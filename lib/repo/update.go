@@ -13,7 +13,7 @@ func UpdateRow[T TableNameType, Id int | int64](id Id, field string, value any) 
 
 	sql := fmt.Sprintf("UPDATE %s SET %s = $1 WHERE id = $2", t.TableName(), field)
 
-	row, err := Conn.Exec(context.Background(), sql, value, id)
+	row, err := Pool.Exec(context.Background(), sql, value, id)
 	if err != nil {
 		log.Printf("conn.Exec error: %s\n", err.Error())
 		return false

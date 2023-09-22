@@ -53,7 +53,7 @@ func Insert[T TableNameType, Id int | int64](attributes []KeyValueField) (*T, er
 	var t T
 
 	sql := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s) RETURNING id", t.TableName(), fieldQuery, dollarQuery)
-	row := Conn.QueryRow(context.Background(), sql, values...)
+	row := Pool.QueryRow(context.Background(), sql, values...)
 
 	var id Id
 

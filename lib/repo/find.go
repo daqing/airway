@@ -28,28 +28,29 @@ func NewCond(key string, value any) *QueryCond {
 }
 
 func Find[T TableNameType](fields []string, conds []KeyValueField) ([]*T, error) {
-	var condString = []string{}
-	var values = []any{}
-	var dollar int
+	return FindLimit[T](fields, conds, "", 0, 0)
+}
 
+// limit = 0 means no limit
+func FindLimit[T TableNameType](fields []string, conds []KeyValueField, orderBy string, offset int, limit int) ([]*T, error) {
 	var _t T // only used for get table name
 
-	for _, cond := range conds {
-		dollar += 1
+	condQuery, values := buildCondQuery(conds)
 
-		part := fmt.Sprintf("%s = $%d", cond.KeyField(), dollar)
+	fieldsQuery := strings.Join(fields, ", ")
 
-		condString = append(condString, part)
-		values = append(values, cond.ValueField())
+	var sql string
+	if limit > 0 {
+		sql = fmt.Sprintf("SELECT %s FROM %s WHERE %s order by %s offset %d limit %d", fieldsQuery, _t.TableName(), condQuery, orderBy, offset, limit)
+	} else if len(orderBy) > 0 {
+		sql = fmt.Sprintf("SELECT %s FROM %s WHERE %s ORDER BY %s", fieldsQuery, _t.TableName(), condQuery, orderBy)
+	} else {
+		sql = fmt.Sprintf("SELECT %s FROM %s WHERE %s", fieldsQuery, _t.TableName(), condQuery)
 	}
 
-	var condQuery = strings.Join(condString, " AND ")
-	var fieldsQuery = strings.Join(fields, ", ")
+	fmt.Printf("SQL: %s, values: %+v\n", sql, values)
 
-	sql := fmt.Sprintf("SELECT %s FROM %s WHERE %s", fieldsQuery, _t.TableName(), condQuery)
-	fmt.Printf("[repo.Find] SQL: %s, values: %+v\n", sql, values)
-
-	rows, err := Conn.Query(context.Background(), sql, values...)
+	rows, err := Pool.Query(context.Background(), sql, values...)
 
 	var ms []*T
 
@@ -65,7 +66,7 @@ func Find[T TableNameType](fields []string, conds []KeyValueField) ([]*T, error)
 
 		err := scanRows(rows, fields, m)
 		if err != nil {
-			fmt.Println("[repo.Find] scanRows error:", err, "fields:", fields)
+			fmt.Println("[repo.FindLimit] scanRows error:", err, "fields:", fields)
 			return ms, err
 		}
 
