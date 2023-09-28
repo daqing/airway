@@ -12,7 +12,7 @@ func GetHello(name string) *models.Hello {
 	hellos, err := repo.Find[models.Hello](
 		[]string{"id", "name", "age"},
 		[]repo.KeyValueField{
-			repo.NewCond("name", utils.TrimFull(name)),
+			repo.NewKV("name", utils.TrimFull(name)),
 		},
 	)
 

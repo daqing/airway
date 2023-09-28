@@ -10,23 +10,6 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-type QueryCond struct {
-	Key   string
-	Value any
-}
-
-func (c *QueryCond) KeyField() string {
-	return c.Key
-}
-
-func (c *QueryCond) ValueField() any {
-	return c.Value
-}
-
-func NewCond(key string, value any) *QueryCond {
-	return &QueryCond{key, value}
-}
-
 func Find[T TableNameType](fields []string, conds []KeyValueField) ([]*T, error) {
 	return FindLimit[T](fields, conds, "", 0, 0)
 }
@@ -48,6 +31,11 @@ func FindLimit[T TableNameType](fields []string, conds []KeyValueField, orderBy 
 		sql = fmt.Sprintf("SELECT %s FROM %s WHERE %s", fieldsQuery, _t.TableName(), condQuery)
 	}
 
+	return execSQL[T](sql, fields, values)
+
+}
+
+func execSQL[T TableNameType](sql string, fields []string, values []any) ([]*T, error) {
 	fmt.Printf("SQL: %s, values: %+v\n", sql, values)
 
 	rows, err := Pool.Query(context.Background(), sql, values...)

@@ -10,29 +10,22 @@ import (
 	"github.com/daqing/airway/lib/utils"
 )
 
-type KeyValueField interface {
-	KeyField() string
-	ValueField() any
+func Insert[T TableNameType](attributes []KeyValueField) (*T, error) {
+	return InsertSkipExists[T](attributes, false)
 }
 
-type Attribute struct {
-	Key   string
-	Value any
-}
+func InsertSkipExists[T TableNameType](attributes []KeyValueField, skipExists bool) (*T, error) {
+	if skipExists {
+		ex, err := Exists[T](attributes)
+		if err != nil {
+			return nil, err
+		}
 
-func NewKV(key string, value any) *Attribute {
-	return &Attribute{key, value}
-}
+		if ex {
+			return nil, nil
+		}
+	}
 
-func (attr *Attribute) KeyField() string {
-	return attr.Key
-}
-
-func (attr *Attribute) ValueField() any {
-	return attr.Value
-}
-
-func Insert[T TableNameType, Id int | int64](attributes []KeyValueField) (*T, error) {
 	var fields []string
 
 	var dollars []string
@@ -55,7 +48,7 @@ func Insert[T TableNameType, Id int | int64](attributes []KeyValueField) (*T, er
 	sql := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s) RETURNING id", t.TableName(), fieldQuery, dollarQuery)
 	row := Pool.QueryRow(context.Background(), sql, values...)
 
-	var id Id
+	var id int64
 
 	err := row.Scan(&id)
 	if err != nil {

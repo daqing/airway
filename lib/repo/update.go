@@ -6,7 +6,7 @@ import (
 	"log"
 )
 
-func UpdateRow[T TableNameType, Id int | int64](id Id, field string, value any) bool {
+func UpdateRow[T TableNameType](id int64, field string, value any) bool {
 	fmt.Printf("id=%d, field=%s, value=%s\n", id, field, value)
 
 	var t T
