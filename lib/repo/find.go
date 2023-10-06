@@ -3,6 +3,7 @@ package repo
 import (
 	"context"
 	"fmt"
+	"log"
 	"reflect"
 	"strings"
 
@@ -20,6 +21,7 @@ func FindLimit[T TableNameType](fields []string, conds []KeyValueField, orderBy 
 
 	condQuery, values := buildCondQuery(conds)
 
+	fields = append(fields, "created_at", "updated_at")
 	fieldsQuery := strings.Join(fields, ", ")
 
 	var sql string
@@ -36,14 +38,12 @@ func FindLimit[T TableNameType](fields []string, conds []KeyValueField, orderBy 
 }
 
 func execSQL[T TableNameType](sql string, fields []string, values []any) ([]*T, error) {
-	fmt.Printf("SQL: %s, values: %+v\n", sql, values)
-
 	rows, err := Pool.Query(context.Background(), sql, values...)
 
 	var ms []*T
 
 	if err != nil {
-		fmt.Println("[repo.Find] Conn.Query error:", err)
+		log.Println("[repo.Find] Conn.Query error:", err)
 		return ms, err
 	}
 
@@ -54,7 +54,7 @@ func execSQL[T TableNameType](sql string, fields []string, values []any) ([]*T, 
 
 		err := scanRows(rows, fields, m)
 		if err != nil {
-			fmt.Println("[repo.FindLimit] scanRows error:", err, "fields:", fields)
+			log.Println("[repo.FindLimit] scanRows error:", err, "fields:", fields)
 			return ms, err
 		}
 

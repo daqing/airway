@@ -7,8 +7,6 @@ import (
 )
 
 func UpdateRow[T TableNameType](id int64, field string, value any) bool {
-	fmt.Printf("id=%d, field=%s, value=%s\n", id, field, value)
-
 	var t T
 
 	sql := fmt.Sprintf("UPDATE %s SET %s = $1 WHERE id = $2", t.TableName(), field)
@@ -18,8 +16,6 @@ func UpdateRow[T TableNameType](id int64, field string, value any) bool {
 		log.Printf("conn.Exec error: %s\n", err.Error())
 		return false
 	}
-
-	log.Printf("affected rows: %d\n", row.RowsAffected())
 
 	return row.RowsAffected() == 1
 }
