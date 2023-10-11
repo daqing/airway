@@ -9,7 +9,7 @@ import (
 func ErrorMsg(c *gin.Context, msg string) {
 	log.Println("Error:", msg)
 
-	c.JSON(200, gin.H{"ok": false, "error": msg})
+	c.JSON(200, gin.H{"ok": false, "data": gin.H{}, "message": msg})
 	c.Abort()
 }
 
