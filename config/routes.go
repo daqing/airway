@@ -2,6 +2,9 @@ package config
 
 import (
 	"github.com/daqing/airway/plugins/hello_plugin"
+	"github.com/daqing/airway/plugins/node_plugin"
+	"github.com/daqing/airway/plugins/post_plugin"
+	"github.com/daqing/airway/plugins/setting_plugin"
 	"github.com/daqing/airway/plugins/user_plugin"
 	"github.com/gin-gonic/gin"
 )
@@ -9,6 +12,9 @@ import (
 func Routes(r *gin.Engine) {
 	v1 := r.Group("/api/v1")
 
-	user_plugin.Routes(v1)
 	hello_plugin.Routes(v1)
+	user_plugin.Routes(v1)
+	node_plugin.Routes(v1)
+	post_plugin.Routes(v1)
+	setting_plugin.Routes(v1)
 }
