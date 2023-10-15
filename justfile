@@ -9,3 +9,17 @@ build:
 
 docker: build
   docker build -t airway -f Dockerfile --platform linux/amd64 .
+
+migrate:
+  find . -name '*_migrate.sql' | sort | xargs -I{} psql -U daqing -d airway -f {}
+
+schema:
+  find . -name 'schema.sql' | xargs -I{} psql -U daqing -d airway -f {}
+
+createdb:
+  psql -U daqing -d postgres -c "create database airway"
+
+dropdb:
+  psql -U daqing -d postgres -c "drop database airway"
+
+reset: dropdb createdb schema migrate

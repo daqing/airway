@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 
+	"github.com/daqing/airway/lib/resp"
 	"github.com/gin-gonic/gin"
 )
 
@@ -15,6 +16,7 @@ func LogError(c *gin.Context, err error) {
 func LogErrorMsg(c *gin.Context, err error, message string) {
 	fmt.Println(message, "Got error: ", err)
 
-	c.JSON(500, gin.H{"error": err.Error()})
+	resp.Error(c, err)
+
 	panic(message)
 }

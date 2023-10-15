@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/daqing/airway/lib/utils"
 )
@@ -45,12 +46,14 @@ func InsertSkipExists[T TableNameType](attributes []KeyValueField, skipExists bo
 
 	var t T
 
-	sql := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s) RETURNING id", t.TableName(), fieldQuery, dollarQuery)
+	sql := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s) RETURNING id, created_at, updated_at", t.TableName(), fieldQuery, dollarQuery)
 	row := Pool.QueryRow(context.Background(), sql, values...)
 
 	var id int64
+	var createdAt time.Time
+	var updatedAt time.Time
 
-	err := row.Scan(&id)
+	err := row.Scan(&id, &createdAt, &updatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +62,13 @@ func InsertSkipExists[T TableNameType](attributes []KeyValueField, skipExists bo
 		return nil, errors.New("ID is zero")
 	}
 
-	attributes = append(attributes, NewKV("id", id))
+	attributes = append(
+		attributes,
+		NewKV("id", id),
+		NewKV("created_at", createdAt),
+		NewKV("updated_at", updatedAt),
+	)
+
 	assignAttributes(&t, attributes)
 
 	return &t, err
