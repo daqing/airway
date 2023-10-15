@@ -11,7 +11,7 @@ docker: build
   docker build -t airway -f Dockerfile --platform linux/amd64 .
 
 migrate:
-  find . -name '*.sql' | sort | xargs -I{} psql -U daqing -d airway -f {}
+  find db -name '*.sql' | sort | xargs -I{} psql -U daqing -d airway -f {}
 
 createdb:
   psql -U daqing -d postgres -c "create database airway"

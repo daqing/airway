@@ -9,7 +9,7 @@ import (
 
 func IndexAction(c *gin.Context) {
 	posts, err := repo.Find[Post]([]string{
-		"id", "user_id", "title", "content",
+		"id", "user_id", "node_id", "title", "content",
 	}, []repo.KeyValueField{})
 
 	if err != nil {
