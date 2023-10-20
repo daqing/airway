@@ -7,7 +7,6 @@ import (
 func Routes(r *gin.RouterGroup) {
 	g := r.Group("/hello")
 	{
-		g.GET("/index", IndexAction)
-		g.POST("/create", CreateAction)
+		g.GET("/ping", PingAction)
 	}
 }
