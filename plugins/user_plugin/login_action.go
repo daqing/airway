@@ -1,6 +1,7 @@
 package user_plugin
 
 import (
+	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/resp"
 	"github.com/daqing/airway/lib/utils"
 	"github.com/gin-gonic/gin"
@@ -25,5 +26,6 @@ func LoginAction(c *gin.Context) {
 		return
 	}
 
-	resp.OK(c, gin.H{"user": user})
+	item := repo.ItemResp[User, UserResp](user)
+	resp.OK(c, gin.H{"user": item})
 }

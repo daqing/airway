@@ -63,6 +63,6 @@ func TogglePostAction(postId, userId int64, action string) (int64, error) {
 		return repo.InvalidCount, nil
 	}
 
-	return action_plugin.ToggleAction(post, userId, action)
+	return action_plugin.ToggleAction(userId, action, post)
 
 }

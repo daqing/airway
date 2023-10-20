@@ -26,5 +26,6 @@ func LoginAdminAction(c *gin.Context) {
 		return
 	}
 
-	resp.OK(c, gin.H{"user": repo.ItemResp[User, UserResp](user)})
+	item := repo.ItemResp[User, UserResp](user)
+	resp.OK(c, gin.H{"user": item})
 }
