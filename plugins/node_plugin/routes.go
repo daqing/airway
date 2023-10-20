@@ -8,6 +8,11 @@ func Routes(r *gin.RouterGroup) {
 	g := r.Group("/node")
 	{
 		g.GET("/index", IndexAction)
-		g.POST("/create", CreateAction)
+
+	}
+
+	admin := g.Group("/admin")
+	{
+		admin.POST("/create", AdminCreateAction)
 	}
 }

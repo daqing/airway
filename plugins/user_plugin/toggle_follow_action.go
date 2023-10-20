@@ -41,7 +41,7 @@ func ToggleFollowAction(c *gin.Context) {
 
 	currentUser := CurrentUser(c.GetHeader("X-Auth-Token"))
 	if currentUser == nil {
-		utils.LogInvalidUserId(c)
+		utils.LogInvalidUser(c)
 		return
 	}
 

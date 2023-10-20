@@ -4,19 +4,26 @@ import (
 	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/resp"
 	"github.com/daqing/airway/lib/utils"
+	"github.com/daqing/airway/plugins/user_plugin"
 	"github.com/gin-gonic/gin"
 )
 
-type CreateParams struct {
+type AdminCreateParams struct {
 	Name string `json:"name"`
 	Key  string `json:"key"`
 }
 
-func CreateAction(c *gin.Context) {
-	var p CreateParams
+func AdminCreateAction(c *gin.Context) {
+	var p AdminCreateParams
 
 	if err := c.BindJSON(&p); err != nil {
 		utils.LogError(c, err)
+		return
+	}
+
+	admin := user_plugin.CurrentAdmin(c.GetHeader("X-Auth-Token"))
+	if admin == nil {
+		utils.LogInvalidAdmin(c)
 		return
 	}
 

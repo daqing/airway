@@ -22,7 +22,7 @@ func ToggleLikeAction(c *gin.Context) {
 
 	user := user_plugin.CurrentUser(c.GetHeader("X-Auth-Token"))
 	if user == nil {
-		utils.LogInvalidUserId(c)
+		utils.LogInvalidUser(c)
 		return
 	}
 

@@ -11,7 +11,7 @@ import (
 func CreateAction(c *gin.Context) {
 	currentUser := user_plugin.CurrentUser(c.GetHeader("X-Auth-Token"))
 	if currentUser == nil {
-		utils.LogInvalidUserId(c)
+		utils.LogInvalidUser(c)
 		return
 	}
 

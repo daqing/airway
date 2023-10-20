@@ -21,8 +21,12 @@ func LogErrorMsg(c *gin.Context, err error, message string) {
 	panic(message)
 }
 
-func LogInvalidUserId(c *gin.Context) {
-	LogError(c, fmt.Errorf("fetch user id from auth token failed"))
+func LogInvalidUser(c *gin.Context) {
+	LogError(c, fmt.Errorf("fetch user from auth token failed"))
+}
+
+func LogInvalidAdmin(c *gin.Context) {
+	LogError(c, fmt.Errorf("fetch admin from auth token failed"))
 }
 
 func ErrorNotFound(c *gin.Context, id int64) {
