@@ -1,6 +1,8 @@
 package setting_plugin
 
 import (
+	"fmt"
+
 	"github.com/daqing/airway/lib/resp"
 	"github.com/daqing/airway/lib/utils"
 	"github.com/daqing/airway/plugins/user_plugin"
@@ -21,6 +23,11 @@ func AdminCreateAction(c *gin.Context) {
 
 	if err := c.BindJSON(&p); err != nil {
 		utils.LogError(c, err)
+		return
+	}
+
+	if len(p.Data) == 0 {
+		resp.Error(c, fmt.Errorf("no data provided"))
 		return
 	}
 
