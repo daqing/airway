@@ -14,14 +14,11 @@ func AdminIndexAction(c *gin.Context) {
 		return
 	}
 
-	settings, err := repo.Find[Setting]([]string{
-		"id", "key", "val",
-	}, []repo.KeyValueField{})
-
+	list, err := repo.ListResp[Setting, SettingResp]()
 	if err != nil {
 		utils.LogError(c, err)
 		return
 	}
 
-	resp.OK(c, gin.H{"list": settings})
+	resp.OK(c, gin.H{"list": list})
 }
