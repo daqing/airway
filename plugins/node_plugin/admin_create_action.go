@@ -21,8 +21,7 @@ func AdminCreateAction(c *gin.Context) {
 		return
 	}
 
-	admin := user_plugin.CurrentAdmin(c.GetHeader("X-Auth-Token"))
-	if admin == nil {
+	if !user_plugin.CheckAdmin(c.GetHeader("X-Auth-Token")) {
 		utils.LogInvalidAdmin(c)
 		return
 	}

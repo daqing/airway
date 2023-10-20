@@ -143,3 +143,17 @@ func userFromToken(authToken string, role UserRole) *User {
 
 	return user
 }
+
+func CheckAdmin(authToken string) bool {
+	ok, err := repo.Exists[User]([]repo.KeyValueField{
+		repo.NewKV("api_token", authToken),
+		repo.NewKV("role", AdminRole),
+	})
+
+	if err != nil {
+		log.Println("Error checking admin: ", err)
+		return false
+	}
+
+	return ok
+}

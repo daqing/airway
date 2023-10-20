@@ -4,10 +4,16 @@ import (
 	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/resp"
 	"github.com/daqing/airway/lib/utils"
+	"github.com/daqing/airway/plugins/user_plugin"
 	"github.com/gin-gonic/gin"
 )
 
-func IndexAction(c *gin.Context) {
+func AdminIndexAction(c *gin.Context) {
+	if !user_plugin.CheckAdmin(c.GetHeader("X-Auth-Token")) {
+		utils.LogInvalidAdmin(c)
+		return
+	}
+
 	settings, err := repo.Find[Setting]([]string{
 		"id", "key", "val",
 	}, []repo.KeyValueField{})

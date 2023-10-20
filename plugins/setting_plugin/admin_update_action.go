@@ -5,6 +5,7 @@ import (
 
 	"github.com/daqing/airway/lib/resp"
 	"github.com/daqing/airway/lib/utils"
+	"github.com/daqing/airway/plugins/user_plugin"
 	"github.com/gin-gonic/gin"
 )
 
@@ -18,11 +19,16 @@ type UpdateParams struct {
 	Data []UpdateItem `json:"data"`
 }
 
-func UpdateAction(c *gin.Context) {
+func AdminUpdateAction(c *gin.Context) {
 	var p UpdateParams
 
 	if err := c.BindJSON(&p); err != nil {
 		utils.LogError(c, err)
+		return
+	}
+
+	if !user_plugin.CheckAdmin(c.GetHeader("X-Auth-Token")) {
+		utils.LogInvalidAdmin(c)
 		return
 	}
 

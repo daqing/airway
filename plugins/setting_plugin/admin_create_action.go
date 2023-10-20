@@ -3,6 +3,7 @@ package setting_plugin
 import (
 	"github.com/daqing/airway/lib/resp"
 	"github.com/daqing/airway/lib/utils"
+	"github.com/daqing/airway/plugins/user_plugin"
 	"github.com/gin-gonic/gin"
 )
 
@@ -15,11 +16,16 @@ type CreateParams struct {
 	Data []Item `json:"data"`
 }
 
-func CreateAction(c *gin.Context) {
+func AdminCreateAction(c *gin.Context) {
 	var p CreateParams
 
 	if err := c.BindJSON(&p); err != nil {
 		utils.LogError(c, err)
+		return
+	}
+
+	if !user_plugin.CheckAdmin(c.GetHeader("X-Auth-Token")) {
+		utils.LogInvalidAdmin(c)
 		return
 	}
 

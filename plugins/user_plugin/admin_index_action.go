@@ -1,8 +1,6 @@
 package user_plugin
 
 import (
-	"fmt"
-
 	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/resp"
 	"github.com/daqing/airway/lib/utils"
@@ -10,9 +8,8 @@ import (
 )
 
 func AdminIndexAction(c *gin.Context) {
-	admin := CurrentAdmin(c.GetHeader("X-Auth-Token"))
-	if admin == nil {
-		utils.LogError(c, fmt.Errorf("current admin not found"))
+	if !CheckAdmin(c.GetHeader("X-Auth-Token")) {
+		utils.LogInvalidAdmin(c)
 		return
 	}
 
