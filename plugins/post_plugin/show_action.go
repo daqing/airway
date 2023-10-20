@@ -30,5 +30,5 @@ func ShowAction(c *gin.Context) {
 		return
 	}
 
-	resp.OK(c, post)
+	resp.OK(c, gin.H{"post": post})
 }

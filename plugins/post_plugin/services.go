@@ -49,7 +49,7 @@ func CreatePost(title, content string, user_id, node_id int64, fee int, tags []s
 	return post, nil
 }
 
-func TogglePostAction(postId, userId int64, action string) (int64, error) {
+func TogglePostAction(userId int64, action string, postId int64) (int64, error) {
 	post, err := repo.FindRow[Post]([]string{"id"}, []repo.KeyValueField{
 		repo.NewKV("id", postId),
 	})

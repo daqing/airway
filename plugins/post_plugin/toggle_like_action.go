@@ -26,7 +26,7 @@ func ToggleLikeAction(c *gin.Context) {
 		return
 	}
 
-	count, err := TogglePostAction(p.PostId, user.Id, action_plugin.ActionLike)
+	count, err := TogglePostAction(user.Id, action_plugin.ActionLike, p.PostId)
 	if err != nil {
 		utils.LogError(c, err)
 		return
