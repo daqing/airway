@@ -6,7 +6,7 @@ import (
 )
 
 func Count[T TableNameType](conds []KeyValueField) (n int64, err error) {
-	condQuery, values := buildCondQuery(conds)
+	condQuery, values, _ := buildCondQuery(conds)
 
 	var t T
 

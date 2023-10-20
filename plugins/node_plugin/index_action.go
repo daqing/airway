@@ -8,14 +8,12 @@ import (
 )
 
 func IndexAction(c *gin.Context) {
-	nodes, err := repo.Find[Node]([]string{
-		"id", "name", "key", "created_at", "updated_at",
-	}, []repo.KeyValueField{})
+	list, err := repo.ListResp[Node, NodeResp]()
 
 	if err != nil {
 		utils.LogError(c, err)
 		return
 	}
 
-	resp.OK(c, gin.H{"list": nodes})
+	resp.OK(c, gin.H{"list": list})
 }

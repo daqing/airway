@@ -1,6 +1,7 @@
 package user_plugin
 
 import (
+	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/resp"
 	"github.com/daqing/airway/lib/utils"
 	"github.com/gin-gonic/gin"
@@ -25,8 +26,5 @@ func LoginAdminAction(c *gin.Context) {
 		return
 	}
 
-	// 保护密码字段
-	user.EncryptedPassword = ""
-
-	resp.OK(c, gin.H{"user": user})
+	resp.OK(c, gin.H{"user": repo.ItemResp[User, UserResp](user)})
 }

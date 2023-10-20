@@ -3,9 +3,11 @@ package node_plugin
 import "time"
 
 type Node struct {
-	Id        int64
-	Name      string
-	Key       string
+	Id int64
+
+	Name string
+	Key  string
+
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }

@@ -1,8 +1,6 @@
 package post_plugin
 
 import (
-	"fmt"
-
 	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/resp"
 	"github.com/daqing/airway/lib/utils"
@@ -21,7 +19,7 @@ func ShowAction(c *gin.Context) {
 		return
 	}
 
-	posts, err := repo.Find[Post]([]string{
+	post, err := repo.FindRow[Post]([]string{
 		"id", "user_id", "node_id", "title", "content",
 	}, []repo.KeyValueField{
 		repo.NewKV("id", p.Id),
@@ -32,10 +30,5 @@ func ShowAction(c *gin.Context) {
 		return
 	}
 
-	if len(posts) != 1 {
-		utils.LogError(c, fmt.Errorf("posts should be one record"))
-		return
-	}
-
-	resp.OK(c, posts[0])
+	resp.OK(c, post)
 }

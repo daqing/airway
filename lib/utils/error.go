@@ -20,3 +20,11 @@ func LogErrorMsg(c *gin.Context, err error, message string) {
 
 	panic(message)
 }
+
+func LogInvalidUserId(c *gin.Context) {
+	LogError(c, fmt.Errorf("fetch user id from auth token failed"))
+}
+
+func ErrorNotFound(c *gin.Context, id int64) {
+	LogError(c, fmt.Errorf("record not found: %d", id))
+}

@@ -10,5 +10,8 @@ func Routes(r *gin.RouterGroup) {
 		g.GET("/index", IndexAction)
 		g.GET("/show", ShowAction)
 		g.POST("/create", CreateAction)
+
+		g.POST("/toggle/like", ToggleLikeAction)
+		g.POST("/toggle/favorite", ToggleFavoriteAction)
 	}
 }

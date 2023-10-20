@@ -1,9 +1,12 @@
 package user_plugin
 
-import "time"
+import (
+	"time"
+)
 
 type User struct {
-	Id                int64
+	Id int64
+
 	Nickname          string
 	Username          string
 	Phone             string
@@ -12,8 +15,9 @@ type User struct {
 	Role              UserRole
 	ApiToken          string
 	EncryptedPassword string
-	CreatedAt         time.Time
-	UpdatedAt         time.Time
+
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 const tableName = "users"
@@ -26,3 +30,9 @@ const (
 	Basic UserRole = iota
 	Admin
 )
+
+const relType = "user"
+
+func (u *User) RelType() string { return relType }
+
+func (u *User) RelId() int64 { return u.Id }

@@ -11,5 +11,7 @@ func Routes(r *gin.RouterGroup) {
 		g.POST("/create", CreateAction)
 		g.POST("/login", LoginAction)
 		g.POST("/login_admin", LoginAdminAction)
+
+		g.POST("/toggle/follow", ToggleFollowAction)
 	}
 }

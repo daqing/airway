@@ -8,6 +8,7 @@ type Post struct {
 	NodeId    int64
 	Title     string
 	Content   string
+	Fee       int
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
@@ -15,3 +16,8 @@ type Post struct {
 const tableName = "posts"
 
 func (p Post) TableName() string { return tableName }
+
+const relType = "post"
+
+func (p *Post) RelId() int64    { return p.Id }
+func (p *Post) RelType() string { return relType }

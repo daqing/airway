@@ -4,26 +4,27 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"strings"
 )
 
 func UpdateFields[T TableNameType](id int64, fields []KeyValueField) bool {
 	var t T
 
-	n := 0
-	var keys []string
-	var vals []any
+	// n := 0
+	// var keys []string
+	// var vals []any
 
-	for _, kv := range fields {
-		n++
-		keys = append(keys, fmt.Sprintf("%s = $%d", kv.KeyField(), n))
-		vals = append(vals, kv.ValueField())
-	}
+	// for _, kv := range fields {
+	// 	n++
+	// 	keys = append(keys, fmt.Sprintf("%s = $%d", kv.KeyField(), n))
+	// 	vals = append(vals, kv.ValueField())
+	// }
 
-	fieldQuery := strings.Join(keys, ",")
+	// fieldQuery := strings.Join(keys, ",")
 
-	n++
-	sql := fmt.Sprintf("UPDATE %s SET %s WHERE id = $%d", t.TableName(), fieldQuery, n)
+	// n++
+	condQuery, vals, n := buildCondQuery(fields)
+
+	sql := fmt.Sprintf("UPDATE %s SET %s WHERE id = $%d", t.TableName(), condQuery, n)
 
 	vals = append(vals, id)
 

@@ -1,6 +1,7 @@
 package node_plugin
 
 import (
+	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/resp"
 	"github.com/daqing/airway/lib/utils"
 	"github.com/gin-gonic/gin"
@@ -25,5 +26,5 @@ func CreateAction(c *gin.Context) {
 		return
 	}
 
-	resp.OK(c, gin.H{"node": node})
+	resp.OK(c, gin.H{"node": repo.ItemResp[Node, NodeResp](node)})
 }

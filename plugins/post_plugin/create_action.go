@@ -1,16 +1,21 @@
 package post_plugin
 
 import (
+	"strings"
+
+	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/resp"
 	"github.com/daqing/airway/lib/utils"
+	"github.com/daqing/airway/plugins/user_plugin"
 	"github.com/gin-gonic/gin"
 )
 
 type CreateParams struct {
-	UserId  int64  `json:"user_id"`
 	NodeId  int64  `json:"node_id"`
 	Title   string `json:"title"`
 	Content string `json:"content"`
+	Fee     int    `json:"fee"`
+	Tags    string `json:"tags"` // 使用英文逗号分隔
 }
 
 func CreateAction(c *gin.Context) {
@@ -21,11 +26,21 @@ func CreateAction(c *gin.Context) {
 		return
 	}
 
-	post, err := CreatePost(p.Title, p.Content, p.UserId, p.NodeId)
+	user := user_plugin.UserFromAuthToken(c.GetHeader("X-Auth-Token"))
+
+	if user == nil {
+		utils.LogInvalidUserId(c)
+		return
+	}
+
+	tags := strings.Split(p.Tags, ",")
+	post, err := CreatePost(p.Title, p.Content, user.Id, p.NodeId, p.Fee, tags)
 	if err != nil {
 		utils.LogError(c, err)
 		return
 	}
 
-	resp.OK(c, gin.H{"post": post})
+	item := repo.ItemResp[Post, PostResp](post)
+
+	resp.OK(c, gin.H{"post": item})
 }

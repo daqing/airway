@@ -122,3 +122,16 @@ func LoginAdmin(username string, password string) (*User, error) {
 
 	return nil, fmt.Errorf("password is not correct")
 }
+
+// 如果遇到错误，返回 0
+func UserFromAuthToken(authToken string) *User {
+	user, err := repo.FindRow[User]([]string{"id"}, []repo.KeyValueField{
+		repo.NewKV("api_token", authToken),
+	})
+
+	if err != nil {
+		return nil
+	}
+
+	return user
+}

@@ -1,9 +1,6 @@
 dev:
   AIRWAY_ENV=local air
 
-setup:
-  go install github.com/cosmtrek/air@latest
-
 build:
   GOOS=linux GOARCH=amd64 go build -o ./bin .
 
@@ -20,3 +17,6 @@ dropdb:
   psql -U daqing -d postgres -c "drop database airway"
 
 reset: dropdb createdb migrate
+
+db:
+  psql -U daqing -d airway

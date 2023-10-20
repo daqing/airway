@@ -61,12 +61,10 @@ func (in *InQuery[T]) ValueField() any {
 
 func (in *InQuery[T]) Operator() string { return IN }
 
-func buildCondQuery(conds []KeyValueField) (condQuery string, values []any) {
+func buildCondQuery(conds []KeyValueField) (condQuery string, values []any, dollar int) {
 	if len(conds) == 0 {
-		return "1=1", nil
+		return "1=1", nil, 0
 	}
-
-	var dollar int
 
 	var condString = []string{}
 
@@ -88,5 +86,11 @@ func buildCondQuery(conds []KeyValueField) (condQuery string, values []any) {
 
 	condQuery = strings.Join(condString, AND)
 
+	dollar++
+
 	return
 }
+
+// var ErrorNotFound = errors.New("record not found")
+
+const InvalidCount = -1

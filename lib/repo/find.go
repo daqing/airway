@@ -11,6 +11,19 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+func FindRow[T TableNameType](fields []string, conds []KeyValueField) (*T, error) {
+	rows, err := Find[T](fields, conds)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(rows) != 1 {
+		return nil, nil
+	}
+
+	return rows[0], nil
+}
+
 func Find[T TableNameType](fields []string, conds []KeyValueField) ([]*T, error) {
 	return FindLimit[T](fields, conds, "", 0, 0)
 }
@@ -19,7 +32,7 @@ func Find[T TableNameType](fields []string, conds []KeyValueField) ([]*T, error)
 func FindLimit[T TableNameType](fields []string, conds []KeyValueField, orderBy string, offset int, limit int) ([]*T, error) {
 	var _t T // only used for get table name
 
-	condQuery, values := buildCondQuery(conds)
+	condQuery, values, _ := buildCondQuery(conds)
 
 	fields = append(fields, "created_at", "updated_at")
 	fieldsQuery := strings.Join(fields, ", ")
