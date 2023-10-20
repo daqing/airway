@@ -100,7 +100,7 @@ func LoginAdmin(username string, password string) (*User, error) {
 		},
 		[]repo.KeyValueField{
 			repo.NewKV("username", username),
-			repo.NewKV("role", Admin),
+			repo.NewKV("role", AdminRole),
 		},
 	)
 
@@ -123,10 +123,18 @@ func LoginAdmin(username string, password string) (*User, error) {
 	return nil, fmt.Errorf("password is not correct")
 }
 
-// 如果遇到错误，返回 0
-func UserFromAuthToken(authToken string) *User {
+func CurrentUser(authToken string) *User {
+	return userFromToken(authToken, BasicRole)
+}
+
+func CurrentAdmin(authToken string) *User {
+	return userFromToken(authToken, AdminRole)
+}
+
+func userFromToken(authToken string, role UserRole) *User {
 	user, err := repo.FindRow[User]([]string{"id"}, []repo.KeyValueField{
 		repo.NewKV("api_token", authToken),
+		repo.NewKV("role", role),
 	})
 
 	if err != nil {

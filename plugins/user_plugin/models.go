@@ -27,8 +27,8 @@ func (u User) TableName() string { return tableName }
 type UserRole int
 
 const (
-	Basic UserRole = iota
-	Admin
+	BasicRole UserRole = iota
+	AdminRole
 )
 
 const relType = "user"

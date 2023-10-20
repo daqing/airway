@@ -20,7 +20,7 @@ func CreateAction(c *gin.Context) {
 		return
 	}
 
-	user, err := CreateUser(p.Nickname, p.Username, Basic, p.Password)
+	user, err := CreateUser(p.Nickname, p.Username, BasicRole, p.Password)
 	if err != nil {
 		utils.LogError(c, err)
 		return
