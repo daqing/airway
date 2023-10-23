@@ -1,13 +1,13 @@
 package resp
 
 import (
-	"log"
+	"fmt"
 
 	"github.com/gin-gonic/gin"
 )
 
 func OK(c *gin.Context, data any) {
-	log.Printf("OK: %+v\n", data)
+	fmt.Printf("===> Response OK: %+v\n", data)
 
 	c.JSON(200, gin.H{"ok": true, "data": data, "message": ""})
 }

@@ -1,13 +1,19 @@
 package repo
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
 
 const EQ = "="
 const IN = "IN"
-const AND = " AND "
+
+type Separator string
+
+const AND Separator = " AND "
+const OR Separator = " OR "
+const COMMA Separator = " , "
 
 type KeyValueField interface {
 	KeyField() string
@@ -61,11 +67,12 @@ func (in *InQuery[T]) ValueField() any {
 
 func (in *InQuery[T]) Operator() string { return IN }
 
-func buildCondQuery(conds []KeyValueField) (condQuery string, values []any, dollar int) {
+func buildCondQuery(conds []KeyValueField, start int, sep Separator) (condQuery string, values []any, dollar int) {
 	if len(conds) == 0 {
 		return "1=1", nil, 0
 	}
 
+	dollar = start
 	var condString = []string{}
 
 	for _, cond := range conds {
@@ -84,13 +91,14 @@ func buildCondQuery(conds []KeyValueField) (condQuery string, values []any, doll
 		values = append(values, cond.ValueField())
 	}
 
-	condQuery = strings.Join(condString, AND)
+	condQuery = strings.Join(condString, string(sep))
 
 	dollar++
 
 	return
 }
 
-// var ErrorNotFound = errors.New("record not found")
+var ErrorNotFound = errors.New("record_not_found")
+var ErrorCountNotMatch = errors.New("count_not_match")
 
 const InvalidCount = -1

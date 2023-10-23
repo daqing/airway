@@ -11,12 +11,12 @@ migrate:
   find db -name '*.sql' | sort | xargs -I{} psql -U daqing -d airway -f {}
 
 createdb:
-  psql -U daqing -d postgres -c "create database airway"
+  psql -U $POSTGRES_USER -d postgres -c "create database airway"
 
 dropdb:
-  psql -U daqing -d postgres -c "drop database airway"
+  psql -U $POSTGRES_USER -d postgres -c "drop database airway"
 
 reset: dropdb createdb migrate
 
 db:
-  psql -U daqing -d airway
+  psql -U $POSTGRES_USER -d airway

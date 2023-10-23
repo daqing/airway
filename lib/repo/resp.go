@@ -3,8 +3,6 @@ package repo
 import (
 	"reflect"
 	"time"
-
-	"github.com/daqing/airway/lib/utils"
 )
 
 type ModelResp interface {
@@ -36,7 +34,7 @@ func ItemResp[M TableNameType, MR ModelResp](m *M) *MR {
 
 // 把 m 的字段值，赋值给 mr
 // 同时，把 created_at 和 updated_at 字段，自动转换为
-// utils.Timestamp 类型
+// repo.Timestamp 类型
 func m2mr[MR any](m any, fields []string) *MR {
 	fields = append(fields, "CreatedAt", "UpdatedAt")
 
@@ -46,7 +44,7 @@ func m2mr[MR any](m any, fields []string) *MR {
 	vmr := reflect.ValueOf(&mr).Elem()
 
 	for _, field := range fields {
-		camelName := utils.ToCamel(field)
+		camelName := ToCamel(field)
 
 		var mf = vm.FieldByName(camelName)
 		var mrf = vmr.FieldByName(camelName)
@@ -55,7 +53,7 @@ func m2mr[MR any](m any, fields []string) *MR {
 			if camelName == "CreatedAt" || camelName == "UpdatedAt" {
 				val := reflect.ValueOf(mf.Interface())
 
-				val2 := utils.Timestamp(val.Interface().(time.Time))
+				val2 := Timestamp(val.Interface().(time.Time))
 
 				mrf.Set(reflect.ValueOf(val2))
 			} else {

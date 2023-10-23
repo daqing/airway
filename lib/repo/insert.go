@@ -7,8 +7,6 @@ import (
 	"reflect"
 	"strings"
 	"time"
-
-	"github.com/daqing/airway/lib/utils"
 )
 
 func Insert[T TableNameType](attributes []KeyValueField) (*T, error) {
@@ -78,7 +76,7 @@ func assignAttributes(dest any, attributes []KeyValueField) {
 	vDest := reflect.ValueOf(dest).Elem()
 
 	for _, attr := range attributes {
-		camelName := utils.ToCamel(attr.KeyField())
+		camelName := ToCamel(attr.KeyField())
 		var f = vDest.FieldByName(camelName)
 
 		if f.CanSet() {

@@ -2,23 +2,30 @@ package utils
 
 import (
 	"fmt"
+	"log"
 
+	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/resp"
 	"github.com/gin-gonic/gin"
 )
 
-const DefaultMessage = "[Error for gin.Context]"
+const DefaultMessage = "===> Got server error: "
 
 func LogError(c *gin.Context, err error) {
 	LogErrorMsg(c, err, DefaultMessage)
 }
 
 func LogErrorMsg(c *gin.Context, err error, message string) {
-	fmt.Println(message, "Got error: ", err)
+	fmt.Println(message, err)
 
 	resp.Error(c, err)
 
-	panic(message)
+	if err == repo.ErrorNotFound {
+		log.Println("Record not found")
+		return
+	}
+
+	panic(message + err.Error())
 }
 
 func LogInvalidUser(c *gin.Context) {

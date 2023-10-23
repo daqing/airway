@@ -9,20 +9,7 @@ import (
 func UpdateFields[T TableNameType](id int64, fields []KeyValueField) bool {
 	var t T
 
-	// n := 0
-	// var keys []string
-	// var vals []any
-
-	// for _, kv := range fields {
-	// 	n++
-	// 	keys = append(keys, fmt.Sprintf("%s = $%d", kv.KeyField(), n))
-	// 	vals = append(vals, kv.ValueField())
-	// }
-
-	// fieldQuery := strings.Join(keys, ",")
-
-	// n++
-	condQuery, vals, n := buildCondQuery(fields)
+	condQuery, vals, n := buildCondQuery(fields, 0, COMMA)
 
 	sql := fmt.Sprintf("UPDATE %s SET %s WHERE id = $%d", t.TableName(), condQuery, n)
 
@@ -38,12 +25,17 @@ func UpdateFields[T TableNameType](id int64, fields []KeyValueField) bool {
 	return row.RowsAffected() == 1
 }
 
-func UpdateRow[T TableNameType](id int64, field string, value any) bool {
+func UpdateRow[T TableNameType](cond []KeyValueField, field string, value any) bool {
 	var t T
 
-	sql := fmt.Sprintf("UPDATE %s SET %s = $1 WHERE id = $2", t.TableName(), field)
+	fieldQuery, vals, _ := buildCondQuery(cond, 1, AND)
 
-	row, err := Pool.Exec(context.Background(), sql, value, id)
+	sql := fmt.Sprintf("UPDATE %s SET %s = $1 WHERE %s", t.TableName(), field, fieldQuery)
+
+	// prepend value to be the first $1 value
+	vals = append([]any{value}, vals...)
+
+	row, err := Pool.Exec(context.Background(), sql, vals...)
 	if err != nil {
 		log.Printf("conn.Exec error: %s\n", err.Error())
 		return false

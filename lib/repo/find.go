@@ -7,7 +7,6 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/daqing/airway/lib/utils"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -17,8 +16,12 @@ func FindRow[T TableNameType](fields []string, conds []KeyValueField) (*T, error
 		return nil, err
 	}
 
-	if len(rows) != 1 {
-		return nil, nil
+	if len(rows) == 0 {
+		return nil, ErrorNotFound
+	}
+
+	if len(rows) > 1 {
+		return nil, ErrorCountNotMatch
 	}
 
 	return rows[0], nil
@@ -32,7 +35,7 @@ func Find[T TableNameType](fields []string, conds []KeyValueField) ([]*T, error)
 func FindLimit[T TableNameType](fields []string, conds []KeyValueField, orderBy string, offset int, limit int) ([]*T, error) {
 	var _t T // only used for get table name
 
-	condQuery, values, _ := buildCondQuery(conds)
+	condQuery, values, _ := buildCondQuery(conds, 0, AND)
 
 	fields = append(fields, "created_at", "updated_at")
 	fieldsQuery := strings.Join(fields, ", ")
@@ -82,7 +85,7 @@ func scanRows(rows pgx.Rows, fields []string, dest any) error {
 	destSlice := make([]interface{}, 0)
 
 	for _, name := range fields {
-		camelName := utils.ToCamel(name)
+		camelName := ToCamel(name)
 		var f = vDest.FieldByName(camelName).Addr().Interface()
 
 		destSlice = append(destSlice, f)
