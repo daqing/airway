@@ -1,0 +1,19 @@
+package {{.Mod}}_plugin
+
+import (
+	"github.com/gin-gonic/gin"
+)
+
+type {{.Name}}Params struct {
+}
+
+func {{.Name}}Action(c *gin.Context) {
+	var p {{.Name}}Params
+
+	if err := c.BindJSON(&p); err != nil {
+		utils.LogError(c, err)
+		return
+	}
+
+  // currentUser := CurrentUser(utils.AuthToken(c))
+}

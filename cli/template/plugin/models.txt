@@ -1,0 +1,16 @@
+package {{.Mod}}_plugin
+
+import (
+	"time"
+)
+
+type {{.ModelName}} struct {
+	Id int64
+
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+const tableName = "{{.Mod}}s"
+
+func (m {{.ModelName}}) TableName() string { return tableName }

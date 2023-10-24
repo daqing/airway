@@ -1,6 +1,10 @@
 dev:
   AIRWAY_ENV=local air
 
+cli:
+  cd ./cli && go build && cd ..
+  mv ./cli/cli ./bin/
+
 build:
   GOOS=linux GOARCH=amd64 go build -o ./bin .
 
