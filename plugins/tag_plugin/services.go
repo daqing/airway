@@ -12,14 +12,14 @@ func CreateTag(name string) (*Tag, error) {
 		return nil, fmt.Errorf("name cannot be empty")
 	}
 
-	return repo.Insert[Tag]([]repo.KeyValueField{
-		repo.NewKV("name", name),
+	return repo.Insert[Tag]([]repo.KVPair{
+		repo.KV("name", name),
 	})
 }
 
 func CreateTagRelation(tagName string, relation action_plugin.RelationModel) error {
-	tags, err := repo.Find[Tag]([]string{"id", "name"}, []repo.KeyValueField{
-		repo.NewKV("name", tagName),
+	tags, err := repo.Find[Tag]([]string{"id", "name"}, []repo.KVPair{
+		repo.KV("name", tagName),
 	})
 
 	if err != nil {
@@ -41,10 +41,10 @@ func CreateTagRelation(tagName string, relation action_plugin.RelationModel) err
 		return fmt.Errorf("number of tags is wrong: %d", len(tags))
 	}
 
-	relations, err := repo.Find[TagRelation]([]string{"id"}, []repo.KeyValueField{
-		repo.NewKV("tag_id", tag.Id),
-		repo.NewKV("relation_id", relation.RelId()),
-		repo.NewKV("relation_type", relation.RelType()),
+	relations, err := repo.Find[TagRelation]([]string{"id"}, []repo.KVPair{
+		repo.KV("tag_id", tag.Id),
+		repo.KV("relation_id", relation.RelId()),
+		repo.KV("relation_type", relation.RelType()),
 	})
 
 	if err != nil {
@@ -53,10 +53,10 @@ func CreateTagRelation(tagName string, relation action_plugin.RelationModel) err
 
 	if len(relations) == 0 {
 		// create new relation
-		_, err = repo.Insert[TagRelation]([]repo.KeyValueField{
-			repo.NewKV("tag_id", tag.Id),
-			repo.NewKV("relation_id", relation.RelId()),
-			repo.NewKV("relation_type", relation.RelType()),
+		_, err = repo.Insert[TagRelation]([]repo.KVPair{
+			repo.KV("tag_id", tag.Id),
+			repo.KV("relation_id", relation.RelId()),
+			repo.KV("relation_type", relation.RelType()),
 		})
 
 		if err != nil {

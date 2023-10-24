@@ -6,7 +6,7 @@ import (
 	"log"
 )
 
-func UpdateFields[T TableNameType](id int64, fields []KeyValueField) bool {
+func UpdateFields[T TableNameType](id int64, fields []KVPair) bool {
 	var t T
 
 	condQuery, vals, n := buildCondQuery(fields, 0, COMMA)
@@ -25,7 +25,7 @@ func UpdateFields[T TableNameType](id int64, fields []KeyValueField) bool {
 	return row.RowsAffected() == 1
 }
 
-func UpdateRow[T TableNameType](cond []KeyValueField, field string, value any) bool {
+func UpdateRow[T TableNameType](cond []KVPair, field string, value any) bool {
 	var t T
 
 	fieldQuery, vals, _ := buildCondQuery(cond, 1, AND)

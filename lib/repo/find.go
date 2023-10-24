@@ -10,7 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-func FindRow[T TableNameType](fields []string, conds []KeyValueField) (*T, error) {
+func FindRow[T TableNameType](fields []string, conds []KVPair) (*T, error) {
 	rows, err := Find[T](fields, conds)
 	if err != nil {
 		return nil, err
@@ -27,12 +27,12 @@ func FindRow[T TableNameType](fields []string, conds []KeyValueField) (*T, error
 	return rows[0], nil
 }
 
-func Find[T TableNameType](fields []string, conds []KeyValueField) ([]*T, error) {
+func Find[T TableNameType](fields []string, conds []KVPair) ([]*T, error) {
 	return FindLimit[T](fields, conds, "", 0, 0)
 }
 
 // limit = 0 means no limit
-func FindLimit[T TableNameType](fields []string, conds []KeyValueField, orderBy string, offset int, limit int) ([]*T, error) {
+func FindLimit[T TableNameType](fields []string, conds []KVPair, orderBy string, offset int, limit int) ([]*T, error) {
 	var _t T // only used for get table name
 
 	condQuery, values, _ := buildCondQuery(conds, 0, AND)

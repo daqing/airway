@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-func Delete[T TableNameType](conds []KeyValueField) error {
+func Delete[T TableNameType](conds []KVPair) error {
 	var t T
 
 	condQuery, vals, _ := buildCondQuery(conds, 0, AND)

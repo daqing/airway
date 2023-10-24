@@ -13,7 +13,7 @@ func ListResp[M TableNameType, MR ModelResp]() ([]*MR, error) {
 	var mr MR
 	fields := mr.Fields()
 
-	ms, err := Find[M](fields, []KeyValueField{})
+	ms, err := Find[M](fields, []KVPair{})
 	if err != nil {
 		return nil, err
 	}

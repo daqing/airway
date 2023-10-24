@@ -25,8 +25,8 @@ func ToggleFollowAction(c *gin.Context) {
 
 	user, err := repo.FindRow[User]([]string{
 		"id",
-	}, []repo.KeyValueField{
-		repo.NewKV("id", p.UserId),
+	}, []repo.KVPair{
+		repo.KV("id", p.UserId),
 	})
 
 	if err != nil {

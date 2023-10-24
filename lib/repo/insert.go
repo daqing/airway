@@ -9,11 +9,11 @@ import (
 	"time"
 )
 
-func Insert[T TableNameType](attributes []KeyValueField) (*T, error) {
+func Insert[T TableNameType](attributes []KVPair) (*T, error) {
 	return InsertSkipExists[T](attributes, false)
 }
 
-func InsertSkipExists[T TableNameType](attributes []KeyValueField, skipExists bool) (*T, error) {
+func InsertSkipExists[T TableNameType](attributes []KVPair, skipExists bool) (*T, error) {
 	if skipExists {
 		ex, err := Exists[T](attributes)
 		if err != nil {
@@ -32,11 +32,11 @@ func InsertSkipExists[T TableNameType](attributes []KeyValueField, skipExists bo
 
 	n := 0
 	for _, field := range attributes {
-		fields = append(fields, field.KeyField())
+		fields = append(fields, field.Key())
 
 		n++
 		dollars = append(dollars, fmt.Sprintf("$%d", n))
-		values = append(values, field.ValueField())
+		values = append(values, field.Value())
 	}
 
 	fieldQuery := strings.Join(fields, ",")
@@ -62,9 +62,9 @@ func InsertSkipExists[T TableNameType](attributes []KeyValueField, skipExists bo
 
 	attributes = append(
 		attributes,
-		NewKV("id", id),
-		NewKV("created_at", createdAt),
-		NewKV("updated_at", updatedAt),
+		KV("id", id),
+		KV("created_at", createdAt),
+		KV("updated_at", updatedAt),
 	)
 
 	assignAttributes(&t, attributes)
@@ -72,15 +72,15 @@ func InsertSkipExists[T TableNameType](attributes []KeyValueField, skipExists bo
 	return &t, err
 }
 
-func assignAttributes(dest any, attributes []KeyValueField) {
+func assignAttributes(dest any, attributes []KVPair) {
 	vDest := reflect.ValueOf(dest).Elem()
 
 	for _, attr := range attributes {
-		camelName := ToCamel(attr.KeyField())
+		camelName := ToCamel(attr.Key())
 		var f = vDest.FieldByName(camelName)
 
 		if f.CanSet() {
-			f.Set(reflect.ValueOf(attr.ValueField()))
+			f.Set(reflect.ValueOf(attr.Value()))
 		}
 	}
 }

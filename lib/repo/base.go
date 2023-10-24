@@ -15,27 +15,27 @@ const AND Separator = " AND "
 const OR Separator = " OR "
 const COMMA Separator = " , "
 
-type KeyValueField interface {
-	KeyField() string
-	ValueField() any
+type KVPair interface {
+	Key() string
+	Value() any
 	Operator() string
 }
 
 type Attribute struct {
-	Key   string
-	Value any
+	KeyField   string
+	ValueField any
 }
 
-func NewKV(key string, value any) *Attribute {
+func KV(key string, value any) *Attribute {
 	return &Attribute{key, value}
 }
 
-func (attr *Attribute) KeyField() string {
-	return attr.Key
+func (attr *Attribute) Key() string {
+	return attr.KeyField
 }
 
-func (attr *Attribute) ValueField() any {
-	return attr.Value
+func (attr *Attribute) Value() any {
+	return attr.ValueField
 }
 
 func (attr *Attribute) Operator() string {
@@ -47,15 +47,15 @@ type InQuery[T any] struct {
 	Values []T
 }
 
-func NewIn[T any](field string, values []T) *InQuery[T] {
+func In[T any](field string, values []T) *InQuery[T] {
 	return &InQuery[T]{field, values}
 }
 
-func (in *InQuery[T]) KeyField() string {
+func (in *InQuery[T]) Key() string {
 	return in.Field
 }
 
-func (in *InQuery[T]) ValueField() any {
+func (in *InQuery[T]) Value() any {
 	var result []string
 
 	for _, v := range in.Values {
@@ -67,7 +67,7 @@ func (in *InQuery[T]) ValueField() any {
 
 func (in *InQuery[T]) Operator() string { return IN }
 
-func buildCondQuery(conds []KeyValueField, start int, sep Separator) (condQuery string, values []any, dollar int) {
+func buildCondQuery(conds []KVPair, start int, sep Separator) (condQuery string, values []any, dollar int) {
 	if len(conds) == 0 {
 		return "1=1", nil, 0
 	}
@@ -82,13 +82,13 @@ func buildCondQuery(conds []KeyValueField, start int, sep Separator) (condQuery 
 
 		switch cond.Operator() {
 		case IN:
-			part = fmt.Sprintf("%s IN ($%d)", cond.KeyField(), dollar)
+			part = fmt.Sprintf("%s IN ($%d)", cond.Key(), dollar)
 		default:
-			part = fmt.Sprintf("%s %s $%d", cond.KeyField(), cond.Operator(), dollar)
+			part = fmt.Sprintf("%s %s $%d", cond.Key(), cond.Operator(), dollar)
 		}
 
 		condString = append(condString, part)
-		values = append(values, cond.ValueField())
+		values = append(values, cond.Value())
 	}
 
 	condQuery = strings.Join(condString, string(sep))

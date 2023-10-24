@@ -26,12 +26,12 @@ func CreatePost(title, content string, user_id, node_id int64, fee int, tags []s
 	}
 
 	post, err := repo.Insert[Post](
-		[]repo.KeyValueField{
-			repo.NewKV("user_id", user_id),
-			repo.NewKV("node_id", node_id),
-			repo.NewKV("title", title),
-			repo.NewKV("content", content),
-			repo.NewKV("fee", fee),
+		[]repo.KVPair{
+			repo.KV("user_id", user_id),
+			repo.KV("node_id", node_id),
+			repo.KV("title", title),
+			repo.KV("content", content),
+			repo.KV("fee", fee),
 		},
 	)
 
@@ -50,8 +50,8 @@ func CreatePost(title, content string, user_id, node_id int64, fee int, tags []s
 }
 
 func TogglePostAction(userId int64, action string, postId int64) (int64, error) {
-	post, err := repo.FindRow[Post]([]string{"id"}, []repo.KeyValueField{
-		repo.NewKV("id", postId),
+	post, err := repo.FindRow[Post]([]string{"id"}, []repo.KVPair{
+		repo.KV("id", postId),
 	})
 
 	if err != nil {

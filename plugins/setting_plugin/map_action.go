@@ -10,7 +10,7 @@ import (
 func MapAction(c *gin.Context) {
 	settings, err := repo.Find[Setting]([]string{
 		"id", "key", "val",
-	}, []repo.KeyValueField{})
+	}, []repo.KVPair{})
 
 	if err != nil {
 		utils.LogError(c, err)

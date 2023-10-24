@@ -21,8 +21,8 @@ func ShowAction(c *gin.Context) {
 
 	post, err := repo.FindRow[Post]([]string{
 		"id", "user_id", "node_id", "title", "content",
-	}, []repo.KeyValueField{
-		repo.NewKV("id", p.Id),
+	}, []repo.KVPair{
+		repo.KV("id", p.Id),
 	})
 
 	if err != nil {

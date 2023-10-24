@@ -28,15 +28,15 @@ func CreateUser(nickname, username string, role UserRole, password string) (*Use
 	}
 
 	user, err := repo.Insert[User](
-		[]repo.KeyValueField{
-			repo.NewKV("nickname", nickname),
-			repo.NewKV("username", username),
-			repo.NewKV("phone", ""),
-			repo.NewKV("email", ""),
-			repo.NewKV("avatar", ""),
-			repo.NewKV("role", role),
-			repo.NewKV("encrypted_password", enc),
-			repo.NewKV("api_token", utils.RandomHex(20)),
+		[]repo.KVPair{
+			repo.KV("nickname", nickname),
+			repo.KV("username", username),
+			repo.KV("phone", ""),
+			repo.KV("email", ""),
+			repo.KV("avatar", ""),
+			repo.KV("role", role),
+			repo.KV("encrypted_password", enc),
+			repo.KV("api_token", utils.RandomHex(20)),
 		},
 	)
 
@@ -61,8 +61,8 @@ func LoginUser(username string, password string) (*User, error) {
 			"id", "username", "nickname", "phone", "email", "avatar",
 			"encrypted_password", "api_token",
 		},
-		[]repo.KeyValueField{
-			repo.NewKV("username", username),
+		[]repo.KVPair{
+			repo.KV("username", username),
 		},
 	)
 
@@ -98,9 +98,9 @@ func LoginAdmin(username string, password string) (*User, error) {
 			"id", "username", "nickname", "phone", "email", "avatar",
 			"encrypted_password", "api_token",
 		},
-		[]repo.KeyValueField{
-			repo.NewKV("username", username),
-			repo.NewKV("role", AdminRole),
+		[]repo.KVPair{
+			repo.KV("username", username),
+			repo.KV("role", AdminRole),
 		},
 	)
 
@@ -132,9 +132,9 @@ func CurrentAdmin(authToken string) *User {
 }
 
 func userFromToken(authToken string, role UserRole) *User {
-	user, err := repo.FindRow[User]([]string{"id"}, []repo.KeyValueField{
-		repo.NewKV("api_token", authToken),
-		repo.NewKV("role", role),
+	user, err := repo.FindRow[User]([]string{"id"}, []repo.KVPair{
+		repo.KV("api_token", authToken),
+		repo.KV("role", role),
 	})
 
 	if err != nil {
@@ -145,9 +145,9 @@ func userFromToken(authToken string, role UserRole) *User {
 }
 
 func CheckAdmin(authToken string) bool {
-	ok, err := repo.Exists[User]([]repo.KeyValueField{
-		repo.NewKV("api_token", authToken),
-		repo.NewKV("role", AdminRole),
+	ok, err := repo.Exists[User]([]repo.KVPair{
+		repo.KV("api_token", authToken),
+		repo.KV("role", AdminRole),
 	})
 
 	if err != nil {

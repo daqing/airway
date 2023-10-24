@@ -11,11 +11,11 @@ func CreateCheckin(user *user_plugin.User, when utils.Date) (*Checkin, error) {
 
 	prev, err := repo.FindRow[Checkin](
 		[]string{"id", "acc"},
-		[]repo.KeyValueField{
-			repo.NewKV("user_id", user.Id),
-			repo.NewKV("year", yesterday.Year),
-			repo.NewKV("month", yesterday.Month),
-			repo.NewKV("day", yesterday.Day),
+		[]repo.KVPair{
+			repo.KV("user_id", user.Id),
+			repo.KV("year", yesterday.Year),
+			repo.KV("month", yesterday.Month),
+			repo.KV("day", yesterday.Day),
 		},
 	)
 
@@ -29,12 +29,12 @@ func CreateCheckin(user *user_plugin.User, when utils.Date) (*Checkin, error) {
 		acc += prev.Acc
 	}
 
-	return repo.Insert[Checkin]([]repo.KeyValueField{
-		repo.NewKV("user_id", user.Id),
-		repo.NewKV("year", when.Year),
-		repo.NewKV("month", when.Month),
-		repo.NewKV("day", when.Day),
-		repo.NewKV("acc", acc),
+	return repo.Insert[Checkin]([]repo.KVPair{
+		repo.KV("user_id", user.Id),
+		repo.KV("year", when.Year),
+		repo.KV("month", when.Month),
+		repo.KV("day", when.Day),
+		repo.KV("acc", acc),
 	})
 
 }
