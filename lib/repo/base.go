@@ -105,3 +105,9 @@ func buildCondQuery(conds []KVPair, start int, sep Separator) (condQuery string,
 
 	return
 }
+
+// Polymorphic model
+type PolyModel interface {
+	PolyId() int64
+	PolyType() string
+}

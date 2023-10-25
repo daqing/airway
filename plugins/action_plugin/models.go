@@ -21,8 +21,3 @@ const ActionFavorite = "favorite"
 const actionTableName = "actions"
 
 func (a Action) TableName() string { return actionTableName }
-
-type RelationModel interface {
-	RelId() int64
-	RelType() string
-}

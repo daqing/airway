@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/daqing/airway/lib/repo"
-	"github.com/daqing/airway/plugins/action_plugin"
 )
 
 func CreateTag(name string) (*Tag, error) {
@@ -17,7 +16,7 @@ func CreateTag(name string) (*Tag, error) {
 	})
 }
 
-func CreateTagRelation(tagName string, relation action_plugin.RelationModel) error {
+func CreateTagRelation(tagName string, relation repo.PolyModel) error {
 	tags, err := repo.Find[Tag]([]string{"id", "name"}, []repo.KVPair{
 		repo.KV("name", tagName),
 	})
@@ -43,8 +42,8 @@ func CreateTagRelation(tagName string, relation action_plugin.RelationModel) err
 
 	relations, err := repo.Find[TagRelation]([]string{"id"}, []repo.KVPair{
 		repo.KV("tag_id", tag.Id),
-		repo.KV("relation_id", relation.RelId()),
-		repo.KV("relation_type", relation.RelType()),
+		repo.KV("relation_id", relation.PolyId()),
+		repo.KV("relation_type", relation.PolyType()),
 	})
 
 	if err != nil {
@@ -55,8 +54,8 @@ func CreateTagRelation(tagName string, relation action_plugin.RelationModel) err
 		// create new relation
 		_, err = repo.Insert[TagRelation]([]repo.KVPair{
 			repo.KV("tag_id", tag.Id),
-			repo.KV("relation_id", relation.RelId()),
-			repo.KV("relation_type", relation.RelType()),
+			repo.KV("relation_id", relation.PolyId()),
+			repo.KV("relation_type", relation.PolyType()),
 		})
 
 		if err != nil {

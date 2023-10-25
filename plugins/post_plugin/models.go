@@ -17,7 +17,7 @@ const tableName = "posts"
 
 func (p Post) TableName() string { return tableName }
 
-const relType = "post"
+const polyType = "post"
 
-func (p *Post) RelId() int64    { return p.Id }
-func (p *Post) RelType() string { return relType }
+func (p *Post) PolyId() int64    { return p.Id }
+func (p *Post) PolyType() string { return polyType }

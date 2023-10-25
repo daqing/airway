@@ -31,8 +31,8 @@ const (
 	AdminRole
 )
 
-const relType = "user"
+const polyType = "user"
 
-func (u *User) RelType() string { return relType }
+func (u *User) PolyType() string { return polyType }
 
-func (u *User) RelId() int64 { return u.Id }
+func (u *User) PolyId() int64 { return u.Id }
