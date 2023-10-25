@@ -13,6 +13,7 @@ type Payment struct {
 	UserId    string
 	GoodsType string
 	GoodsId   int64
+	Cent      int
 	Action    string
 	Note      map[string]any
 	Status    string
