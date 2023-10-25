@@ -1,0 +1,11 @@
+create table payments (
+  id BIGSERIAL PRIMARY KEY,
+  uuid VARCHAR(255) UNIQUE NOT NULL,
+  user_id BIGINT NOT NULL references users(id),
+  goods_type VARCHAR(255) NOT NULL,
+  goods_id BIGINT NOT NULL,
+  action VARCHAR(255) NOT NULL,
+  note JSON NOT NULL DEFAULT '{}',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+)
