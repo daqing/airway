@@ -1,0 +1,7 @@
+create table points (
+  id BIGSERIAL PRIMARY KEY,
+  user_id BIGINT NOT NULL references users(id),
+  count INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+)
