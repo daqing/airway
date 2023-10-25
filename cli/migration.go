@@ -7,8 +7,7 @@ import (
 )
 
 func GenerateMigration(name string) {
-	now := time.Now()
-	ts := now.Format("20060102150405")
+	ts := time.Now().Format("20060102150405")
 
 	targetPath := fmt.Sprintf("./db/%s_%s.sql", ts, name)
 	if _, err := os.Stat(targetPath); err == nil {

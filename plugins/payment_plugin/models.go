@@ -15,6 +15,7 @@ type Payment struct {
 	GoodsId   int64
 	Action    string
 	Note      map[string]any
+	Status    string
 
 	CreatedAt time.Time
 	UpdatedAt time.Time
