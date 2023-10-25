@@ -50,16 +50,15 @@ func m2mr[MR any](m any, fields []string) *MR {
 		var mrf = vmr.FieldByName(camelName)
 
 		if mrf.CanSet() {
-			if camelName == "CreatedAt" || camelName == "UpdatedAt" {
-				val := reflect.ValueOf(mf.Interface())
+			val := reflect.ValueOf(mf.Interface())
 
-				val2 := Timestamp(val.Interface().(time.Time))
-
+			// try test if the field is time.Time type
+			if t, ok := val.Interface().(time.Time); ok {
+				val2 := Timestamp(t)
 				mrf.Set(reflect.ValueOf(val2))
 			} else {
-				mrf.Set(reflect.ValueOf(mf.Interface()))
+				mrf.Set(val)
 			}
-
 		}
 	}
 

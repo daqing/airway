@@ -2,9 +2,7 @@ package utils
 
 import (
 	"fmt"
-	"log"
 
-	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/resp"
 	"github.com/gin-gonic/gin"
 )
@@ -16,14 +14,9 @@ func LogError(c *gin.Context, err error) {
 }
 
 func LogErrorMsg(c *gin.Context, err error, message string) {
-	fmt.Println(message, err)
+	fmt.Println(message, err.Error())
 
 	resp.Error(c, err)
-
-	if err == repo.ErrorNotFound {
-		log.Println("Record not found")
-		return
-	}
 
 	panic(message + err.Error())
 }

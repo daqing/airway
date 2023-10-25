@@ -9,6 +9,11 @@ import (
 const EQ = "="
 const IN = "IN"
 
+// var ErrorNotFound = errors.New("record_not_found")
+var ErrorCountNotMatch = errors.New("count_not_match")
+
+const InvalidCount = -1
+
 type Separator string
 
 const AND Separator = " AND "
@@ -97,8 +102,3 @@ func buildCondQuery(conds []KVPair, start int, sep Separator) (condQuery string,
 
 	return
 }
-
-var ErrorNotFound = errors.New("record_not_found")
-var ErrorCountNotMatch = errors.New("count_not_match")
-
-const InvalidCount = -1

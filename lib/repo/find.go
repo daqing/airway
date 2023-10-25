@@ -16,12 +16,12 @@ func FindRow[T TableNameType](fields []string, conds []KVPair) (*T, error) {
 		return nil, err
 	}
 
-	if len(rows) == 0 {
-		return nil, ErrorNotFound
-	}
-
 	if len(rows) > 1 {
 		return nil, ErrorCountNotMatch
+	}
+
+	if len(rows) == 0 {
+		return nil, nil
 	}
 
 	return rows[0], nil
