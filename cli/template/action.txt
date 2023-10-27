@@ -15,5 +15,9 @@ func {{.Name}}Action(c *gin.Context) {
 		return
 	}
 
-  // currentUser := CurrentUser(utils.AuthToken(c))
+	// currentUser := user_plugin.CurrentUser(utils.AuthToken(c))
+	// if currentUser == nil {
+	//   utils.LogInvalidUser(c)
+	//   return
+	// }
 }
