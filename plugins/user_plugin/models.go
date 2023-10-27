@@ -2,6 +2,8 @@ package user_plugin
 
 import (
 	"time"
+
+	"github.com/daqing/airway/lib/repo"
 )
 
 type User struct {
@@ -15,6 +17,7 @@ type User struct {
 	Role              UserRole
 	ApiToken          string
 	EncryptedPassword string
+	Balance           repo.PriceCent
 
 	CreatedAt time.Time
 	UpdatedAt time.Time

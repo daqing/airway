@@ -111,3 +111,9 @@ type PolyModel interface {
 	PolyId() int64
 	PolyType() string
 }
+
+type PriceCent int
+
+func ToCent(price float64) PriceCent {
+	return PriceCent(price * 100)
+}

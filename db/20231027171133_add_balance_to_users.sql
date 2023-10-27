@@ -1,0 +1,1 @@
+ALTER TABLE users ADD balance INT DEFAULT 0

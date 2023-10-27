@@ -2,6 +2,8 @@ package payment_plugin
 
 import (
 	"time"
+
+	"github.com/daqing/airway/lib/repo"
 )
 
 // type JSON map[string]any
@@ -13,7 +15,7 @@ type Payment struct {
 	UUID      string
 	GoodsType string
 	GoodsId   int64
-	Cent      int
+	Cent      repo.PriceCent
 	Action    string
 	Note      string
 	Status    PaymentStatus
