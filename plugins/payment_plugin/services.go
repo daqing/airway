@@ -27,6 +27,7 @@ func BuyGoods(userId int64, goods repo.PolyModel, priceCent int, action, note st
 			repo.KV("cent", priceCent),
 			repo.KV("action", action),
 			repo.KV("note", note),
+			repo.KV("status", FreshStatus),
 		},
 	)
 }
