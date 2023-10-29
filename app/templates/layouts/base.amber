@@ -1,0 +1,12 @@
+doctype 5
+html
+  head
+    block meta
+
+    title
+      block title
+        | Powered by the airway framework
+  body
+    block content
+    footer[style="color: #999;"]
+      | Powered by the airway framework
