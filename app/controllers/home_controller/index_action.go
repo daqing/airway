@@ -6,5 +6,5 @@ import (
 )
 
 func IndexAction(c *gin.Context) {
-	resp.HTML(c, "home/index", nil)
+	resp.View(c, "home/index", nil)
 }

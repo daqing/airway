@@ -1,17 +1,17 @@
-package page
+package tmpl
 
 import (
 	"bytes"
 	"fmt"
-	"os"
+
+	"github.com/daqing/amber"
 )
 
+var compiler = amber.New()
 var emptyBytes = []byte{}
 
-func Render(template string, data map[string]any) ([]byte, error) {
-	var pwd = os.Getenv("AIRWAY_PWD")
-
-	path := fmt.Sprintf("%s/app/templates/%s.amber", pwd, template)
+func Render(prefix string, template string, data map[string]any) ([]byte, error) {
+	path := fmt.Sprintf("%s/%s.amber", prefix, template)
 
 	err := compiler.ParseFile(path)
 	if err != nil {

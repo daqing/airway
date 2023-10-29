@@ -1,0 +1,6 @@
+extends layout
+
+block content
+  h1
+    a[href="/"].text-orange-800 Airway
+  p.text-indigo-500 it works

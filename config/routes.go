@@ -2,7 +2,7 @@ package config
 
 import (
 	"github.com/daqing/airway/app/controllers/home_controller"
-	"github.com/daqing/airway/app/controllers/login_controller"
+	"github.com/daqing/airway/pages/demo_page"
 	"github.com/daqing/airway/plugins/checkin_plugin"
 	"github.com/daqing/airway/plugins/comment_plugin"
 	"github.com/daqing/airway/plugins/hello_plugin"
@@ -16,7 +16,7 @@ import (
 func Routes(r *gin.Engine) {
 	r.GET("/", home_controller.IndexAction)
 
-	login_controller.Routes(r)
+	demo_page.Routes(r)
 
 	v1 := r.Group("/api/v1")
 
