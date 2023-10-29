@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/plugins/membership_plugin"
 )
 
 type User struct {
@@ -39,3 +40,7 @@ const polyType = "user"
 func (u *User) PolyType() string { return polyType }
 
 func (u *User) PolyId() int64 { return u.Id }
+
+func (u *User) Membership() (*membership_plugin.MembershipResp, error) {
+	return membership_plugin.MembershipFor(u.Id)
+}
