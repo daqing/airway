@@ -1,4 +1,4 @@
-package {{.Mod}}_plugin
+package {{.Mod}}_api
 
 import (
 	"github.com/gin-gonic/gin"
@@ -15,7 +15,7 @@ func {{.Name}}Action(c *gin.Context) {
 		return
 	}
 
-	// currentUser := user_plugin.CurrentUser(utils.AuthToken(c))
+	// currentUser := user_api.CurrentUser(utils.AuthToken(c))
 	// if currentUser == nil {
 	//   resp.LogInvalidUser(c)
 	//   return
