@@ -18,6 +18,8 @@ func NewApp() *App {
 
 	router := gin.New()
 
+	router.Static("/public", "./public")
+
 	router.Use(sloggin.New(logger))
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())

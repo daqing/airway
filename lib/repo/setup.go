@@ -1,7 +1,6 @@
 package repo
 
 import (
-	"log"
 	"os"
 
 	"github.com/daqing/airway/lib/clients"
@@ -13,7 +12,7 @@ var Pool *pgxpool.Pool
 func Setup() {
 	pgUrl := os.Getenv("AIRWAY_PG_URL")
 	if pgUrl == "" {
-		log.Fatalf("No PG_URL environment variable set")
+		panic("AIRWAY_PG_URL not set")
 	}
 
 	Pool = clients.NewPGPool(pgUrl)
