@@ -1,0 +1,9 @@
+package {{.Page}}_page
+
+import (
+	"github.com/gin-gonic/gin"
+)
+
+func {{.Action}}Action(c *gin.Context) {
+  resp.Page(c, "{{.Page}}", "{{.Name}}", nil)
+}

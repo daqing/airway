@@ -25,11 +25,11 @@ func main() {
 		case "action":
 			actionArgs := args[2:]
 			if len(actionArgs) != 2 {
-				fmt.Println("cli g action [mod] [action]")
+				fmt.Println("cli g action [api] [action]")
 				return
 			}
 
-			GenerateAction(actionArgs[0], actionArgs[1])
+			GenerateAPIAction(actionArgs[0], actionArgs[1])
 		case "migration":
 			migrationArgs := args[2:]
 			if len(migrationArgs) == 0 {
@@ -46,6 +46,19 @@ func main() {
 			}
 
 			GenerateAPI(apiArgs[0])
+		case "page":
+			pageArgs := args[2:]
+			if len(pageArgs) == 0 {
+				fmt.Println("cli g page [name] [action]")
+				return
+			}
+
+			var action = "index"
+			if len(pageArgs) == 2 {
+				action = pageArgs[1]
+			}
+
+			GeneratePage(pageArgs[0], action)
 		}
 	}
 }

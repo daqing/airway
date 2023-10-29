@@ -26,18 +26,18 @@ func GenerateAPI(name string) {
 		panic(err)
 	}
 
-	GenerateAction(name, "index")
-	GenerateAction(name, "show")
-	GenerateAction(name, "create")
+	GenerateAPIAction(name, "index")
+	GenerateAPIAction(name, "show")
+	GenerateAPIAction(name, "create")
 
-	generateRoutes(name)
-	generateModels(name)
-	generateServices(name)
+	generateAPIRoutes(name)
+	generateAPIModels(name)
+	generateAPIServices(name)
 	generateResp(name)
 
 }
 
-func generateRoutes(name string) {
+func generateAPIRoutes(name string) {
 	targetPath := strings.Join([]string{
 		"./api",
 		fmt.Sprintf("%s_api", name),
@@ -51,7 +51,7 @@ func generateRoutes(name string) {
 	)
 }
 
-func generateModels(name string) {
+func generateAPIModels(name string) {
 	targetPath := strings.Join([]string{
 		"./api",
 		fmt.Sprintf("%s_api", name),
@@ -65,7 +65,7 @@ func generateModels(name string) {
 	)
 }
 
-func generateServices(name string) {
+func generateAPIServices(name string) {
 	targetPath := strings.Join([]string{
 		"./api",
 		fmt.Sprintf("%s_api", name),

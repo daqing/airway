@@ -11,7 +11,7 @@ type ActionGenerator struct {
 	Name string
 }
 
-func GenerateAction(mod string, name string) {
+func GenerateAPIAction(mod string, name string) {
 	targetFileName := strings.Join(
 		[]string{
 			"./api",
@@ -22,7 +22,7 @@ func GenerateAction(mod string, name string) {
 	)
 
 	err := ExecTemplate(
-		"./cli/template/action.txt",
+		"./cli/template/api/action.txt",
 		targetFileName,
 		ActionGenerator{Mod: mod, Name: utils.ToCamel(name)},
 	)
