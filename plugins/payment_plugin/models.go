@@ -6,8 +6,6 @@ import (
 	"github.com/daqing/airway/lib/repo"
 )
 
-// type JSON map[string]any
-
 type Payment struct {
 	Id int64
 
@@ -31,3 +29,4 @@ func (m Payment) TableName() string { return tableName }
 type PaymentStatus string
 
 const FreshStatus PaymentStatus = "fresh"
+const PaidStatus PaymentStatus = "paid"
