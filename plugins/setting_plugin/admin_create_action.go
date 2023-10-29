@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/daqing/airway/lib/resp"
-	"github.com/daqing/airway/lib/utils"
 	"github.com/daqing/airway/plugins/user_plugin"
 	"github.com/gin-gonic/gin"
 )
@@ -22,7 +21,7 @@ func AdminCreateAction(c *gin.Context) {
 	var p CreateParams
 
 	if err := c.BindJSON(&p); err != nil {
-		utils.LogError(c, err)
+		resp.LogError(c, err)
 		return
 	}
 
@@ -32,13 +31,13 @@ func AdminCreateAction(c *gin.Context) {
 	}
 
 	if !user_plugin.CheckAdmin(c.GetHeader("X-Auth-Token")) {
-		utils.LogInvalidAdmin(c)
+		resp.LogInvalidAdmin(c)
 		return
 	}
 
 	for _, item := range p.Data {
 		if _, err := CreateSetting(item.Key, item.Val); err != nil {
-			utils.LogError(c, err)
+			resp.LogError(c, err)
 			return
 		}
 	}

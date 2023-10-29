@@ -5,7 +5,6 @@ import (
 
 	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/resp"
-	"github.com/daqing/airway/lib/utils"
 	"github.com/daqing/airway/plugins/user_plugin"
 	"github.com/gin-gonic/gin"
 )
@@ -22,21 +21,21 @@ func CreateAction(c *gin.Context) {
 	var p CreateParams
 
 	if err := c.BindJSON(&p); err != nil {
-		utils.LogError(c, err)
+		resp.LogError(c, err)
 		return
 	}
 
 	user := user_plugin.CurrentUser(c.GetHeader("X-Auth-Token"))
 
 	if user == nil {
-		utils.LogInvalidUser(c)
+		resp.LogInvalidUser(c)
 		return
 	}
 
 	tags := strings.Split(p.Tags, ",")
 	post, err := CreatePost(p.Title, p.Content, user.Id, p.NodeId, p.Fee, tags)
 	if err != nil {
-		utils.LogError(c, err)
+		resp.LogError(c, err)
 		return
 	}
 

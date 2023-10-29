@@ -5,7 +5,6 @@ import (
 
 	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/resp"
-	"github.com/daqing/airway/lib/utils"
 	"github.com/daqing/airway/plugins/action_plugin"
 
 	"github.com/gin-gonic/gin"
@@ -19,7 +18,7 @@ func ToggleFollowAction(c *gin.Context) {
 	var p ToggleFollowParams
 
 	if err := c.BindQuery(&p); err != nil {
-		utils.LogError(c, err)
+		resp.LogError(c, err)
 		return
 	}
 
@@ -30,25 +29,25 @@ func ToggleFollowAction(c *gin.Context) {
 	})
 
 	if err != nil {
-		utils.LogError(c, err)
+		resp.LogError(c, err)
 		return
 	}
 
 	if user == nil {
-		utils.LogError(c, fmt.Errorf("the followed user must exists"))
+		resp.LogError(c, fmt.Errorf("the followed user must exists"))
 		return
 	}
 
 	currentUser := CurrentUser(c.GetHeader("X-Auth-Token"))
 	if currentUser == nil {
-		utils.LogInvalidUser(c)
+		resp.LogInvalidUser(c)
 		return
 	}
 
 	count, err := action_plugin.ToggleAction(currentUser.Id, action_plugin.ActionFavorite, user)
 
 	if err != nil {
-		utils.LogError(c, err)
+		resp.LogError(c, err)
 		return
 	}
 

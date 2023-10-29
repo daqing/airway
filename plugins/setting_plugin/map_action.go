@@ -3,7 +3,6 @@ package setting_plugin
 import (
 	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/resp"
-	"github.com/daqing/airway/lib/utils"
 	"github.com/gin-gonic/gin"
 )
 
@@ -13,7 +12,7 @@ func MapAction(c *gin.Context) {
 	}, []repo.KVPair{})
 
 	if err != nil {
-		utils.LogError(c, err)
+		resp.LogError(c, err)
 		return
 	}
 

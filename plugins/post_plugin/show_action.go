@@ -3,7 +3,6 @@ package post_plugin
 import (
 	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/resp"
-	"github.com/daqing/airway/lib/utils"
 	"github.com/gin-gonic/gin"
 )
 
@@ -15,7 +14,7 @@ func ShowAction(c *gin.Context) {
 	var p ShowParams
 
 	if err := c.ShouldBind(&p); err != nil {
-		utils.LogError(c, err)
+		resp.LogError(c, err)
 		return
 	}
 
@@ -26,7 +25,7 @@ func ShowAction(c *gin.Context) {
 	})
 
 	if err != nil {
-		utils.LogError(c, err)
+		resp.LogError(c, err)
 		return
 	}
 

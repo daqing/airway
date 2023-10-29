@@ -3,7 +3,6 @@ package node_plugin
 import (
 	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/resp"
-	"github.com/daqing/airway/lib/utils"
 	"github.com/daqing/airway/plugins/user_plugin"
 	"github.com/gin-gonic/gin"
 )
@@ -17,18 +16,18 @@ func AdminCreateAction(c *gin.Context) {
 	var p AdminCreateParams
 
 	if err := c.BindJSON(&p); err != nil {
-		utils.LogError(c, err)
+		resp.LogError(c, err)
 		return
 	}
 
 	if !user_plugin.CheckAdmin(c.GetHeader("X-Auth-Token")) {
-		utils.LogInvalidAdmin(c)
+		resp.LogInvalidAdmin(c)
 		return
 	}
 
 	node, err := CreateNode(p.Name, p.Key)
 	if err != nil {
-		utils.LogError(c, err)
+		resp.LogError(c, err)
 		return
 	}
 

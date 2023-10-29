@@ -11,14 +11,14 @@ import (
 func CreateAction(c *gin.Context) {
 	currentUser := user_plugin.CurrentUser(c.GetHeader("X-Auth-Token"))
 	if currentUser == nil {
-		utils.LogInvalidUser(c)
+		resp.LogInvalidUser(c)
 		return
 	}
 
 	checkin, err := CreateCheckin(currentUser, utils.Today())
 
 	if err != nil {
-		utils.LogError(c, err)
+		resp.LogError(c, err)
 		return
 	}
 
