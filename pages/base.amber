@@ -8,6 +8,8 @@ html
         | Powered by the airway framework
     link[rel="stylesheet"][href="/public/css/tailwind.css?ts=" + ts]
   body
+    header
+      a[href="/"].font-bold.text-2xl Airway
     block content
     footer.text-zinc-700
       | Powered by the airway framework
