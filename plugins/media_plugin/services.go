@@ -1,7 +1,6 @@
 package media_plugin
 
 import (
-	"os"
 	"path/filepath"
 	"time"
 
@@ -40,8 +39,8 @@ func replace(filename string, part string) string {
 	return part + filepath.Ext(filename)
 }
 
-func hashDirPath(path string) string {
-	return assetFullPath(dirParts(path))
+func hashDirPath(prefix string, path string) string {
+	return assetFullPath(prefix, dirParts(path))
 }
 
 func dirParts(path string) string {
@@ -55,23 +54,10 @@ func dirParts(path string) string {
 	return "/" + p1 + "/" + p2
 }
 
-func assetFullPath(path string) string {
-	assetDir := os.Getenv(ASSET_DIR_KEY)
-	if assetDir == "" {
-		panic("NO environment variable defined for ASSET_DIR_KEY")
-	}
-
+func assetFullPath(assetDir string, path string) string {
 	return assetDir + path
 }
 
-func assetHostPath(filename string) string {
-	assetHost := os.Getenv(ASSET_HOST_KEY)
-	if assetHost == "" {
-		panic("NO environment variable defined for ASSET_HOST_KEY")
-	}
-
-	return assetHost + dirParts(filename) + "/" + filename
+func assetHostPath(prefix string, filename string) string {
+	return prefix + dirParts(filename) + "/" + filename
 }
-
-const ASSET_DIR_KEY = "ASSET_DIR"
-const ASSET_HOST_KEY = "ASSET_HOST"

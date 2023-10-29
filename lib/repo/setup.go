@@ -11,7 +11,7 @@ import (
 var Pool *pgxpool.Pool
 
 func Setup() {
-	pgUrl := os.Getenv("PG_URL")
+	pgUrl := os.Getenv("AIRWAY_PG_URL")
 	if pgUrl == "" {
 		log.Fatalf("No PG_URL environment variable set")
 	}

@@ -1,8 +1,9 @@
 module github.com/daqing/airway
 
-go 1.21.1
+go 1.21.3
 
 require (
+	github.com/daqing/amber v0.0.0-20231029122315-1c7f2629b8ca
 	github.com/gin-contrib/cors v1.4.0
 	github.com/gin-gonic/gin v1.9.1
 	github.com/iancoleman/strcase v0.3.0

@@ -12,14 +12,15 @@ import (
 	"github.com/joho/godotenv"
 )
 
+var env = os.Getenv("AIRWAY_ENV")
+
 func main() {
-	env := os.Getenv("AIRWAY_ENV")
 	if env == "" {
-		log.Println("AIRWAY_ENV was not set")
+		log.Println("AIRWAY_ENV is not set")
 		os.Exit(1)
 	}
 
-	if env == "local" {
+	if isLocalEnv() {
 		envFile := fmt.Sprintf(".env.%s", env)
 		err := godotenv.Load(envFile)
 		if err != nil {
@@ -40,15 +41,17 @@ func main() {
 
 	config.Routes(r)
 
-	app.Run(port())
-}
+	var port = os.Getenv("AIRWAY_PORT")
 
-func port() string {
-	port := os.Getenv("PORT")
-
-	if port == "" {
-		log.Fatalf("No PORT env set")
+	if isLocalEnv() {
+		fmt.Printf("Airway running at: http://127.0.0.1:%s\n", port)
 	}
 
-	return ":" + port
+	app.Run(":" + port)
+}
+
+const LOCAL_ENV = "local"
+
+func isLocalEnv() bool {
+	return env == LOCAL_ENV
 }

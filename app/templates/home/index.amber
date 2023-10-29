@@ -1,0 +1,14 @@
+extends ../layouts/base
+
+block title
+  | Hello, airway
+
+block append meta
+  style[type="text/css"]
+    body { background-color: #eee; }
+    h1 { background-color: #fff; padding: 10px;}
+
+block content
+  h1 hello, airway
+  p
+    a[href="/login/index"] 登录

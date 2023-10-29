@@ -45,10 +45,19 @@ func UploadAction(c *gin.Context) {
 	if row == nil {
 		// failed to create database row
 		resp.Error(c, fmt.Errorf("failed to create database row"))
+		return
 	}
 
 	// move uplaoded file to asset directory
-	destDir := hashDirPath(newFilename)
+	assetDir := os.Getenv("AIRWAY_STORAGE_DIR")
+	if assetDir == "" {
+		resp.Error(c, fmt.Errorf(
+			"no environment variable defined for AIRWAY_STORAGE_DIR",
+		))
+		return
+	}
+
+	destDir := hashDirPath(assetDir, newFilename)
 
 	if err := os.MkdirAll(destDir, 0755); err != nil {
 		resp.Error(c, err)
@@ -59,5 +68,14 @@ func UploadAction(c *gin.Context) {
 
 	c.SaveUploadedFile(file, destFile)
 
-	resp.OK(c, gin.H{"filename": newFilename, "url": assetHostPath(newFilename)})
+	assetHost := os.Getenv("AIRWAY_ASSET_HOST")
+	if assetHost == "" {
+		resp.Error(c, fmt.Errorf(
+			"no environment variable defined for AIRWAY_ASSET_HOST",
+		))
+
+		return
+	}
+
+	resp.OK(c, gin.H{"filename": newFilename, "url": assetHostPath(assetHost, newFilename)})
 }

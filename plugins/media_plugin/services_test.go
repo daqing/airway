@@ -22,13 +22,13 @@ func TestReplace(t *testing.T) {
 }
 
 func TestHashDirPath(t *testing.T) {
-	if err := os.Setenv("ASSET_DIR", "/tmp"); err != nil {
+	if err := os.Setenv("AIRWAY_STORAGE_DIR", "/tmp"); err != nil {
 		t.Error(err)
 	}
 
 	expected := "/tmp/a2/a2b3"
 
-	if actual := hashDirPath("a2b3041922.png"); actual != expected {
+	if actual := hashDirPath("/tmp", "a2b3041922.png"); actual != expected {
 		t.Errorf("expected %v, got %v", expected, actual)
 	}
 }
@@ -52,12 +52,8 @@ func TestDirParts(t *testing.T) {
 }
 
 func TestAssetHostPath(t *testing.T) {
-	if err := os.Setenv("ASSET_HOST", "https://abcd.com"); err != nil {
-		t.Error(err)
-	}
-
 	expected := "https://abcd.com/ab/abcd/abcdefg.png"
-	actual := assetHostPath("abcdefg.png")
+	actual := assetHostPath("https://abcd.com", "abcdefg.png")
 
 	if actual != expected {
 		t.Errorf("expected %s, got %s", expected, actual)
