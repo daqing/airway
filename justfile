@@ -1,5 +1,11 @@
 dev:
-  AIRWAY_ENV=local air
+  overmind start -f Procfile.dev
+
+setup:
+  go install github.com/cosmtrek/air@latest
+  brew install tmux
+  brew install overmind
+  curl -fsSL https://bun.sh/install | bash
 
 cli:
   cd ./cli && go build && cd ..

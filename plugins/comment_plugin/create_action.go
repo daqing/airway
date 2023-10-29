@@ -3,7 +3,6 @@ package comment_plugin
 import (
 	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/resp"
-	"github.com/daqing/airway/lib/utils"
 	"github.com/daqing/airway/plugins/user_plugin"
 	"github.com/gin-gonic/gin"
 )
@@ -18,19 +17,19 @@ func CreateAction(c *gin.Context) {
 	var p CreateParams
 
 	if err := c.BindJSON(&p); err != nil {
-		utils.LogError(c, err)
+		resp.LogError(c, err)
 		return
 	}
 
 	currentUser := user_plugin.CurrentUser(c.GetHeader("X-Auth-Token"))
 	if currentUser == nil {
-		utils.LogInvalidUser(c)
+		resp.LogInvalidUser(c)
 		return
 	}
 
 	comment, err := CreateComment(currentUser, p.TargetType, p.TargetId, p.Content)
 	if err != nil {
-		utils.LogError(c, err)
+		resp.LogError(c, err)
 		return
 	}
 

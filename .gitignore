@@ -2,3 +2,6 @@
 /tmp
 
 .env.local
+
+/public/css
+/public/js
