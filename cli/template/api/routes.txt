@@ -1,0 +1,14 @@
+package {{.Mod}}_api
+
+import (
+	"github.com/gin-gonic/gin"
+)
+
+func Routes(r *gin.RouterGroup) {
+	g := r.Group("/{{.Mod}}")
+	{
+		g.GET("/index", IndexAction)
+    g.GET("/show", ShowAction)
+    g.POST("/create", CreateAction)
+	}
+}

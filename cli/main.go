@@ -38,14 +38,14 @@ func main() {
 			}
 
 			GenerateMigration(migrationArgs[0])
-		case "plugin":
-			pluginArgs := args[2:]
-			if len(pluginArgs) == 0 {
-				fmt.Println("cli g plugin [name]")
+		case "api":
+			apiArgs := args[2:]
+			if len(apiArgs) == 0 {
+				fmt.Println("cli g api [name]")
 				return
 			}
 
-			GeneratePlugin(pluginArgs[0])
+			GenerateAPI(apiArgs[0])
 		}
 	}
 }

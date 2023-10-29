@@ -14,8 +14,8 @@ type ActionGenerator struct {
 func GenerateAction(mod string, name string) {
 	targetFileName := strings.Join(
 		[]string{
-			"./plugins",
-			mod + "_plugin",
+			"./api",
+			mod + "_api",
 			name + "_action.go",
 		},
 		"/",

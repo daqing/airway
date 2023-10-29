@@ -1,4 +1,4 @@
-package home_controller
+package demo_page
 
 import (
 	"github.com/daqing/airway/lib/resp"
@@ -6,5 +6,5 @@ import (
 )
 
 func IndexAction(c *gin.Context) {
-	resp.View(c, "home/index", nil)
+	resp.Page(c, "demo", "index", nil)
 }
