@@ -21,7 +21,7 @@ func FindRow[T TableNameType](fields []string, conds []KVPair) (*T, error) {
 	}
 
 	if len(rows) == 0 {
-		return nil, nil
+		return nil, ErrorNotFound
 	}
 
 	return rows[0], nil

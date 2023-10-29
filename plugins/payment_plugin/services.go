@@ -17,17 +17,17 @@ func GenerateUUID() string {
 	return strings.Join([]string{PREFIX, ts, "H", rand}, "")
 }
 
-func BuyGoods(userId int64, goods repo.PolyModel, priceCent int, action, note string) (*Payment, error) {
-	return repo.Insert[Payment](
-		[]repo.KVPair{
-			repo.KV("uuid", GenerateUUID()),
-			repo.KV("user_id", userId),
-			repo.KV("goods_type", goods.PolyType()),
-			repo.KV("goods_id", goods.PolyId()),
-			repo.KV("cent", priceCent),
-			repo.KV("action", action),
-			repo.KV("note", note),
-			repo.KV("status", FreshStatus),
-		},
-	)
+func BuyGoods(userId int64, goods repo.PolyModel, price repo.PriceCent, action, note string) (*Payment, error) {
+	pair := []repo.KVPair{
+		repo.KV("uuid", GenerateUUID()),
+		repo.KV("user_id", userId),
+		repo.KV("goods_type", goods.PolyType()),
+		repo.KV("goods_id", goods.PolyId()),
+		repo.KV("cent", price),
+		repo.KV("action", action),
+		repo.KV("note", note),
+		repo.KV("status", FreshStatus),
+	}
+
+	return repo.Insert[Payment](pair)
 }
