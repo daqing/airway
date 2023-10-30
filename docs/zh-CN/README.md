@@ -33,3 +33,63 @@ $ gonew github.com/daqing/airway example.com/foo/bar
 针对你的项目情况，替换 `example.com/foo/bar` 为真实的模块名称。
 
 ## 2. 搭建开发环境
+
+首先，项目使用 [just](https://github.com/casey/just) 来执行一些脚本命令。
+
+关于如何安装 `just` 请参考其中文文档：[https://github.com/casey/just/blob/master/README.中文.md](https://github.com/casey/just/blob/master/README.中文.md)
+
+除了 just, 项目还用到了以下软件：
+
+- air: [github.com/cosmtrek/air](https://github.com/cosmtrek/air) 热重载 Go 应用的工具
+
+- overmind: [github.com/DarthSim/overmind](https://github.com/DarthSim/overmind) Process manager for Procfile-based applications and tmux
+
+- bun: [https://bun.sh](https://bun.sh) Bun is a fast JavaScript
+all-in-one toolkit
+
+对于 macOS 系统，只需要执行:
+
+```bash
+$ just setup
+```
+
+就可以把上述依赖的软件安装好。
+
+其次，项目使用了 `.env` 作为配置。
+
+需要创建 `.env.local` 文件：
+
+```bash
+$ cp .env.example .env.local
+```
+
+这个文件，定义了几个环境变量，说明如下：
+
+#### `AIRWAY_PG_URL`
+
+连接PostgreSQL字符串，类似这样的形式:
+
+`postgres://daqing:passwd@127.0.0.1:5432/airway`
+
+#### `AIRWAY_PORT`
+
+服务器监听的端口，默认为 `"1900"`
+
+#### `AIRWAY_STORAGE_DIR`
+
+存储用户上传文件的绝对路径
+
+例如: `/var/www/storage`（不要以'/'结尾）
+
+#### `AIRWAY_ASSET_HOST`
+
+静态资源的托管域名（可用于配置CDN）
+
+例如: `https://assets.example.com"`
+
+
+#### `AIRWAY_PWD`
+
+项目所在的绝对路径（不要以'/'结尾）
+
+例如: `/Users/joe/projects/airway`
