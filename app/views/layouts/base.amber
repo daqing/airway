@@ -7,16 +7,7 @@ html
       block title
         | Powered by the airway framework
     link[rel="stylesheet"][href="/public/css/tailwind.css?ts=" + ts]
-    script[type="importmap"]
-      {
-        "imports": {
-          "react": "https://esm.sh/react",
-          "react-dom/client": "https://esm.sh/react-dom/client"
-        }
-      }
-
   body
     block content
     footer.text-zinc-700
       | Powered by the airway framework
-    script[type="text/javascript"][src="/public/js/home_index.js?ts=" + ts]

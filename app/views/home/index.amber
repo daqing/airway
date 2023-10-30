@@ -9,3 +9,4 @@ block content
     a[href="/demo/index"].font-bold view demo page
 
   div#react-root
+  script[type="text/javascript"][src="/public/js/home_index.js?ts=" + ts]
