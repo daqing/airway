@@ -21,6 +21,7 @@ func main() {
 		}
 
 		thing := args[1]
+
 		switch thing {
 		case "action":
 			actionArgs := args[2:]
@@ -59,6 +60,14 @@ func main() {
 			}
 
 			GeneratePage(pageArgs[0], action)
+		case "js":
+			jsArgs := args[2:]
+			if len(jsArgs) < 2 {
+				fmt.Println("cli g js [name] [action]")
+				return
+			}
+
+			GeneratePageReactJS(jsArgs[0], jsArgs[1])
 		}
 	}
 }

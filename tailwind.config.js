@@ -2,6 +2,7 @@
 module.exports = {
   content: [
     "./app/templates/**/*.amber",
+    "./app/javascripts/**/*.jsx",
     "./pages/**/*.amber",
     "./pages/*.amber",
   ],

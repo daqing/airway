@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
 
 	"github.com/daqing/airway/config"
@@ -11,6 +12,7 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	sloggin "github.com/samber/slog-gin"
 )
 
 func main() {
@@ -49,4 +51,32 @@ func main() {
 	}
 
 	app.Run(":" + port)
+}
+
+type App struct {
+	r *gin.Engine
+}
+
+func NewApp() *App {
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+
+	router := gin.New()
+
+	router.Static("/public", "./public")
+
+	router.Use(sloggin.New(logger))
+	router.Use(gin.Logger())
+	router.Use(gin.Recovery())
+
+	return &App{
+		r: router,
+	}
+}
+
+func (a *App) Router() *gin.Engine {
+	return a.r
+}
+
+func (a *App) Run(addr string) {
+	a.r.Run(addr)
 }
