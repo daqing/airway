@@ -126,8 +126,7 @@ func GeneratePageReactJS(page string, action string) {
 	targetFileName := strings.Join(
 		[]string{
 			"./app/javascripts/src",
-			page + "_" + action,
-			".jsx",
+			page + "_" + action + ".jsx",
 		},
 		"/",
 	)

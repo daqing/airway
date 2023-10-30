@@ -4,7 +4,7 @@ import { createRoot } from 'react-dom/client';
 let App = () => {
   return (
     <div>
-      <h1>Hello, {{.Page}}/{{.Action}}</h1>
+      <h1>Hello, {{.Page}} - {{.Action}}</h1>
     </div>
   );
 }
