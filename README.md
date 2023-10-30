@@ -13,7 +13,7 @@ Get Started
 Use `gonew` to create a new project based on `airway`:
 
 ```bash
-gonew github.com/daqing/airway example.com/foo/bar
+$ gonew github.com/daqing/airway example.com/foo/bar
 ```
 
 Replace `example.com/foo/bar` with your real module name.
@@ -33,7 +33,7 @@ This file defines a few environment variables:
 - AIRWAY_PORT
   **the port to listen on**
 - AIRWAY_STORAGE_DIR
-  **the full path to store the uplaoded files**
+  **the full path to store the uploaded files**
 - AIRWAY_ASSET_HOST
   **the CDN url for serving assets**
 - AIRWAY_PWD
