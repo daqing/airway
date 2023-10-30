@@ -26,6 +26,8 @@ func GeneratePage(name string, action string) {
 	GeneratePageActionTemplate(name, action)
 	GeneratePageLayout(name)
 	GeneratePageRoutes(name, action)
+
+	GeneratePageReactJS(name, action)
 }
 
 func GeneratePageAction(page string, action string) {
@@ -118,4 +120,25 @@ func GeneratePageRoutes(page string, action string) {
 		panic(err)
 	}
 
+}
+
+func GeneratePageReactJS(page string, action string) {
+	targetFileName := strings.Join(
+		[]string{
+			"./app/javascripts/src",
+			page + "_" + action,
+			".jsx",
+		},
+		"/",
+	)
+
+	err := ExecTemplate(
+		"./cli/template/js/react.txt",
+		targetFileName,
+		PageGenerator{Page: page, Name: action, Action: utils.ToCamel(action)},
+	)
+
+	if err != nil {
+		panic(err)
+	}
 }

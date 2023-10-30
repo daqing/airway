@@ -7,3 +7,5 @@ block content
   h1.font-mono.text-green-800.font-bold hello, airway
   p.text-lg.text-indigo-500
     a[href="/demo/index"].font-bold view demo page
+
+  div#react-root

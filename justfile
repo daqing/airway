@@ -11,8 +11,15 @@ cli:
   cd ./cli && go build && cd ..
   mv ./cli/cli ./bin/
 
-build:
+packjs:
+  cd ./app/javascripts/ && bun build --minify --splitting --outdir=../../public/js ./src/*.jsx
+
+
+build: packjs
   GOOS=linux GOARCH=amd64 go build -o ./bin .
+
+bun:
+  echo 'bun build'
 
 docker: build
   docker build -t airway-api -f Dockerfile --platform linux/amd64 .

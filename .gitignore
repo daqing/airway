@@ -4,4 +4,8 @@
 .env.local
 
 /public/css
+!/public/css/.keep
 /public/js
+!/public/js/.keep
+
+node_modules
