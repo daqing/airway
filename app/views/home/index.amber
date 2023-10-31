@@ -1,12 +1,23 @@
 extends ../layouts/base
 
 block title
-  | Hello, airway
+  | Hello, Airway
 
-block content
-  h1.font-mono.text-green-800.font-bold hello, airway
-  p.text-lg.text-indigo-500
-    a[href="/demo/index"].font-bold view demo page
+block body
+  div.w-screen.h-screen[style="background-image: url('/public/header-bg.jpg')"]
+    header.mx-auto.py-5.flex.flex-row.justify-between.items-center.font-light[class="w-2/3"]
+      div.flex.items-center.gap-8
+        h1.text-2xl
+          a[href="/"] Airway
+        ul.flex.gap-8
+          li
+            a[href="/"] Home
+          li
+            a[href="#"] Docs
+      div
+        a[href="https://github.com/daqing/airway"][target="_blank"] GitHub
 
-  div#react-root
-  script[type="text/javascript"][src="/public/js/home_index.js?ts=" + ts]
+    main.flex.flex-col.items-center.pt-20
+      h2.text-cyan-700.font-light.text-4xl The full-stack framework for Go
+      div.mt-4#react-root
+    script[type="text/javascript"][src="/public/js/home_index.js?ts=" + ts]

@@ -2,12 +2,9 @@ doctype 5
 html
   head
     block meta
-
     title
       block title
-        | Powered by the airway framework
     link[rel="stylesheet"][href="/public/css/tailwind.css?ts=" + ts]
+
   body
-    block content
-    footer.text-zinc-700
-      | Powered by the airway framework
+    block body

@@ -1,20 +1,22 @@
-import React, { StrictMode } from 'react';
+import React, { StrictMode, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
-function MyButton() {
+function MyButton({ setMsg }) {
   return (
-    <button className='bg-green-600 px-4 py-2 rounded-full text-white' onClick={() => { alert('hi') }}>
-      I'm a button
+    <button className='bg-green-600 px-4 py-2 rounded-full text-white' onClick={() => { setMsg('Hello, React!') }}>
+      React works
     </button>
   );
 }
 
 let App = function MyApp() {
+  const [msg, setMsg] = useState("");
+
   return (
-    <div>
-      <h1 className='text-sky-700'>React works</h1>
-      <MyButton />
-    </div>
+    <div className='mt-10 text-center'>
+      <MyButton setMsg={setMsg} />
+      <div class="mt-5 text-green-700 font-mono">{msg}</div>
+    </div >
   );
 }
 
