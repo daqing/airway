@@ -70,30 +70,30 @@ $ cp .env.example .env.local
 
 这个文件，定义了几个环境变量，说明如下：
 
-**AIRWAY_PG_URL**
+* AIRWAY_PG_URL
 
-连接PostgreSQL字符串，类似这样的形式:
+  * 连接PostgreSQL字符串，类似这样的形式:
 
-`postgres://daqing:passwd@127.0.0.1:5432/airway`
+  * `postgres://daqing:passwd@127.0.0.1:5432/airway`
 
-**AIRWAY_PORT**
+* AIRWAY_PORT
 
-服务器监听的端口，默认为 `"1900"`
+  * 服务器监听的端口，默认为 `"1900"`
 
-**AIRWAY_STORAGE_DIR**
+* AIRWAY_STORAGE_DIR
 
-存储用户上传文件的绝对路径
+  * 存储用户上传文件的绝对路径
 
-例如: `/var/www/storage`（不要以'/'结尾）
+  * 例如: `/var/www/storage`（不要以'/'结尾）
 
-**AIRWAY_ASSET_HOST**
+* AIRWAY_ASSET_HOST
 
-静态资源的托管域名（可用于配置CDN）
+  * 静态资源的托管域名（可用于配置CDN）
 
-例如: `https://assets.example.com"`
+  * 例如: `https://assets.example.com"`
 
-**AIRWAY_PWD**
+* AIRWAY_PWD
 
-项目所在的绝对路径（不要以'/'结尾）
+  * 项目所在的绝对路径（不要以'/'结尾）
 
-例如: `/Users/joe/projects/airway`
+  * 例如: `/Users/joe/projects/airway`
