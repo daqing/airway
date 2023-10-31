@@ -34,6 +34,8 @@ $ gonew github.com/daqing/airway example.com/foo/bar
 
 ## 2. 搭建开发环境
 
+#### 2.1
+
 首先，项目使用 [just](https://github.com/casey/just) 来执行一些脚本命令。
 
 关于如何安装 `just` 请参考其中文文档：[https://github.com/casey/just/blob/master/README.中文.md](https://github.com/casey/just/blob/master/README.中文.md)
@@ -55,6 +57,9 @@ $ just setup
 
 就可以把上述依赖的软件安装好。
 
+
+#### 2.2
+
 其次，项目使用了 `.env` 作为配置。
 
 需要创建 `.env.local` 文件：
@@ -65,30 +70,29 @@ $ cp .env.example .env.local
 
 这个文件，定义了几个环境变量，说明如下：
 
-#### `AIRWAY_PG_URL`
+**AIRWAY_PG_URL**
 
 连接PostgreSQL字符串，类似这样的形式:
 
 `postgres://daqing:passwd@127.0.0.1:5432/airway`
 
-#### `AIRWAY_PORT`
+**AIRWAY_PORT**
 
 服务器监听的端口，默认为 `"1900"`
 
-#### `AIRWAY_STORAGE_DIR`
+**AIRWAY_STORAGE_DIR**
 
 存储用户上传文件的绝对路径
 
 例如: `/var/www/storage`（不要以'/'结尾）
 
-#### `AIRWAY_ASSET_HOST`
+**AIRWAY_ASSET_HOST**
 
 静态资源的托管域名（可用于配置CDN）
 
 例如: `https://assets.example.com"`
 
-
-#### `AIRWAY_PWD`
+**AIRWAY_PWD**
 
 项目所在的绝对路径（不要以'/'结尾）
 
