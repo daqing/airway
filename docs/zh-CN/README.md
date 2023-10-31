@@ -52,7 +52,7 @@ all-in-one toolkit
 对于 macOS 系统，只需要执行:
 
 ```bash
-$ just setup
+$ just install-deps
 ```
 
 就可以把上述依赖的软件安装好。
