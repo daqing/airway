@@ -97,3 +97,58 @@ $ cp .env.example .env.local
   * 项目所在的绝对路径（不要以'/'结尾）
 
   * 例如: `/Users/joe/projects/airway`
+
+#### 2.3
+
+替换掉 `justfile` 中硬编码的 `airway` 字符。
+
+例如，`justfile` 里面有这样的文字：
+
+```
+createdb:
+  psql -U $POSTGRES_USER -d postgres -c "create database airway"
+```
+
+需要把 airway，替换成当前项目所用的数据库名字。
+
+
+#### 2.4
+
+创建数据库和表结构。
+
+执行以下命令：
+
+```
+$ just createdb
+$ just migrate
+```
+
+这样，数据库和表结构，就准备好了。
+
+#### 2.5
+
+初始化 JavaScript 环境。
+
+`Airway` 通过集成 `bun` 工具，支持在页面中使用 React 代码库。
+
+执行以下命令：
+
+```
+$ just bun
+```
+
+就可以准备好 React 环境。
+
+## 3. 启动本地开发服务器
+
+执行以下命令：
+
+```
+$ just
+```
+
+就可以启动本地开发服务器。
+
+根据你的 `.env.local` 中配置的端口，就可以访问对应的网址。
+
+假设你配置的端口是 **2023**, 那么，访问 [http://localhost:2023](http://localhost:2023) 即可。
