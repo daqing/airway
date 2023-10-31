@@ -1,7 +1,7 @@
 dev:
   overmind start -f Procfile.dev
 
-setup:
+install-deps:
   go install github.com/cosmtrek/air@latest
   brew install tmux
   brew install overmind
@@ -14,12 +14,11 @@ cli:
 packjs:
   cd ./app/javascripts/ && bun build --minify --splitting --outdir=../../public/js ./src/*.jsx
 
-
 build: packjs
   GOOS=linux GOARCH=amd64 go build -o ./bin .
 
 bun:
-  echo 'bun build'
+  cd ./app/javascripts && bun install
 
 docker: build
   docker build -t airway-api -f Dockerfile --platform linux/amd64 .
