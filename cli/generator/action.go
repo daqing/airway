@@ -1,7 +1,6 @@
 package generator
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/daqing/airway/cli/helper"
@@ -15,8 +14,7 @@ type ActionGenerator struct {
 
 func GenAction(xargs []string) {
 	if len(xargs) != 2 {
-		fmt.Println("cli g action [api] [action]")
-		return
+		helper.Help("cli g action [api] [action]")
 	}
 
 	GenerateAPIAction(xargs[0], xargs[1])

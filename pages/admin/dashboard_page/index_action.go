@@ -1,4 +1,4 @@
-package sign_in_page
+package dashboard_page
 
 import (
 	"github.com/daqing/airway/lib/resp"
@@ -6,5 +6,6 @@ import (
 )
 
 func IndexAction(c *gin.Context) {
-	resp.Page(c, "sign_in", "index", nil)
+	data := map[string]any{}
+	resp.Page(c, "admin/dashboard", "index", data)
 }

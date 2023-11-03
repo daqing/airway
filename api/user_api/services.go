@@ -8,7 +8,15 @@ import (
 	"github.com/daqing/airway/lib/utils"
 )
 
-func CreateUser(nickname, username string, role UserRole, password string) (*User, error) {
+func CreateBasicUser(nickname, username string, password string) (*User, error) {
+	return createUser(nickname, username, basicRole, password)
+}
+
+func CreateAdminUser(nickname, username string, password string) (*User, error) {
+	return createUser(nickname, username, adminRole, password)
+}
+
+func createUser(nickname, username string, role userRole, password string) (*User, error) {
 	if len(nickname) == 0 {
 		return nil, fmt.Errorf("nickname can't be empty")
 	}
@@ -100,7 +108,7 @@ func LoginAdmin(username string, password string) (*User, error) {
 		},
 		[]repo.KVPair{
 			repo.KV("username", username),
-			repo.KV("role", AdminRole),
+			repo.KV("role", adminRole),
 		},
 	)
 
@@ -143,14 +151,14 @@ func UserFromAPIToken(token string) *User {
 }
 
 func CurrentUser(authToken string) *User {
-	return userFromToken(authToken, BasicRole)
+	return userFromToken(authToken, basicRole)
 }
 
 func CurrentAdmin(authToken string) *User {
-	return userFromToken(authToken, AdminRole)
+	return userFromToken(authToken, adminRole)
 }
 
-func userFromToken(apiToken string, role UserRole) *User {
+func userFromToken(apiToken string, role userRole) *User {
 	user := UserFromAPIToken(apiToken)
 	if user == nil {
 		return nil
@@ -166,7 +174,7 @@ func userFromToken(apiToken string, role UserRole) *User {
 func CheckAdmin(authToken string) bool {
 	ok, err := repo.Exists[User]([]repo.KVPair{
 		repo.KV("api_token", authToken),
-		repo.KV("role", AdminRole),
+		repo.KV("role", adminRole),
 	})
 
 	if err != nil {

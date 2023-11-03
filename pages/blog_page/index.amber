@@ -1,0 +1,24 @@
+extends layout
+
+block title
+  #{Title}
+
+block style
+  style
+    .post {
+      margin-bottom: 60px;
+    }
+
+block content
+  div#posts.mt-10
+    div.post
+      h2.text-xl.text-gray-900 苹果公司的产品线
+
+    div.post
+      h2.text-xl.text-gray-800 转自推特：如何创建伟大的公司
+
+    div.post
+      h2.text-xl.text-gray-800 关于产品用户的基本事实
+
+    div.post
+      h2.text-xl.text-gray-800 分享我用 Go 开发的小工具：rename

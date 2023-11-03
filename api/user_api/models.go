@@ -15,7 +15,7 @@ type User struct {
 	Phone             string
 	Email             string
 	Avatar            string
-	Role              UserRole
+	Role              userRole
 	ApiToken          string
 	EncryptedPassword string
 	Balance           repo.PriceCent
@@ -28,11 +28,11 @@ const tableName = "users"
 
 func (u User) TableName() string { return tableName }
 
-type UserRole int
+type userRole int
 
 const (
-	BasicRole UserRole = iota
-	AdminRole
+	basicRole userRole = iota
+	adminRole
 )
 
 const polyType = "user"
@@ -44,3 +44,5 @@ func (u *User) PolyId() int64 { return u.Id }
 func (u *User) Membership() (*membership_api.MembershipResp, error) {
 	return membership_api.MembershipFor(u.Id)
 }
+
+func (u *User) IsAdmin() bool { return u.Role == adminRole }

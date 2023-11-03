@@ -1,0 +1,24 @@
+extends ../base
+
+block subtitle
+  | &nbsp;-&nbsp;#{Tagline}
+
+block body
+  div.w-screen
+    header.w-full.border-b.border-zinc-200.px-10.py-6
+      div.mx-auto[class="w-2/3"].flex.flex-row.justify-between.items-center
+        div
+          h1.text-2xl #{Title}
+          p.text-zinc-400.mt-2 #{Tagline}
+        div
+          a[href="#"] 关于我
+    main.w-full.px-10.py-4
+      div.mx-auto[class="w-2/3"]
+        block content
+
+  footer.mt-2.px-2.py-6
+    div.flex.flex-col.items-center.space-x-2.pt-10
+      div.text-sm.text-gray-500 &copy; #{Year} #{Title}
+      div.text-xs.text-gray-300.mt-2
+        | Powered by
+        a[href="#"] Airway

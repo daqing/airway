@@ -9,55 +9,55 @@ import (
 	"github.com/daqing/airway/lib/utils"
 )
 
-func GenJS(xargs []string) {
-	if len(xargs) < 2 {
-		fmt.Println("cli g js [name] [action]")
-		return
+const DEFAULT_PREFIX_FOLDER = "."
+
+func GenPage(args []string) {
+	if len(args) < 2 {
+		helper.Help("cli g page [api] [action]")
 	}
 
-	GeneratePageReactJS(xargs[0], xargs[1])
-}
+	fmt.Printf("gen page for %s, %s\n", args[0], args[1])
 
-func GenPage(xargs []string) {
-	if len(xargs) == 0 {
-		fmt.Println("cli g page [name] [action]")
-		return
-	}
-
-	var action = "index"
-	if len(xargs) == 2 {
-		action = xargs[1]
-	}
-
-	GeneratePage(xargs[0], action)
+	GeneratePage(args[0], args[1])
 }
 
 func GeneratePage(name string, action string) {
-	dir := fmt.Sprintf("%s_page", name)
+	var prefixFolder = DEFAULT_PREFIX_FOLDER
 
-	if _, err := os.Stat(dir); err == nil {
-		panic("Page already exists")
+	if strings.Contains(name, ".") {
+		parts := strings.Split(name, ".")
+
+		prefixFolder = parts[0]
+		name = parts[1]
 	}
+
+	dir := fmt.Sprintf("%s/%s_page", prefixFolder, name)
 
 	dirPath := fmt.Sprintf("./pages/%s", dir)
-
 	if err := os.Mkdir(dirPath, 0755); err != nil {
-		panic(err)
+		// page directory exists, generate new action
+		GeneratePageAction(prefixFolder, name, action)
+		GeneratePageActionTemplate(prefixFolder, name, action)
+		GeneratePageReactJS(prefixFolder, name, action)
+
+		os.Exit(0)
 	}
 
-	GeneratePageAction(name, action)
+	GeneratePageAction(prefixFolder, name, action)
 
-	GeneratePageActionTemplate(name, action)
-	GeneratePageLayout(name)
-	GeneratePageRoutes(name, action)
+	GeneratePageActionTemplate(prefixFolder, name, action)
 
-	GeneratePageReactJS(name, action)
+	GeneratePageLayout(prefixFolder, name)
+	GeneratePageRoutes(prefixFolder, name, action)
+
+	GeneratePageReactJS(prefixFolder, name, action)
 }
 
-func GeneratePageAction(page string, action string) {
+func GeneratePageAction(prefixFolder string, page string, action string) {
 	targetFileName := strings.Join(
 		[]string{
 			"./pages",
+			prefixFolder,
 			page + "_page",
 			action + "_action.go",
 		},
@@ -82,10 +82,11 @@ type PageGenerator struct {
 	Action string
 }
 
-func GeneratePageActionTemplate(page string, action string) {
+func GeneratePageActionTemplate(prefixFolder string, page string, action string) {
 	targetFileName := strings.Join(
 		[]string{
 			"./pages",
+			prefixFolder,
 			page + "_page",
 			action + ".amber",
 		},
@@ -103,10 +104,11 @@ func GeneratePageActionTemplate(page string, action string) {
 	}
 }
 
-func GeneratePageLayout(page string) {
+func GeneratePageLayout(prefixFolder, page string) {
 	targetFileName := strings.Join(
 		[]string{
 			"./pages",
+			prefixFolder,
 			page + "_page",
 			"layout.amber",
 		},
@@ -124,10 +126,11 @@ func GeneratePageLayout(page string) {
 	}
 }
 
-func GeneratePageRoutes(page string, action string) {
+func GeneratePageRoutes(prefixFolder, page string, action string) {
 	targetFileName := strings.Join(
 		[]string{
 			"./pages",
+			prefixFolder,
 			page + "_page",
 			"routes.go",
 		},
@@ -144,24 +147,4 @@ func GeneratePageRoutes(page string, action string) {
 		panic(err)
 	}
 
-}
-
-func GeneratePageReactJS(page string, action string) {
-	targetFileName := strings.Join(
-		[]string{
-			"./app/javascripts/src",
-			page + "_" + action + ".jsx",
-		},
-		"/",
-	)
-
-	err := helper.ExecTemplate(
-		"./cli/template/js/react.txt",
-		targetFileName,
-		PageGenerator{Page: page, Name: action, Action: utils.ToCamel(action)},
-	)
-
-	if err != nil {
-		panic(err)
-	}
 }

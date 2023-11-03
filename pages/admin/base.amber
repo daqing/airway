@@ -1,0 +1,9 @@
+extends ../base
+
+block body
+  div.w-screen
+    header.w-full.bg-zinc-100.py-1.px-10.shadow.border.border-b-zinc-200
+      h1 ADMIN
+
+    main.w-full.px-10.pt-5
+      block content
