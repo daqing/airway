@@ -4,8 +4,8 @@ import (
 	"strings"
 
 	"github.com/daqing/airway/api/user_api"
+	"github.com/daqing/airway/lib/api_resp"
 	"github.com/daqing/airway/lib/repo"
-	"github.com/daqing/airway/lib/resp"
 	"github.com/gin-gonic/gin"
 )
 
@@ -21,25 +21,25 @@ func CreateAction(c *gin.Context) {
 	var p CreateParams
 
 	if err := c.BindJSON(&p); err != nil {
-		resp.LogError(c, err)
+		api_resp.LogError(c, err)
 		return
 	}
 
 	user := user_api.CurrentUser(c.GetHeader("X-Auth-Token"))
 
 	if user == nil {
-		resp.LogInvalidUser(c)
+		api_resp.LogInvalidUser(c)
 		return
 	}
 
 	tags := strings.Split(p.Tags, ",")
 	post, err := CreatePost(p.Title, p.Content, user.Id, p.NodeId, p.Fee, tags)
 	if err != nil {
-		resp.LogError(c, err)
+		api_resp.LogError(c, err)
 		return
 	}
 
 	item := repo.ItemResp[Post, PostResp](post)
 
-	resp.OK(c, gin.H{"post": item})
+	api_resp.OK(c, gin.H{"post": item})
 }

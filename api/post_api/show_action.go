@@ -1,8 +1,8 @@
 package post_api
 
 import (
+	"github.com/daqing/airway/lib/api_resp"
 	"github.com/daqing/airway/lib/repo"
-	"github.com/daqing/airway/lib/resp"
 	"github.com/gin-gonic/gin"
 )
 
@@ -14,7 +14,7 @@ func ShowAction(c *gin.Context) {
 	var p ShowParams
 
 	if err := c.ShouldBind(&p); err != nil {
-		resp.LogError(c, err)
+		api_resp.LogError(c, err)
 		return
 	}
 
@@ -25,9 +25,9 @@ func ShowAction(c *gin.Context) {
 	})
 
 	if err != nil {
-		resp.LogError(c, err)
+		api_resp.LogError(c, err)
 		return
 	}
 
-	resp.OK(c, gin.H{"post": post})
+	api_resp.OK(c, gin.H{"post": post})
 }

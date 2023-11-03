@@ -1,4 +1,4 @@
-package resp
+package page_resp
 
 import "github.com/gin-gonic/gin"
 

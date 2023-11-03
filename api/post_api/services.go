@@ -8,6 +8,20 @@ import (
 	"github.com/daqing/airway/lib/repo"
 )
 
+func Posts(order string, page, limit int) ([]*Post, error) {
+	if page == 0 {
+		page = 1
+	}
+
+	return repo.FindLimit[Post](
+		[]string{"id", "user_id", "title", "node_id", "fee"},
+		[]repo.KVPair{},
+		order,
+		(page-1)*limit,
+		limit,
+	)
+}
+
 func CreatePost(title, content string, user_id, node_id int64, fee int, tags []string) (*Post, error) {
 	if len(title) == 0 {
 		return nil, fmt.Errorf("title can't be empty")

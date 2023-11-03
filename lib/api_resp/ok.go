@@ -1,4 +1,4 @@
-package resp
+package api_resp
 
 import (
 	"fmt"

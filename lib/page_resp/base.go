@@ -1,6 +1,7 @@
-package resp
+package page_resp
 
 import (
+	"fmt"
 	"maps"
 	"net/http"
 	"time"
@@ -42,4 +43,8 @@ func renderTemplate(c *gin.Context, prefix string, template string, obj map[stri
 
 	c.Header("Content-Type", "text/html; charset=utf-8")
 	c.Data(http.StatusOK, "text/html; charset=utf-8", html)
+}
+
+func HtmlError(c *gin.Context, err error) {
+	c.String(500, fmt.Sprintf("ERR: %s", err.Error()))
 }

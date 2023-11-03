@@ -5,7 +5,8 @@ import (
 	"os"
 
 	"github.com/daqing/airway/api/user_api"
-	"github.com/daqing/airway/lib/resp"
+	"github.com/daqing/airway/lib/api_resp"
+
 	"github.com/daqing/airway/lib/utils"
 	"github.com/gin-gonic/gin"
 )
@@ -15,7 +16,7 @@ func UploadAction(c *gin.Context) {
 
 	// user must be logged in to upload files
 	if currentUser == nil {
-		resp.Error(c, fmt.Errorf("current user not found"))
+		api_resp.Error(c, fmt.Errorf("current user not found"))
 		return
 	}
 
@@ -23,13 +24,13 @@ func UploadAction(c *gin.Context) {
 
 	f, err := file.Open()
 	if err != nil {
-		resp.Error(c, err)
+		api_resp.Error(c, err)
 		return
 	}
 
 	hash, err := utils.MD5SumFile(f)
 	if err != nil {
-		resp.Error(c, err)
+		api_resp.Error(c, err)
 		return
 	}
 
@@ -38,20 +39,20 @@ func UploadAction(c *gin.Context) {
 
 	row, err := SaveFile(currentUser.Id, newFilename, mime, file.Size)
 	if err != nil {
-		resp.Error(c, err)
+		api_resp.Error(c, err)
 		return
 	}
 
 	if row == nil {
 		// failed to create database row
-		resp.Error(c, fmt.Errorf("failed to create database row"))
+		api_resp.Error(c, fmt.Errorf("failed to create database row"))
 		return
 	}
 
 	// move uplaoded file to asset directory
 	assetDir := os.Getenv("AIRWAY_STORAGE_DIR")
 	if assetDir == "" {
-		resp.Error(c, fmt.Errorf(
+		api_resp.Error(c, fmt.Errorf(
 			"no environment variable defined for AIRWAY_STORAGE_DIR",
 		))
 		return
@@ -60,7 +61,7 @@ func UploadAction(c *gin.Context) {
 	destDir := hashDirPath(assetDir, newFilename)
 
 	if err := os.MkdirAll(destDir, 0755); err != nil {
-		resp.Error(c, err)
+		api_resp.Error(c, err)
 		return
 	}
 
@@ -70,12 +71,12 @@ func UploadAction(c *gin.Context) {
 
 	assetHost := os.Getenv("AIRWAY_ASSET_HOST")
 	if assetHost == "" {
-		resp.Error(c, fmt.Errorf(
+		api_resp.Error(c, fmt.Errorf(
 			"no environment variable defined for AIRWAY_ASSET_HOST",
 		))
 
 		return
 	}
 
-	resp.OK(c, gin.H{"filename": newFilename, "url": assetHostPath(assetHost, newFilename)})
+	api_resp.OK(c, gin.H{"filename": newFilename, "url": assetHostPath(assetHost, newFilename)})
 }

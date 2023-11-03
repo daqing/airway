@@ -3,7 +3,14 @@ extends ../base
 block body
   div.w-screen
     header.w-full.bg-zinc-100.py-1.px-10.shadow.border.border-b-zinc-200
-      h1 ADMIN
+      div.flex.justify-between
+        div.flex.gap-8
+          h1
+            a[href="/admin/dashboard"] ADMIN
+          div.nav
+            a[href="/admin/post"].text-cyan-700 Post
+        div.right
+          a[href="/"] Back
 
     main.w-full.px-10.pt-5
       block content

@@ -4,7 +4,8 @@ import (
 	"fmt"
 
 	"github.com/daqing/airway/api/user_api"
-	"github.com/daqing/airway/lib/resp"
+	"github.com/daqing/airway/lib/api_resp"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -22,18 +23,18 @@ func AdminUpdateAction(c *gin.Context) {
 	var p UpdateParams
 
 	if err := c.BindJSON(&p); err != nil {
-		resp.LogError(c, err)
+		api_resp.LogError(c, err)
 		return
 	}
 
 	if !user_api.CheckAdmin(c.GetHeader("X-Auth-Token")) {
-		resp.LogInvalidAdmin(c)
+		api_resp.LogInvalidAdmin(c)
 		return
 	}
 
 	for _, item := range p.Data {
 		if !UpdateSetting(item.Id, item.Key, item.Val) {
-			resp.LogError(c,
+			api_resp.LogError(c,
 				fmt.Errorf(
 					"update setting %d failed: %s, %s",
 					item.Id,
@@ -44,5 +45,5 @@ func AdminUpdateAction(c *gin.Context) {
 		}
 	}
 
-	resp.OK(c, gin.H{})
+	api_resp.OK(c, gin.H{})
 }
