@@ -13,15 +13,15 @@ block body
           li
             a[href="/"] Home
           li
-            a[href="#"] Docs
+            a[href="/blog"] Blog
       div.flex.gap-4
         a[href="https://github.com/daqing/airway"][target="_blank"] GitHub
 
         if SignedIn
           a[href="/"] #{Nickname}
-          a[href="/sign_out/index"] Logout
+          a[href="/session/destroy"] Logout
         else
-          a[href="/sign_in/index"] Sign In
+          a[href="/session/sign_in"] Sign In
 
     main.flex.flex-col.items-center.pt-20
       h2.text-cyan-700.font-light.text-4xl The full-stack framework for Go

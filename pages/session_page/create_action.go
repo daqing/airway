@@ -1,4 +1,4 @@
-package sign_in_page
+package session_page
 
 import (
 	"github.com/daqing/airway/api/user_api"
@@ -7,13 +7,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type AuthParams struct {
+type CreateSessionParams struct {
 	Username string `form:"username"`
 	Password string `form:"password"`
 }
 
-func AuthAction(c *gin.Context) {
-	var p AuthParams
+func CreateAction(c *gin.Context) {
+	var p CreateSessionParams
 
 	if err := c.ShouldBind(&p); err != nil {
 		resp.Error(c, err)

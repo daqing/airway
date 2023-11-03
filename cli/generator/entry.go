@@ -1,14 +1,18 @@
 package generator
 
-import "github.com/daqing/airway/cli/helper"
+import (
+	"fmt"
+
+	"github.com/daqing/airway/cli/helper"
+)
 
 func Generate(args []string) {
 	if len(args) == 0 {
 		helper.Help("cli g [what] [params]")
 	}
 
-	thing := args[1]
-	xargs := args[2:]
+	thing := args[0]
+	xargs := args[1:]
 
 	switch thing {
 	case "action":
@@ -21,5 +25,9 @@ func Generate(args []string) {
 		GenPage(xargs)
 	case "js":
 		GenJS(xargs)
+	default:
+		panic("unknown generator")
 	}
+
+	fmt.Println("done.")
 }

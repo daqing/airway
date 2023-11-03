@@ -1,10 +1,10 @@
-package demo_page
+package blog_page
 
 import "github.com/gin-gonic/gin"
 
 func Routes(r *gin.Engine) {
-	g := r.Group("/demo")
+	g := r.Group("/blog")
 	{
-		g.GET("/index", IndexAction)
+		g.GET("/", IndexAction)
 	}
 }

@@ -14,20 +14,22 @@ func GenPage(args []string) {
 		helper.Help("cli g page [api] [action]")
 	}
 
+	fmt.Printf("gen page for %s, %s\n", args[0], args[1])
+
 	GeneratePage(args[0], args[1])
 }
 
 func GeneratePage(name string, action string) {
 	dir := fmt.Sprintf("%s_page", name)
-
-	if _, err := os.Stat(dir); err == nil {
-		panic("Page already exists")
-	}
-
 	dirPath := fmt.Sprintf("./pages/%s", dir)
 
 	if err := os.Mkdir(dirPath, 0755); err != nil {
-		panic(err)
+		// page directory exists, generate new action
+		GeneratePageAction(name, action)
+		GeneratePageActionTemplate(name, action)
+		GeneratePageReactJS(name, action)
+
+		os.Exit(0)
 	}
 
 	GeneratePageAction(name, action)

@@ -1,0 +1,7 @@
+extends layout
+
+block title
+  | Hello, blog
+
+block body
+  h1 Hello, blog#Index
