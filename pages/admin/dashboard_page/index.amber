@@ -1,0 +1,7 @@
+extends layout
+
+block title
+  | Hello, dashboard
+
+block content
+  h1 Hello, dashboard#Index

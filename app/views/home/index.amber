@@ -19,6 +19,10 @@ block body
 
         if SignedIn
           a[href="/"] #{Nickname}
+
+          if IsAdmin
+            a[href="/admin/dashboard"] Admin
+
           a[href="/session/destroy"] Logout
         else
           a[href="/session/sign_in"] Sign In

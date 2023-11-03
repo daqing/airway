@@ -9,6 +9,8 @@ import (
 	"github.com/daqing/airway/lib/utils"
 )
 
+const DEFAULT_PREFIX_FOLDER = "."
+
 func GenPage(args []string) {
 	if len(args) < 2 {
 		helper.Help("cli g page [api] [action]")
@@ -20,31 +22,42 @@ func GenPage(args []string) {
 }
 
 func GeneratePage(name string, action string) {
-	dir := fmt.Sprintf("%s_page", name)
-	dirPath := fmt.Sprintf("./pages/%s", dir)
+	var prefixFolder = DEFAULT_PREFIX_FOLDER
 
+	if strings.Contains(name, ".") {
+		parts := strings.Split(name, ".")
+
+		prefixFolder = parts[0]
+		name = parts[1]
+	}
+
+	dir := fmt.Sprintf("%s/%s_page", prefixFolder, name)
+
+	dirPath := fmt.Sprintf("./pages/%s", dir)
 	if err := os.Mkdir(dirPath, 0755); err != nil {
 		// page directory exists, generate new action
-		GeneratePageAction(name, action)
-		GeneratePageActionTemplate(name, action)
-		GeneratePageReactJS(name, action)
+		GeneratePageAction(prefixFolder, name, action)
+		GeneratePageActionTemplate(prefixFolder, name, action)
+		GeneratePageReactJS(prefixFolder, name, action)
 
 		os.Exit(0)
 	}
 
-	GeneratePageAction(name, action)
+	GeneratePageAction(prefixFolder, name, action)
 
-	GeneratePageActionTemplate(name, action)
-	GeneratePageLayout(name)
-	GeneratePageRoutes(name, action)
+	GeneratePageActionTemplate(prefixFolder, name, action)
 
-	GeneratePageReactJS(name, action)
+	GeneratePageLayout(prefixFolder, name)
+	GeneratePageRoutes(prefixFolder, name, action)
+
+	GeneratePageReactJS(prefixFolder, name, action)
 }
 
-func GeneratePageAction(page string, action string) {
+func GeneratePageAction(prefixFolder string, page string, action string) {
 	targetFileName := strings.Join(
 		[]string{
 			"./pages",
+			prefixFolder,
 			page + "_page",
 			action + "_action.go",
 		},
@@ -69,10 +82,11 @@ type PageGenerator struct {
 	Action string
 }
 
-func GeneratePageActionTemplate(page string, action string) {
+func GeneratePageActionTemplate(prefixFolder string, page string, action string) {
 	targetFileName := strings.Join(
 		[]string{
 			"./pages",
+			prefixFolder,
 			page + "_page",
 			action + ".amber",
 		},
@@ -90,10 +104,11 @@ func GeneratePageActionTemplate(page string, action string) {
 	}
 }
 
-func GeneratePageLayout(page string) {
+func GeneratePageLayout(prefixFolder, page string) {
 	targetFileName := strings.Join(
 		[]string{
 			"./pages",
+			prefixFolder,
 			page + "_page",
 			"layout.amber",
 		},
@@ -111,10 +126,11 @@ func GeneratePageLayout(page string) {
 	}
 }
 
-func GeneratePageRoutes(page string, action string) {
+func GeneratePageRoutes(prefixFolder, page string, action string) {
 	targetFileName := strings.Join(
 		[]string{
 			"./pages",
+			prefixFolder,
 			page + "_page",
 			"routes.go",
 		},

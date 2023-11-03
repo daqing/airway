@@ -7,7 +7,7 @@ type UserResp struct {
 	Nickname  string
 	Username  string
 	ApiToken  string
-	Role      UserRole
+	Role      int
 	CreatedAt utils.Timestamp
 	UpdatedAt utils.Timestamp
 }
