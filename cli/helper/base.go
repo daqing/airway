@@ -43,3 +43,8 @@ func ExecTemplate(path string, out string, data any) error {
 
 	return tmpl.Execute(outputFile, data)
 }
+
+func Help(msg string) {
+	fmt.Printf("usage: %s\n", msg)
+	os.Exit(1)
+}

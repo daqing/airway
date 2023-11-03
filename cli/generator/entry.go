@@ -1,13 +1,10 @@
 package generator
 
-import (
-	"fmt"
-)
+import "github.com/daqing/airway/cli/helper"
 
 func Generate(args []string) {
 	if len(args) == 0 {
-		fmt.Println("cli g [what] [params]")
-		return
+		helper.Help("cli g [what] [params]")
 	}
 
 	thing := args[1]

@@ -9,27 +9,12 @@ import (
 	"github.com/daqing/airway/lib/utils"
 )
 
-func GenJS(xargs []string) {
-	if len(xargs) < 2 {
-		fmt.Println("cli g js [name] [action]")
-		return
+func GenPage(args []string) {
+	if len(args) < 2 {
+		helper.Help("cli g page [api] [action]")
 	}
 
-	GeneratePageReactJS(xargs[0], xargs[1])
-}
-
-func GenPage(xargs []string) {
-	if len(xargs) == 0 {
-		fmt.Println("cli g page [name] [action]")
-		return
-	}
-
-	var action = "index"
-	if len(xargs) == 2 {
-		action = xargs[1]
-	}
-
-	GeneratePage(xargs[0], action)
+	GeneratePage(args[0], args[1])
 }
 
 func GeneratePage(name string, action string) {
@@ -144,24 +129,4 @@ func GeneratePageRoutes(page string, action string) {
 		panic(err)
 	}
 
-}
-
-func GeneratePageReactJS(page string, action string) {
-	targetFileName := strings.Join(
-		[]string{
-			"./app/javascripts/src",
-			page + "_" + action + ".jsx",
-		},
-		"/",
-	)
-
-	err := helper.ExecTemplate(
-		"./cli/template/js/react.txt",
-		targetFileName,
-		PageGenerator{Page: page, Name: action, Action: utils.ToCamel(action)},
-	)
-
-	if err != nil {
-		panic(err)
-	}
 }

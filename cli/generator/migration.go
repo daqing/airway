@@ -4,12 +4,13 @@ import (
 	"fmt"
 	"os"
 	"time"
+
+	"github.com/daqing/airway/cli/helper"
 )
 
 func GenMigration(xargs []string) {
 	if len(xargs) == 0 {
-		fmt.Println("cli g migration [name]")
-		return
+		helper.Help("cli g migration [name]")
 	}
 
 	GenerateMigration(xargs[0])

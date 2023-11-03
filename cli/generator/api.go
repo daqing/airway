@@ -11,8 +11,7 @@ import (
 
 func GenAPI(xargs []string) {
 	if len(xargs) == 0 {
-		fmt.Println("cli g api [name]")
-		return
+		helper.Help("cli g api [name]")
 	}
 
 	GenerateAPI(xargs[0])
