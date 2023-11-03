@@ -1,10 +1,19 @@
-package main
+package generator
 
 import (
 	"fmt"
 	"os"
 	"time"
 )
+
+func GenMigration(xargs []string) {
+	if len(xargs) == 0 {
+		fmt.Println("cli g migration [name]")
+		return
+	}
+
+	GenerateMigration(xargs[0])
+}
 
 func GenerateMigration(name string) {
 	ts := time.Now().Format("20060102150405")

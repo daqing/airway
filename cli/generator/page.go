@@ -1,4 +1,4 @@
-package main
+package generator
 
 import (
 	"fmt"
@@ -8,6 +8,29 @@ import (
 	"github.com/daqing/airway/cli/helper"
 	"github.com/daqing/airway/lib/utils"
 )
+
+func GenJS(xargs []string) {
+	if len(xargs) < 2 {
+		fmt.Println("cli g js [name] [action]")
+		return
+	}
+
+	GeneratePageReactJS(xargs[0], xargs[1])
+}
+
+func GenPage(xargs []string) {
+	if len(xargs) == 0 {
+		fmt.Println("cli g page [name] [action]")
+		return
+	}
+
+	var action = "index"
+	if len(xargs) == 2 {
+		action = xargs[1]
+	}
+
+	GeneratePage(xargs[0], action)
+}
 
 func GeneratePage(name string, action string) {
 	dir := fmt.Sprintf("%s_page", name)

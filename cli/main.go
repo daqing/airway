@@ -2,7 +2,14 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
+
+	"github.com/daqing/airway/cli/generator"
+	"github.com/daqing/airway/cli/seed"
+	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/utils"
+	"github.com/joho/godotenv"
 )
 
 func main() {
@@ -13,65 +20,40 @@ func main() {
 		return
 	}
 
+	setUpDB()
+
 	switch args[0] {
 	case "g":
-		if len(args) == 1 {
-			fmt.Println("cli g [action]")
-			return
-		}
-
-		thing := args[1]
-
-		switch thing {
-		case "action":
-			actionArgs := args[2:]
-			if len(actionArgs) != 2 {
-				fmt.Println("cli g action [api] [action]")
-				return
-			}
-
-			GenerateAPIAction(actionArgs[0], actionArgs[1])
-		case "migration":
-			migrationArgs := args[2:]
-			if len(migrationArgs) == 0 {
-				fmt.Println("cli g migration [name]")
-				return
-			}
-
-			GenerateMigration(migrationArgs[0])
-		case "api":
-			apiArgs := args[2:]
-			if len(apiArgs) == 0 {
-				fmt.Println("cli g api [name]")
-				return
-			}
-
-			GenerateAPI(apiArgs[0])
-		case "page":
-			pageArgs := args[2:]
-			if len(pageArgs) == 0 {
-				fmt.Println("cli g page [name] [action]")
-				return
-			}
-
-			var action = "index"
-			if len(pageArgs) == 2 {
-				action = pageArgs[1]
-			}
-
-			GeneratePage(pageArgs[0], action)
-		case "js":
-			jsArgs := args[2:]
-			if len(jsArgs) < 2 {
-				fmt.Println("cli g js [name] [action]")
-				return
-			}
-
-			GeneratePageReactJS(jsArgs[0], jsArgs[1])
-		}
+		generator.Generate(args[1:])
+	case "seed":
+		seed.Generate(args[1:])
+	default:
+		showHelp()
 	}
+
 }
 
 func showHelp() {
 	fmt.Println("cli g [what] [params]")
+	fmt.Println("cli seed [what] [params]")
+}
+
+func setUpDB() {
+	appConfig := utils.AppConfig()
+
+	if appConfig.Env == "" {
+		log.Println("AIRWAY_ENV is not set")
+		os.Exit(1)
+	}
+
+	if appConfig.IsLocal {
+		envFile := fmt.Sprintf(".env.%s", appConfig.Env)
+		err := godotenv.Load(envFile)
+		if err != nil {
+			log.Printf("Loading env file: %s failed", envFile)
+			os.Exit(2)
+		}
+	}
+
+	repo.Setup()
 }

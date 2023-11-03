@@ -1,12 +1,22 @@
-package main
+package generator
 
 import (
 	"fmt"
 	"os"
 	"strings"
 
+	"github.com/daqing/airway/cli/helper"
 	"github.com/daqing/airway/lib/utils"
 )
+
+func GenAPI(xargs []string) {
+	if len(xargs) == 0 {
+		fmt.Println("cli g api [name]")
+		return
+	}
+
+	GenerateAPI(xargs[0])
+}
 
 type APIGenerator struct {
 	Mod       string
@@ -44,7 +54,7 @@ func generateAPIRoutes(name string) {
 		"routes.go",
 	}, "/")
 
-	ExecTemplate(
+	helper.ExecTemplate(
 		"./cli/template/api/routes.txt",
 		targetPath,
 		APIGenerator{name, utils.ToCamel(name)},
@@ -58,7 +68,7 @@ func generateAPIModels(name string) {
 		"models.go",
 	}, "/")
 
-	ExecTemplate(
+	helper.ExecTemplate(
 		"./cli/template/api/models.txt",
 		targetPath,
 		APIGenerator{name, utils.ToCamel(name)},
@@ -72,7 +82,7 @@ func generateAPIServices(name string) {
 		"services.go",
 	}, "/")
 
-	ExecTemplate(
+	helper.ExecTemplate(
 		"./cli/template/api/services.txt",
 		targetPath,
 		APIGenerator{name, utils.ToCamel(name)},
@@ -86,7 +96,7 @@ func generateResp(name string) {
 		"resp.go",
 	}, "/")
 
-	ExecTemplate(
+	helper.ExecTemplate(
 		"./cli/template/api/resp.txt",
 		targetPath,
 		APIGenerator{name, utils.ToCamel(name)},

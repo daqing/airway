@@ -7,9 +7,12 @@ install-deps:
   brew install overmind
   curl -fsSL https://bun.sh/install | bash
 
-cli:
+build-cli:
   cd ./cli && go build && cd ..
   mv ./cli/cli ./bin/
+
+cli +args:
+  ./bin/cli {{args}}
 
 packjs:
   cd ./app/javascripts/ && bun build --minify --splitting --outdir=../../public/js ./src/*.jsx
