@@ -2,14 +2,14 @@ doctype 5
 html
   head
     block meta
+      meta[charset="utf-8"]
+      meta[name="viewport"][content="width=device-width, initial-scale=1"]
 
     title
       block title
-        | Powered by the airway framework
+
     link[rel="stylesheet"][href="/public/css/tailwind.css?ts=" + ts]
+    block style
+
   body
-    header
-      a[href="/"].font-bold.text-2xl Airway
-    block content
-    footer.text-zinc-700
-      | Powered by the airway framework
+    block body

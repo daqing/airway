@@ -1,4 +1,7 @@
 extends layout
 
-block content
+block title
+  | Hello, {{.Page}}
+
+block body
   h1 Hello, {{.Page}}#{{.Action}}

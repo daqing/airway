@@ -14,8 +14,9 @@ block body
             a[href="/"] Home
           li
             a[href="#"] Docs
-      div
+      div.flex.gap-4
         a[href="https://github.com/daqing/airway"][target="_blank"] GitHub
+        a[href="/sign_in/index"] Sign In
 
     main.flex.flex-col.items-center.pt-20
       h2.text-cyan-700.font-light.text-4xl The full-stack framework for Go

@@ -10,6 +10,7 @@ import (
 	"github.com/daqing/airway/api/user_api"
 	"github.com/daqing/airway/app/controllers/home_controller"
 	"github.com/daqing/airway/pages/demo_page"
+	"github.com/daqing/airway/pages/sign_in_page"
 	"github.com/daqing/airway/pages/up_page"
 	"github.com/gin-gonic/gin"
 )
@@ -19,6 +20,7 @@ func Routes(r *gin.Engine) {
 
 	demo_page.Routes(r)
 	up_page.Routes(r)
+	sign_in_page.Routes(r)
 
 	v1 := r.Group("/api/v1")
 

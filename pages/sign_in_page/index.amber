@@ -1,0 +1,38 @@
+extends layout
+
+block title
+  | Sign In
+
+block style
+  style[type="text/css"]
+    form {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    .group {
+      display: flex;
+      flex-direction: column;
+      padding-bottom: 20px;
+    }
+
+    label {
+      margin-bottom: 5px;
+    }
+
+block body
+  div.w-screen.h-screen
+    div.mx-auto[class="w-1/4"]
+      form[action="/sign_in/auth"][method="POST"]
+        h1.mb-10.text-center.text-xl Welcome to Airway
+        div.flex.flex-col
+          div.group
+            label Username
+            input[type="text"][name="username"].border
+          div.group
+            label Password
+            input[type="password"][name="password"].border
+          div.group
+            button.border.bg-zinc-100.shadow.border-zinc-200[type="submit"] Sign In
