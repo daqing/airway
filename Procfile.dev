@@ -1,3 +1,3 @@
 web: AIRWAY_ENV=local air
 tailwind: tailwindcss -i ./app/stylesheets/application.css -o ./public/css/tailwind.css --watch
-react: bun build --minify --splitting --outdir=./public/js ./app/javascripts/src/*.jsx --watch
+react: bun build --outdir=./public/js ./app/javascripts/src/*.jsx --watch

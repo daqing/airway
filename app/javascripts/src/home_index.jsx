@@ -15,8 +15,8 @@ let App = function MyApp() {
   return (
     <div className='mt-10 text-center'>
       <MyButton setMsg={setMsg} />
-      <div class="mt-5 text-green-700 font-mono">{msg}</div>
-    </div >
+      <div className="mt-5 text-green-700 font-mono">{msg}</div>
+    </div>
   );
 }
 

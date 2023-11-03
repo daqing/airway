@@ -1,11 +1,10 @@
-package sign_in_page
+package sign_out_page
 
 import "github.com/gin-gonic/gin"
 
 func Routes(r *gin.Engine) {
-	g := r.Group("/sign_in")
+	g := r.Group("/sign_out")
 	{
 		g.GET("/index", IndexAction)
-		g.POST("/auth", AuthAction)
 	}
 }

@@ -123,6 +123,25 @@ func LoginAdmin(username string, password string) (*User, error) {
 	return nil, fmt.Errorf("password is not correct")
 }
 
+func UserFromAPIToken(token string) *User {
+	user, err := repo.FindRow[User](
+		[]string{
+			"id", "username", "nickname",
+			"phone", "email", "avatar",
+			"role", "api_token",
+		},
+		[]repo.KVPair{
+			repo.KV("api_token", token),
+		},
+	)
+
+	if err != nil {
+		return nil
+	}
+
+	return user
+}
+
 func CurrentUser(authToken string) *User {
 	return userFromToken(authToken, BasicRole)
 }
@@ -131,17 +150,17 @@ func CurrentAdmin(authToken string) *User {
 	return userFromToken(authToken, AdminRole)
 }
 
-func userFromToken(authToken string, role UserRole) *User {
-	user, err := repo.FindRow[User]([]string{"id"}, []repo.KVPair{
-		repo.KV("api_token", authToken),
-		repo.KV("role", role),
-	})
-
-	if err != nil {
+func userFromToken(apiToken string, role UserRole) *User {
+	user := UserFromAPIToken(apiToken)
+	if user == nil {
 		return nil
 	}
 
-	return user
+	if user.Role == role {
+		return user
+	}
+
+	return nil
 }
 
 func CheckAdmin(authToken string) bool {
