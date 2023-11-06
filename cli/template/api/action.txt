@@ -11,13 +11,13 @@ func {{.Name}}Action(c *gin.Context) {
 	var p {{.Name}}Params
 
 	if err := c.BindJSON(&p); err != nil {
-		resp.LogError(c, err)
+		api_resp.LogError(c, err)
 		return
 	}
 
 	// currentUser := user_api.CurrentUser(utils.AuthToken(c))
 	// if currentUser == nil {
-	//   resp.LogInvalidUser(c)
+	//   api_resp.LogInvalidUser(c)
 	//   return
 	// }
 }

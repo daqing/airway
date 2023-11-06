@@ -1,8 +1,8 @@
 package setting_api
 
 import (
+	"github.com/daqing/airway/lib/api_resp"
 	"github.com/daqing/airway/lib/repo"
-	"github.com/daqing/airway/lib/resp"
 	"github.com/gin-gonic/gin"
 )
 
@@ -12,7 +12,7 @@ func MapAction(c *gin.Context) {
 	}, []repo.KVPair{})
 
 	if err != nil {
-		resp.LogError(c, err)
+		api_resp.LogError(c, err)
 		return
 	}
 
@@ -22,5 +22,5 @@ func MapAction(c *gin.Context) {
 		mapping[item.Key] = item.Val
 	}
 
-	resp.OK(c, mapping)
+	api_resp.OK(c, mapping)
 }

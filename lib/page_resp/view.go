@@ -1,4 +1,4 @@
-package resp
+package page_resp
 
 import (
 	"fmt"

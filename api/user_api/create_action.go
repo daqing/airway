@@ -1,7 +1,7 @@
 package user_api
 
 import (
-	"github.com/daqing/airway/lib/resp"
+	"github.com/daqing/airway/lib/api_resp"
 	"github.com/gin-gonic/gin"
 )
 
@@ -15,15 +15,15 @@ func CreateAction(c *gin.Context) {
 	var p CreateParams
 
 	if err := c.BindJSON(&p); err != nil {
-		resp.LogError(c, err)
+		api_resp.LogError(c, err)
 		return
 	}
 
 	user, err := CreateBasicUser(p.Nickname, p.Username, p.Password)
 	if err != nil {
-		resp.LogError(c, err)
+		api_resp.LogError(c, err)
 		return
 	}
 
-	resp.OK(c, gin.H{"user": user})
+	api_resp.OK(c, gin.H{"user": user})
 }

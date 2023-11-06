@@ -1,0 +1,15 @@
+extends layout
+
+block title
+  | New Node
+
+block content
+  form[action="/admin/node/create"][method="post"].mt-5
+    div.group.flex.flex-col.mb-5
+      label Name
+      input[type="text"][name="name"].border
+    div.group.flex.flex-col
+      label Key
+      input[type="text"][name="key"].border
+    div.group.mt-5
+      button.btn[type="submit"] Create Node

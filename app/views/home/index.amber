@@ -14,9 +14,11 @@ block body
             a[href="/"] Home
           li
             a[href="/blog"] Blog
-      div.flex.gap-4
-        a[href="https://github.com/daqing/airway"][target="_blank"] GitHub
+          li
+            a[href="https://github.com/daqing/airway"][target="_blank"] GitHub
 
+
+      div.flex.flex-row.gap-4
         if SignedIn
           a[href="/"] #{Nickname}
 
@@ -28,7 +30,7 @@ block body
           a[href="/session/sign_in"] Sign In
 
     main.flex.flex-col.items-center.pt-20
-      h2.text-cyan-700.font-light.text-4xl The full-stack framework for Go
+      h2.text-cyan-700.font-light.text-4xl The full-stack web framework for Go
       div.mt-4#react-root
 
     script[type="text/javascript"][src="/public/js/home_index.js?ts=" + ts]

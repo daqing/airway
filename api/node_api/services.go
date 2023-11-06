@@ -10,3 +10,17 @@ func CreateNode(name, key string) (*Node, error) {
 		},
 	)
 }
+
+func Nodes(order string, page, limit int) ([]*Node, error) {
+	if page == 0 {
+		page = 1
+	}
+
+	return repo.FindLimit[Node](
+		[]string{"id", "name", "key"},
+		[]repo.KVPair{},
+		order,
+		(page-1)*limit,
+		limit,
+	)
+}

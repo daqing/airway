@@ -5,16 +5,17 @@ import (
 )
 
 type PostResp struct {
-	Id        int64
-	UserId    int64
-	NodeId    int64
-	Title     string
-	Content   string
-	Fee       int
-	CreatedAt utils.Timestamp
-	UpdatedAt utils.Timestamp
+	Id         int64
+	UserId     int64
+	NodeId     int64
+	Title      string
+	CustomPath string
+	Content    string
+	Fee        int
+	CreatedAt  utils.Timestamp
+	UpdatedAt  utils.Timestamp
 }
 
 func (pr PostResp) Fields() []string {
-	return []string{"id", "user_id", "node_id", "title", "content", "fee"}
+	return []string{"id", "user_id", "node_id", "title", "custom_path", "content", "fee"}
 }

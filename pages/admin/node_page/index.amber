@@ -1,0 +1,27 @@
+extends layout
+
+block title
+  | Hello, node
+
+block content
+  div.flex
+    table[class=""].border.grow
+      thead.border-b.border-zinc-100
+        tr.text-left
+          th.px-4 ID
+          th.px-4 Name
+          th.px-4 Key
+          th.px-4 Action
+      tbody
+        each $node in Nodes
+          tr.text-left
+            td.px-4 #{$node.Id}
+            td.px-4 #{$node.Name}
+            td.px-4 #{$node.Key}
+            td.px-4.flex.gap-4
+              a[href="#"] Edit
+              a[href="#"] Delete
+
+    div.flex[class="w-1/4"].px-4
+      a[href="/admin/node/new"]
+        span.btn Add Node

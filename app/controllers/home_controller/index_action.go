@@ -2,7 +2,8 @@ package home_controller
 
 import (
 	"github.com/daqing/airway/api/user_api"
-	"github.com/daqing/airway/lib/resp"
+	"github.com/daqing/airway/lib/page_resp"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -30,5 +31,5 @@ func IndexAction(c *gin.Context) {
 		"IsAdmin":  isAdmin,
 	}
 
-	resp.View(c, "home/index", data)
+	page_resp.View(c, "home/index", data)
 }

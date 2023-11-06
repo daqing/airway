@@ -1,4 +1,4 @@
-package resp
+package api_resp
 
 import (
 	"fmt"
@@ -15,10 +15,6 @@ func ErrorMsg(c *gin.Context, msg string) {
 
 func Error(c *gin.Context, err error) {
 	ErrorMsg(c, err.Error())
-}
-
-func HtmlError(c *gin.Context, err error) {
-	c.String(500, fmt.Sprintf("ERR: %s", err.Error()))
 }
 
 const DefaultMessage = "===> Got server error: "

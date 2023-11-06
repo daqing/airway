@@ -35,4 +35,4 @@ block body
             label Password
             input[type="password"][name="password"].border
           div.group
-            button.border.bg-zinc-100.shadow.border-zinc-200[type="submit"] Sign In
+            button.btn[type="submit"] Sign In
