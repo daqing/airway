@@ -1,4 +1,4 @@
-package dashboard_page
+package user_page
 
 import (
 	"github.com/daqing/airway/pages/admin/helper"
@@ -6,5 +6,8 @@ import (
 )
 
 func Routes(r *gin.RouterGroup) {
-	r.GET("", helper.CheckAdmin(IndexAction))
+	g := r.Group("/user")
+	{
+		g.GET("", helper.CheckAdmin(IndexAction))
+	}
 }
