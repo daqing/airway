@@ -16,7 +16,7 @@ func CheckAdmin(action gin.HandlerFunc) gin.HandlerFunc {
 
 		var admin = user_api.CurrentAdmin(token)
 		if admin == nil {
-			page_resp.Redirect(c, "/")
+			page_resp.Redirect(c, "/session/sign_in")
 			return
 		}
 

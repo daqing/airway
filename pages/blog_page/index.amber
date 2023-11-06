@@ -14,4 +14,5 @@ block content
     each $post in Posts
       div.post
         h2.text-xl.text-gray-900
-          #{$post.Title}
+          a[href=$post.Url] #{$post.Title}
+        span.mt-3.text-gray-400.text-sm #{$post.Date}

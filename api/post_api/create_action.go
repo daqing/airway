@@ -33,7 +33,7 @@ func CreateAction(c *gin.Context) {
 	}
 
 	tags := strings.Split(p.Tags, ",")
-	post, err := CreatePost(p.Title, p.Content, user.Id, p.NodeId, p.Fee, tags)
+	post, err := CreatePost(p.Title, "", p.Content, user.Id, p.NodeId, p.Fee, tags)
 	if err != nil {
 		api_resp.LogError(c, err)
 		return

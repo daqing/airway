@@ -8,13 +8,13 @@ import (
 	"github.com/daqing/airway/lib/repo"
 )
 
-func Posts(order string, page, limit int) ([]*Post, error) {
+func Posts(fields []string, order string, page, limit int) ([]*Post, error) {
 	if page == 0 {
 		page = 1
 	}
 
 	return repo.FindLimit[Post](
-		[]string{"id", "user_id", "title", "node_id", "fee"},
+		fields,
 		[]repo.KVPair{},
 		order,
 		(page-1)*limit,
@@ -22,7 +22,7 @@ func Posts(order string, page, limit int) ([]*Post, error) {
 	)
 }
 
-func CreatePost(title, content string, user_id, node_id int64, fee int, tags []string) (*Post, error) {
+func CreatePost(title, customPath, content string, user_id, node_id int64, fee int, tags []string) (*Post, error) {
 	if len(title) == 0 {
 		return nil, fmt.Errorf("title can't be empty")
 	}
@@ -44,6 +44,7 @@ func CreatePost(title, content string, user_id, node_id int64, fee int, tags []s
 			repo.KV("user_id", user_id),
 			repo.KV("node_id", node_id),
 			repo.KV("title", title),
+			repo.KV("custom_path", customPath),
 			repo.KV("content", content),
 			repo.KV("fee", fee),
 		},

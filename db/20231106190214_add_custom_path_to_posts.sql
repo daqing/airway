@@ -1,0 +1,1 @@
+ALTER TABLE posts ADD custom_path VARCHAR(255) DEFAULT ''

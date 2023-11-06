@@ -9,6 +9,9 @@ block content
       label Title
       input[type="text"][name="title"].border
     div.group.flex.flex-col.mb-5
+      label Custom Path
+      input[type="text"][name="custom_path"].border
+    div.group.flex.flex-col.mb-5
       label Content
       textarea[name="content"].border
     div.group.flex.flex-col
