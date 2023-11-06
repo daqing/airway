@@ -19,10 +19,15 @@ func IndexAction(c *gin.Context) {
 		return
 	}
 
-	posts, _ := post_api.Posts("id DESC", p.Page, 50)
+	posts, err := post_api.Posts("id DESC", p.Page, 50)
+	if err != nil {
+		page_resp.Error(c, err)
+		return
+	}
 
 	data := map[string]any{
 		"Posts": posts,
 	}
+
 	page_resp.Page(c, "admin/post", "index", data)
 }

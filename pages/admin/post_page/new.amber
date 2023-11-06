@@ -1,0 +1,15 @@
+extends layout
+
+block title
+  | New Post
+
+block content
+  form[action="/admin/post/create"][method="post"].mt-5
+    div.group.flex.flex-col.mb-5
+      label Title
+      input[type="text"][name="title"].border
+    div.group.flex.flex-col
+      label Content
+      textarea[name="content"].border
+    div.group.mt-5
+      button.btn[type="submit"] Create Post

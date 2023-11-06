@@ -1,7 +1,25 @@
 extends layout
 
 block title
-  | Hello, post
+  | Posts
 
 block content
-  h1 Hello, post#Index
+  div.flex
+    table[class=""].border.grow
+      thead.border-b.border-zinc-100
+        tr.text-left
+          th.px-4 ID
+          th.px-4 Title
+          th.px-4 Action
+      tbody
+        each $post in Posts
+          tr.text-left
+            td.px-4 #{$post.Id}
+            td.px-4 #{$post.Title}
+            td.px-4.flex.gap-4
+              a[href="#"] Edit
+              a[href="#"] Delete
+
+    div.flex[class="w-1/4"].px-4
+      a[href="/admin/post/new"]
+        span.btn Add Post
