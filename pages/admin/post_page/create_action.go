@@ -13,6 +13,7 @@ import (
 type CreateParams struct {
 	Title   string `form:"title"`
 	Content string `form:"content"`
+	NodeId  int64  `form:"node_id"`
 }
 
 func CreateAction(c *gin.Context) {
@@ -39,7 +40,7 @@ func CreateAction(c *gin.Context) {
 
 	admin := user_api.CurrentAdmin(token)
 
-	_, err = post_api.CreatePost(title, content, admin.Id, 1, 0, []string{})
+	_, err = post_api.CreatePost(title, content, admin.Id, p.NodeId, 0, []string{})
 	if err != nil {
 		page_resp.Error(c, err)
 		return

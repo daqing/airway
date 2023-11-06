@@ -10,12 +10,14 @@ block content
         tr.text-left
           th.px-4 ID
           th.px-4 Title
+          th.px-4 Node Id
           th.px-4 Action
       tbody
         each $post in Posts
           tr.text-left
             td.px-4 #{$post.Id}
             td.px-4 #{$post.Title}
+            td.px-4 #{$post.NodeId}
             td.px-4.flex.gap-4
               a[href="#"] Edit
               a[href="#"] Delete
