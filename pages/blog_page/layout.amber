@@ -11,8 +11,9 @@ block body
           h1.text-2xl
             a[href=BlogRootPath] #{Title}
           p.text-zinc-400.mt-2 #{Tagline}
-        div
-          a[href="#"] 关于我
+        div.flex.gap-4
+          each $menu in Menus
+            a[href=$menu.URL] #{$menu.Name}
     main.w-full.px-10.py-4
       div.mx-auto[class="w-2/3"]
         block content

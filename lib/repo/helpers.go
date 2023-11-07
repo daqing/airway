@@ -9,5 +9,7 @@ import (
 func ToCamel(s string) string {
 	var camel = strcase.ToCamel(s)
 
-	return strings.Replace(camel, "Uuid", "UUID", -1)
+	r := strings.Replace(camel, "Uuid", "UUID", -1)
+
+	return strings.Replace(r, "Url", "URL", -1)
 }

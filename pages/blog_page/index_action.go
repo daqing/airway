@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/daqing/airway/api/menu_api"
 	"github.com/daqing/airway/api/post_api"
 	"github.com/daqing/airway/lib/page_resp"
 	"github.com/daqing/airway/lib/utils"
@@ -49,11 +50,22 @@ func IndexAction(c *gin.Context) {
 		)
 	}
 
+	menus, err := menu_api.MenuPlace(
+		[]string{"name", "url"},
+		"blog",
+	)
+
+	if err != nil {
+		page_resp.Error(c, err)
+		return
+	}
+
 	data := map[string]any{
 		"Title":        BlogTitle(),
 		"Tagline":      BlogTagline(),
 		"Year":         time.Now().Year(),
 		"BlogRootPath": utils.PathPrefix("blog"),
+		"Menus":        menus,
 		"Posts":        postsShow,
 	}
 

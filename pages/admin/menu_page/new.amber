@@ -1,0 +1,18 @@
+extends layout
+
+block title
+  | New Menu
+
+block content
+  form[action="/admin/menu/create"][method="post"].mt-5
+    div.group.flex.flex-col.mb-5
+      label Name
+      input[type="text"][name="name"].border
+    div.group.flex.flex-col.mb-5
+      label Url
+      input[type="text"][name="url"].border
+    div.group.flex.flex-col
+      label Place
+      input[type="text"][name="place"].border
+    div.group.mt-5
+      button.btn[type="submit"] Create Menu
