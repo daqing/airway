@@ -6,8 +6,9 @@ block body
       div.flex.justify-between
         div.flex.gap-8
           h1
-            a[href="/admin/dashboard"] ADMIN
+            a[href="/admin"] ADMIN
           div.flex.gap-4
+            a[href="/admin/user"].text-cyan-700 User
             a[href="/admin/post"].text-cyan-700 Post
             a[href="/admin/node"].text-cyan-700 Node
         div.right
