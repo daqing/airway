@@ -14,7 +14,7 @@ block content
           th.px-4 Role
           th.px-4 API Token
           th.px-4 Balance
-          th.px-4 Action
+          th.px-4
       tbody
         each $user in Users
           tr.text-left

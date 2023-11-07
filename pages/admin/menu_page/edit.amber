@@ -1,0 +1,20 @@
+extends layout
+
+block title
+  | New Menu
+
+block content
+  form[action="/admin/menu/update"][method="post"][class="w-1/4 mx-auto"].mt-5
+    input[type="hidden"][name="id"][value=Menu.Id]
+
+    div.group.flex.flex-col.mb-5
+      label Name
+      input[type="text"][name="name"][value=Menu.Name].border
+    div.group.flex.flex-col.mb-5
+      label Url
+      input[type="text"][name="url"][value=Menu.URL].border
+    div.group.flex.flex-col
+      label Place
+      input[type="text"][name="place"][value=Menu.Place].border
+    div.group.mt-5
+      button.btn[type="submit"] Update Menu

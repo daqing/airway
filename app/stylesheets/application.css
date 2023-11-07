@@ -6,4 +6,8 @@
   .btn {
     @apply bg-zinc-200 px-4 py-1 rounded-md hover:bg-zinc-400 hover:text-white hover:font-bold
   }
+
+  input[type="text"] {
+    @apply px-2 py-1;
+  }
 }

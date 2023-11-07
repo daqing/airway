@@ -14,6 +14,17 @@ func CreateMenu(name, url, place string) (menu *Menu, err error) {
 	)
 }
 
+func UpdateMenu(id int64, name, url, place string) bool {
+	return repo.UpdateFields[Menu](
+		id,
+		[]repo.KVPair{
+			repo.KV("name", name),
+			repo.KV("url", url),
+			repo.KV("place", place),
+		},
+	)
+}
+
 func Menus(fields []string, order string, page, limit int) ([]*Menu, error) {
 	if page == 0 {
 		page = 1
@@ -33,6 +44,15 @@ func MenuPlace(fields []string, place string) ([]*Menu, error) {
 		fields,
 		[]repo.KVPair{
 			repo.KV("place", place),
+		},
+	)
+}
+
+func FindBy(field string, value any) (*Menu, error) {
+	return repo.FindRow[Menu](
+		[]string{"id", "name", "url", "place"},
+		[]repo.KVPair{
+			repo.KV(field, value),
 		},
 	)
 }
