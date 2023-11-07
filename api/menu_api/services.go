@@ -1,6 +1,8 @@
 package menu_api
 
-import "github.com/daqing/airway/lib/repo"
+import (
+	"github.com/daqing/airway/lib/repo"
+)
 
 func CreateMenu(name, url, place string) (menu *Menu, err error) {
 	return repo.Insert[Menu](
@@ -23,5 +25,14 @@ func Menus(fields []string, order string, page, limit int) ([]*Menu, error) {
 		order,
 		(page-1)*limit,
 		limit,
+	)
+}
+
+func MenuPlace(fields []string, place string) ([]*Menu, error) {
+	return repo.Find[Menu](
+		fields,
+		[]repo.KVPair{
+			repo.KV("place", place),
+		},
 	)
 }
