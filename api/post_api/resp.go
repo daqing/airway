@@ -10,6 +10,7 @@ type PostResp struct {
 	NodeId     int64
 	Title      string
 	CustomPath string
+	Cat        string
 	Content    string
 	Fee        int
 	CreatedAt  utils.Timestamp
@@ -17,5 +18,9 @@ type PostResp struct {
 }
 
 func (pr PostResp) Fields() []string {
-	return []string{"id", "user_id", "node_id", "title", "custom_path", "content", "fee"}
+	return []string{
+		"id", "user_id", "node_id",
+		"title", "custom_path",
+		"cat", "content", "fee",
+	}
 }

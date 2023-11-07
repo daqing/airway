@@ -4,20 +4,26 @@ block title
   | New Post
 
 block content
-  form[action="/admin/post/create"][method="post"].mt-5
+  form[action="/admin/post/create"][method="post"][class="w-1/4 mx-auto"].mt-5
     div.group.flex.flex-col.mb-5
       label Title
       input[type="text"][name="title"].border
     div.group.flex.flex-col.mb-5
-      label Custom Path
-      input[type="text"][name="custom_path"].border
-    div.group.flex.flex-col.mb-5
       label Content
-      textarea[name="content"].border
-    div.group.flex.flex-col
+      textarea[name="content"][rows=10].border
+    div.group.flex.flex-col.mb-5
+      label Category
+      select[name="cat"].border
+        option[value="blog"] Blog
+        option[value="page"] Page
+    div.group.flex.flex-col.mb-5
       label Node
       select[name="node_id"].border
         each $node in Nodes
           option[value=$node.Id] #{$node.Name}
+    div.group.flex.flex-col
+      label Custom Path
+      input[type="text"][name="custom_path"].border
+
     div.group.mt-5
       button.btn[type="submit"] Create Post

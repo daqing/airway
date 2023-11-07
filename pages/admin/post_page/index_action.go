@@ -20,7 +20,8 @@ func IndexAction(c *gin.Context) {
 	}
 
 	posts, err := post_api.Posts(
-		[]string{"id", "title", "custom_path", "node_id"},
+		[]string{"id", "title", "custom_path", "cat", "node_id"},
+		"",
 		"id DESC",
 		p.Page,
 		50,

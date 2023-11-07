@@ -8,6 +8,7 @@ type Post struct {
 	NodeId     int64
 	Title      string
 	CustomPath string
+	Cat        string
 	Content    string
 	Fee        int
 	CreatedAt  time.Time

@@ -4,7 +4,7 @@ block title
   | New Node
 
 block content
-  form[action="/admin/node/create"][method="post"].mt-5
+  form[action="/admin/node/create"][method="post"][class="w-1/4 mx-auto"].mt-5
     div.group.flex.flex-col.mb-5
       label Name
       input[type="text"][name="name"].border

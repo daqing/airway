@@ -4,7 +4,7 @@ block title
   | New User
 
 block content
-  form[action="/admin/user/create"][method="post"].mt-5
+  form[action="/admin/user/create"][method="post"][class="w-1/4 mx-auto"].mt-5
     div.group.flex.flex-col.mb-5
       label Nickname
       input[type="text"][name="nickname"].border

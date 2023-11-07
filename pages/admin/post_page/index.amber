@@ -11,6 +11,7 @@ block content
           th.px-4 ID
           th.px-4 Title
           th.px-4 Custom Path
+          th.px-4 Category
           th.px-4 Node Id
           th.px-4 Action
       tbody
@@ -19,6 +20,7 @@ block content
             td.px-4 #{$post.Id}
             td.px-4 #{$post.Title}
             td.px-4 #{$post.CustomPath}
+            td.px-4 #{$post.Cat}
             td.px-4 #{$post.NodeId}
             td.px-4.flex.gap-4
               a[href="#"] Edit

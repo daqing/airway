@@ -21,6 +21,7 @@ type PostItemIndex struct {
 func IndexAction(c *gin.Context) {
 	posts, err := post_api.Posts(
 		[]string{"id", "title", "custom_path"},
+		"blog", // TODO: define constant
 		"id DESC",
 		0,
 		50,
