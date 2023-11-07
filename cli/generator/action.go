@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/daqing/airway/cli/helper"
-	"github.com/daqing/airway/lib/utils"
+	"github.com/daqing/airway/lib/repo"
 )
 
 type ActionGenerator struct {
@@ -33,7 +33,7 @@ func GenerateAPIAction(mod string, name string) {
 	err := helper.ExecTemplate(
 		"./cli/template/api/action.txt",
 		targetFileName,
-		ActionGenerator{Mod: mod, Name: utils.ToCamel(name)},
+		ActionGenerator{Mod: mod, Name: repo.ToCamel(name)},
 	)
 
 	if err != nil {

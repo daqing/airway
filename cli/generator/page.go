@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/daqing/airway/cli/helper"
-	"github.com/daqing/airway/lib/utils"
+	"github.com/daqing/airway/lib/repo"
 )
 
 const DEFAULT_PREFIX_FOLDER = "."
@@ -67,7 +67,7 @@ func GeneratePageAction(prefixFolder string, page string, action string) {
 	err := helper.ExecTemplate(
 		"./cli/template/page/action.txt",
 		targetFileName,
-		PageGenerator{Page: page, Name: action, Action: utils.ToCamel(action)},
+		PageGenerator{Page: page, Name: action, Action: repo.ToCamel(action)},
 	)
 
 	if err != nil {
@@ -96,7 +96,7 @@ func GeneratePageActionTemplate(prefixFolder string, page string, action string)
 	err := helper.ExecTemplate(
 		"./cli/template/page/action.amber",
 		targetFileName,
-		PageGenerator{Page: page, Action: utils.ToCamel(action)},
+		PageGenerator{Page: page, Action: repo.ToCamel(action)},
 	)
 
 	if err != nil {
@@ -140,7 +140,7 @@ func GeneratePageRoutes(prefixFolder, page string, action string) {
 	err := helper.ExecTemplate(
 		"./cli/template/page/routes.txt",
 		targetFileName,
-		PageGenerator{Page: page, Name: action, Action: utils.ToCamel(action)},
+		PageGenerator{Page: page, Name: action, Action: repo.ToCamel(action)},
 	)
 
 	if err != nil {

@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/daqing/airway/cli/helper"
-	"github.com/daqing/airway/lib/utils"
+	"github.com/daqing/airway/lib/repo"
 )
 
 func GenJS(args []string) {
@@ -39,7 +39,7 @@ func GeneratePageReactJS(prefixFolder string, page string, action string) {
 	err := helper.ExecTemplate(
 		"./cli/template/js/react.txt",
 		targetFileName,
-		PageGenerator{Page: page, Name: action, Action: utils.ToCamel(action)},
+		PageGenerator{Page: page, Name: action, Action: repo.ToCamel(action)},
 	)
 
 	if err != nil {

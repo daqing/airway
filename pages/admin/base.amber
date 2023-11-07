@@ -11,6 +11,7 @@ block body
             a[href="/admin/user"].text-cyan-700 User
             a[href="/admin/post"].text-cyan-700 Post
             a[href="/admin/node"].text-cyan-700 Node
+            a[href="/admin/menu"].text-cyan-700 Menu
         div.right
           a[href="/"] Back
 
