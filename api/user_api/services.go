@@ -184,3 +184,17 @@ func CheckAdmin(authToken string) bool {
 
 	return ok
 }
+
+func Users(fields []string, order string, page, limit int) ([]*User, error) {
+	if page == 0 {
+		page = 1
+	}
+
+	return repo.FindLimit[User](
+		fields,
+		[]repo.KVPair{},
+		order,
+		(page-1)*limit,
+		limit,
+	)
+}

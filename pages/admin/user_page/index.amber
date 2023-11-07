@@ -1,0 +1,33 @@
+extends layout
+
+block title
+  | Hello, user
+
+block content
+  div.flex
+    table[class=""].border.grow
+      thead.border-b.border-zinc-100
+        tr.text-left
+          th.px-4 ID
+          th.px-4 Nickname
+          th.px-4 Username
+          th.px-4 Role
+          th.px-4 API Token
+          th.px-4 Balance
+          th.px-4 Action
+      tbody
+        each $user in Users
+          tr.text-left
+            td.px-4 #{$user.Id}
+            td.px-4 #{$user.Nickname}
+            td.px-4 #{$user.Username}
+            td.px-4 #{$user.Role}
+            td.px-4 #{$user.ApiToken}
+            td.px-4 #{$user.Balance}
+            td.px-4.flex.gap-4
+              a[href="#"] Edit
+              a[href="#"] Delete
+
+    div.flex[class="w-1/4"].px-4
+      a[href="/admin/user/new"]
+        span.btn Add User

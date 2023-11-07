@@ -6,8 +6,5 @@ import (
 )
 
 func Routes(r *gin.RouterGroup) {
-	g := r.Group("/dashboard")
-	{
-		g.GET("", helper.CheckAdmin(IndexAction))
-	}
+	r.GET("", helper.CheckAdmin(IndexAction))
 }

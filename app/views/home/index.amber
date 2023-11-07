@@ -23,7 +23,7 @@ block body
           a[href="/"] #{Nickname}
 
           if IsAdmin
-            a[href="/admin/dashboard"] Admin
+            a[href="/admin"] Admin
 
           a[href="/session/destroy"] Logout
         else
