@@ -139,6 +139,30 @@ $ just bun
 
 就可以准备好 React 环境。
 
+#### 2.6
+
+修改 `Dockerfile`，把里面的`airway`，替换为项目名称。
+
+```
+FROM golang:1.21.1-bookworm
+
+WORKDIR /app
+
+COPY ./bin/airway /app/
+
+ENV AIRWAY_ENV=production
+ENV PORT=1900
+
+EXPOSE 1900
+
+CMD ["/app/airway"]
+```
+
+假设你的项目目录是 `foobar-site`，那么，当执行 go build 时，所生成的二进制名称就是 `foobar-site`。
+
+那么，你需要把上面内容中的 `airway`，替换为 `foobar-site`
+
+
 ## 3. 启动本地开发服务器
 
 执行以下命令：
