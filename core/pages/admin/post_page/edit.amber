@@ -19,8 +19,15 @@ block content
     div.group.flex.flex-col.mb-5
       label Category
       select[name="cat"].border
-        option[value="blog"][selected=$.Post.Cat == "blog"] Blog
-        option[value="page"][selected=$.Post.Cat == "page"] Page
+        if $.Post.Cat == "blog"
+          option[value="blog"][selected="true"] Blog
+        else
+          option[value="blog"] Blog
+
+        if $.Post.Cat == "page"
+          option[value="page"][selected="true"] Page
+        else
+          option[value="page"] Page
 
     div.group.flex.flex-col.mb-5
       label Node
