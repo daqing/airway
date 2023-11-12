@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/daqing/airway/api/user_api"
+	"github.com/daqing/airway/core/api/user_api"
 )
 
 func Generate(args []string) {

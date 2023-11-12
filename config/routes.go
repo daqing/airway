@@ -1,18 +1,18 @@
 package config
 
 import (
-	"github.com/daqing/airway/api/checkin_api"
-	"github.com/daqing/airway/api/comment_api"
-	"github.com/daqing/airway/api/hello_api"
-	"github.com/daqing/airway/api/node_api"
-	"github.com/daqing/airway/api/post_api"
-	"github.com/daqing/airway/api/setting_api"
-	"github.com/daqing/airway/api/user_api"
-	"github.com/daqing/airway/pages/admin"
-	"github.com/daqing/airway/pages/blog_page"
-	"github.com/daqing/airway/pages/home_page"
-	"github.com/daqing/airway/pages/session_page"
-	"github.com/daqing/airway/pages/up_page"
+	"github.com/daqing/airway/core/api/checkin_api"
+	"github.com/daqing/airway/core/api/comment_api"
+	"github.com/daqing/airway/core/api/hello_api"
+	"github.com/daqing/airway/core/api/node_api"
+	"github.com/daqing/airway/core/api/post_api"
+	"github.com/daqing/airway/core/api/setting_api"
+	"github.com/daqing/airway/core/api/user_api"
+	"github.com/daqing/airway/core/pages/admin"
+	"github.com/daqing/airway/core/pages/blog_page"
+	"github.com/daqing/airway/core/pages/home_page"
+	"github.com/daqing/airway/core/pages/session_page"
+	"github.com/daqing/airway/core/pages/up_page"
 	"github.com/gin-gonic/gin"
 )
 

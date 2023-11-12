@@ -7,9 +7,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func Page(c *gin.Context, page string, action string, obj map[string]any) {
+func Page(c *gin.Context, topDir, page string, action string, obj map[string]any) {
 	pwd := os.Getenv("AIRWAY_PWD")
-	prefix := fmt.Sprintf("%s/pages/%s_page", pwd, page)
+	prefix := fmt.Sprintf("%s/%s/pages/%s_page", pwd, topDir, page)
 
 	renderTemplate(c, prefix, action, obj)
 }
