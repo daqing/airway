@@ -11,23 +11,26 @@ build-cli:
   cd ./cli && go build && cd ..
   mv ./cli/cli ./bin/
 
+build-cli-docker:
+  cd ./cli && GOOS=linux GOARCH=amd64 go build -o ../bin/cli_amd .
+
 cli +args:
   ./bin/cli {{args}}
 
 packjs:
-  cd ./app/javascripts/ && bun build --minify --splitting --outdir=../../public/js ./src/*.jsx
+  cd ./frontend/javascripts/ && bun build --minify --splitting --outdir=../../public/js ./src/*.jsx
 
 build: packjs
   GOOS=linux GOARCH=amd64 go build -o ./bin .
 
 bun:
-  cd ./app/javascripts && bun install
+  cd ./frontend/javascripts && bun install
 
-docker: build
-  docker build -t airway-api -f Dockerfile --platform linux/amd64 .
+docker: build build-cli-docker
+  docker build -t airway -f Dockerfile --platform linux/amd64 .
 
 dbdocker:
-  docker build -f Dockerfile.db -t airway-db --platform linux/amd64 .
+  docker build -t airway_db -f Dockerfile.db  --platform linux/amd64 .
 
 migrate:
   find db/*.sql | xargs -I{} psql -U $POSTGRES_USER -d airway -f {}

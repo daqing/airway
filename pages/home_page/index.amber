@@ -1,4 +1,4 @@
-extends ../layouts/base
+extends layout
 
 block title
   | Hello, Airway

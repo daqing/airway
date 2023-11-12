@@ -8,17 +8,16 @@ import (
 	"github.com/daqing/airway/api/post_api"
 	"github.com/daqing/airway/api/setting_api"
 	"github.com/daqing/airway/api/user_api"
-	"github.com/daqing/airway/app/controllers/home_controller"
 	"github.com/daqing/airway/pages/admin"
 	"github.com/daqing/airway/pages/blog_page"
+	"github.com/daqing/airway/pages/home_page"
 	"github.com/daqing/airway/pages/session_page"
 	"github.com/daqing/airway/pages/up_page"
 	"github.com/gin-gonic/gin"
 )
 
 func Routes(r *gin.Engine) {
-	r.GET("/", home_controller.IndexAction)
-
+	home_page.Routes(r)
 	up_page.Routes(r)
 	session_page.Routes(r)
 	blog_page.Routes(r)

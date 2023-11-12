@@ -30,7 +30,7 @@ func GeneratePageReactJS(prefixFolder string, page string, action string) {
 
 	targetFileName := strings.Join(
 		[]string{
-			"./app/javascripts/src",
+			"./frontend/javascripts/src",
 			filename,
 		},
 		"/",

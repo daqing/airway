@@ -1,0 +1,22 @@
+version: "3.1"
+services:
+  registry:
+    image: "registry:2"
+    restart: "always"
+    environment:
+      REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /data
+      REGISTRY_AUTH: htpasswd
+      REGISTRY_AUTH_HTPASSWD_REALM: Registry
+      REGISTRY_AUTH_HTPASSWD_PATH: /auth/registry.password
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.reg.rule=Host(`reg.example.com`)"
+      - "traefik.http.routers.reg.entrypoints=websecure"
+      - "traefik.http.routers.reg.tls.certresolver=myresolver"
+      - "traefik.http.services.reg.loadbalancer.server.port=5000"
+    volumes:
+      - regdata:/data
+      - ./auth:/auth
+
+volumes:
+  regdata:

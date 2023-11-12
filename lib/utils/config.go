@@ -2,7 +2,7 @@ package utils
 
 import "os"
 
-var env = os.Getenv("AIRWAY_ENV")
+var env = TrimFull(os.Getenv("AIRWAY_ENV"))
 
 const LOCAL_ENV = "local"
 
