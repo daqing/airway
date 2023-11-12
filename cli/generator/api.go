@@ -10,11 +10,11 @@ import (
 )
 
 func GenAPI(xargs []string) {
-	if len(xargs) == 0 {
-		helper.Help("cli g api [name]")
+	if len(xargs) != 2 {
+		helper.Help("cli g api [top-dir] [name]")
 	}
 
-	GenerateAPI(xargs[0])
+	GenerateAPI(xargs[0], xargs[1])
 }
 
 type APIGenerator struct {
@@ -22,22 +22,17 @@ type APIGenerator struct {
 	ModelName string
 }
 
-func GenerateAPI(name string) {
+func GenerateAPI(topDir, name string) {
 	dir := fmt.Sprintf("%s_api", name)
-
-	if _, err := os.Stat(dir); err == nil {
-		panic("API already exists")
-	}
-
-	dirPath := fmt.Sprintf("./api/%s", dir)
+	dirPath := fmt.Sprintf("./%s/api/%s", topDir, dir)
 
 	if err := os.Mkdir(dirPath, 0755); err != nil {
 		panic(err)
 	}
 
-	GenerateAPIAction(name, "index")
-	GenerateAPIAction(name, "show")
-	GenerateAPIAction(name, "create")
+	GenerateAPIAction(topDir, name, "index")
+	GenerateAPIAction(topDir, name, "show")
+	GenerateAPIAction(topDir, name, "create")
 
 	generateAPIRoutes(name)
 	generateAPIModels(name)

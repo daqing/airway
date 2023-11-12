@@ -13,17 +13,19 @@ type ActionGenerator struct {
 }
 
 func GenAction(xargs []string) {
-	if len(xargs) != 2 {
-		helper.Help("cli g action [api] [action]")
+	if len(xargs) != 3 {
+		helper.Help("cli g action [top-dir] [api] [action]")
 	}
 
-	GenerateAPIAction(xargs[0], xargs[1])
+	GenerateAPIAction(xargs[0], xargs[1], xargs[2])
 }
 
-func GenerateAPIAction(mod string, name string) {
+func GenerateAPIAction(topDir, mod string, name string) {
 	targetFileName := strings.Join(
 		[]string{
-			"./api",
+			".",
+			topDir,
+			"api",
 			mod + "_api",
 			name + "_action.go",
 		},
