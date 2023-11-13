@@ -14,5 +14,8 @@ func Routes(r *gin.RouterGroup) {
 
 		g.POST("/create", helper.CheckAdmin(CreateAction))
 		g.POST("/update", helper.CheckAdmin(UpdateAction))
+
+		// TODO: csrf protection
+		g.GET("/delete", helper.CheckAdmin(DeleteAction))
 	}
 }
