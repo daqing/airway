@@ -18,7 +18,13 @@ func IndexAction(c *gin.Context) {
 		return
 	}
 
-	nodes, err := node_api.Nodes("id DESC", p.Page, 50)
+	nodes, err := node_api.Nodes(
+		[]string{"id", "name", "key", "parent_key", "place"},
+		"id DESC",
+		p.Page,
+		50,
+	)
+
 	if err != nil {
 		page_resp.Error(c, err)
 		return

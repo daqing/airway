@@ -23,7 +23,13 @@ func EditAction(c *gin.Context) {
 		return
 	}
 
-	nodes, err := node_api.Nodes("id DESC", 1, 100)
+	nodes, err := repo.Find[node_api.Node](
+		[]string{"id", "name"},
+		[]repo.KVPair{
+			repo.KV("place", "blog"),
+		},
+	)
+
 	if err != nil {
 		page_resp.Error(c, err)
 		return

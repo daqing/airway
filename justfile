@@ -18,6 +18,7 @@ cli +args:
   ./bin/cli {{args}}
 
 packjs:
+  rm -f ./public/js/*
   cd ./frontend/javascripts/ && bun build --minify --splitting --outdir=../../public/js ./src/*.jsx
 
 build: packjs

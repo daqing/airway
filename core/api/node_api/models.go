@@ -9,6 +9,7 @@ type Node struct {
 	Key       string
 	ParentKey string
 	Level     int
+	Place     string
 
 	CreatedAt time.Time
 	UpdatedAt time.Time

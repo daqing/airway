@@ -15,13 +15,13 @@ func CreateNode(name, key, parentKey string, level int) (*Node, error) {
 	)
 }
 
-func Nodes(order string, page, limit int) ([]*Node, error) {
+func Nodes(fields []string, order string, page, limit int) ([]*Node, error) {
 	if page == 0 {
 		page = 1
 	}
 
 	return repo.FindLimit[Node](
-		[]string{"id", "name", "key", "parent_key"},
+		fields,
 		[]repo.KVPair{},
 		order,
 		(page-1)*limit,

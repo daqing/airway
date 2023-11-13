@@ -13,6 +13,7 @@ block content
           th.px-4 Key
           th.px-4 Level
           th.px-4 Parent
+          th.px-4 Place
           th.px-4
       tbody
         each $node in Nodes
@@ -22,6 +23,7 @@ block content
             td.px-4 #{$node.Key}
             td.px-4 #{$node.Level}
             td.px-4 #{$node.ParentKey}
+            td.px-4 #{$node.Place}
             td.px-4.flex.gap-4
               a[href="/admin/node/edit?id="+$node.Id] Edit
               a[href="/admin/node/delete?id="+$node.Id] Delete

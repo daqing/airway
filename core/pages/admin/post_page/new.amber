@@ -12,7 +12,7 @@ block content
       label Content
       textarea[name="content"][rows=10].border
     div.group.flex.flex-col.mb-5
-      label Category
+      label Type
       select[name="cat"].border
         option[value="blog"] Blog
         option[value="page"] Page
