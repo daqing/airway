@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/daqing/airway/core/api/node_api"
-	"github.com/daqing/airway/core/api/user_api"
 	"github.com/daqing/airway/lib/page_resp"
 	"github.com/daqing/airway/lib/utils"
 	"github.com/gin-gonic/gin"
@@ -31,19 +30,7 @@ func CreateAction(c *gin.Context) {
 		return
 	}
 
-	token, err := c.Cookie("user_api_token")
-	if err != nil {
-		page_resp.Error(c, err)
-		return
-	}
-
-	admin := user_api.CurrentAdmin(token)
-	if admin == nil {
-		page_resp.Error(c, fmt.Errorf("current user is not admin"))
-		return
-	}
-
-	_, err = node_api.CreateNode(name, key)
+	_, err := node_api.CreateNode(name, key, "", 0)
 	if err != nil {
 		page_resp.Error(c, err)
 		return

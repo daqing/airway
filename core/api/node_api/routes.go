@@ -10,9 +10,4 @@ func Routes(r *gin.RouterGroup) {
 		g.GET("/index", IndexAction)
 
 	}
-
-	admin := g.Group("/admin")
-	{
-		admin.POST("/create", AdminCreateAction)
-	}
 }
