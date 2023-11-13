@@ -10,11 +10,18 @@ block content
     div.group.flex.flex-col.mb-5
       label Name
       input[type="text"][name="name"][value=Menu.Name].border
+
     div.group.flex.flex-col.mb-5
       label Url
       input[type="text"][name="url"][value=Menu.URL].border
+
     div.group.flex.flex-col
       label Place
-      input[type="text"][name="place"][value=Menu.Place].border
+      select[name="place"].border
+        if Menu.Place == "blog"
+          option[value="blog"][selected="true"] Blog
+        else
+            option[value="blog"] Blog
+
     div.group.mt-5
       button.btn[type="submit"] Update Menu
