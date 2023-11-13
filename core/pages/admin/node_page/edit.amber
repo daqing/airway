@@ -1,0 +1,19 @@
+extends layout
+
+block title
+  | Edit Node
+
+block content
+  form[action="/admin/node/update"][method="post"][class="w-1/4 mx-auto"].mt-5
+    input[type="hidden"][name="id"][value=$.Node.Id]
+
+    div.group.flex.flex-col.mb-5
+      label Name
+      input[type="text"][name="name"][value=$.Node.Name].border
+
+    div.group.flex.flex-col
+      label Key
+      input[type="text"][name="key"][value=$.Node.Key].border
+
+    div.group.mt-5
+      button.btn[type="submit"] Update Node

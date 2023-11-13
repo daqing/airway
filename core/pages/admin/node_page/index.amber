@@ -23,7 +23,7 @@ block content
             td.px-4 #{$node.Level}
             td.px-4 #{$node.ParentKey}
             td.px-4.flex.gap-4
-              a[href="#"] Edit
+              a[href="/admin/node/edit?id="+$node.Id] Edit
               a[href="#"] Delete
 
     div.flex[class="w-1/4"].px-4
