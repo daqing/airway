@@ -18,13 +18,13 @@ cli +args:
   ./bin/cli {{args}}
 
 packjs:
-  cd ./core/frontend/javascripts/ && bun build --minify --splitting --outdir=../../public/js ./src/*.jsx
+  cd ./frontend/javascripts/ && bun build --minify --splitting --outdir=../../public/js ./src/*.jsx
 
 build: packjs
   GOOS=linux GOARCH=amd64 go build -o ./bin .
 
 bun:
-  cd ./core/frontend/javascripts && bun install
+  cd ./frontend/javascripts && bun install
 
 docker: build build-cli-docker
   docker build -t airway -f Dockerfile --platform linux/amd64 .

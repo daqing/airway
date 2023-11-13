@@ -25,9 +25,7 @@ func GeneratePageReactJS(topDir, prefixFolder string, page string, action string
 
 	targetFileName := strings.Join(
 		[]string{
-			".",
-			topDir,
-			"frontend/javascripts/src",
+			"./frontend/javascripts/src",
 			filename,
 		},
 		"/",
