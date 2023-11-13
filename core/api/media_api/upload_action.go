@@ -50,11 +50,9 @@ func UploadAction(c *gin.Context) {
 	}
 
 	// move uplaoded file to asset directory
-	assetDir := os.Getenv("AIRWAY_STORAGE_DIR")
-	if assetDir == "" {
-		api_resp.Error(c, fmt.Errorf(
-			"no environment variable defined for AIRWAY_STORAGE_DIR",
-		))
+	assetDir, err := utils.GetEnv("AIRWAY_STORAGE_DIR")
+	if err != nil {
+		api_resp.Error(c, err)
 		return
 	}
 
@@ -69,12 +67,9 @@ func UploadAction(c *gin.Context) {
 
 	c.SaveUploadedFile(file, destFile)
 
-	assetHost := os.Getenv("AIRWAY_ASSET_HOST")
-	if assetHost == "" {
-		api_resp.Error(c, fmt.Errorf(
-			"no environment variable defined for AIRWAY_ASSET_HOST",
-		))
-
+	assetHost, err := utils.GetEnv("AIRWAY_ASSET_HOST")
+	if err != nil {
+		api_resp.Error(c, err)
 		return
 	}
 

@@ -44,11 +44,7 @@ func main() {
 
 	config.Routes(r)
 
-	var port = utils.TrimFull(os.Getenv("AIRWAY_PORT"))
-	if port == "" {
-		fmt.Println("AIRWAY_PORT not set")
-		os.Exit(3)
-	}
+	port := utils.GetEnvMust("AIRWAY_PORT")
 
 	fmt.Printf("Airway running at: http://127.0.0.1:%s\n", port)
 	app.Run(":" + port)
