@@ -2,7 +2,13 @@ FROM alpine
 
 WORKDIR /app
 
-COPY . .
+RUN mkdir /app/bin
+RUN mkdir /app/core
+RUN mkdir /app/public
+
+COPY ./bin/airway /app/bin/
+COPY ./core /app/core
+COPY ./public /app/public
 
 ENV AIRWAY_ENV=production
 ENV AIRWAY_PORT=1900
