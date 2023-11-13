@@ -11,7 +11,7 @@ block content
           th.px-4 ID
           th.px-4 Title
           th.px-4 Custom Path
-          th.px-4 Category
+          th.px-4 Type
           th.px-4 Node Id
           th.px-4
       tbody

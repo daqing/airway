@@ -17,7 +17,7 @@ block content
         | #{$.Post.Content}
 
     div.group.flex.flex-col.mb-5
-      label Category
+      label Type
       select[name="cat"].border
         if $.Post.Cat == "blog"
           option[value="blog"][selected="true"] Blog
