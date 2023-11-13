@@ -22,7 +22,7 @@ block content
             td.px-4 #{$menu.Place}
             td.px-4.flex.gap-4
               a[href="/admin/menu/edit?id="+$menu.Id] Edit
-              a[href="#"] Delete
+              a[href="/admin/menu/delete?id="+$menu.Id] Delete
 
     div.flex[class="w-1/4"].px-4
       a[href="/admin/menu/new"]

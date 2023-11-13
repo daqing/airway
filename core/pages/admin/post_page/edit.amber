@@ -1,0 +1,43 @@
+extends layout
+
+block title
+  | Edit Post
+
+block content
+  form[action="/admin/post/update"][method="post"][class="w-1/4 mx-auto"].mt-5
+    input[type="hidden"][name="id"][value=$.Post.Id]
+
+    div.group.flex.flex-col.mb-5
+      label Title
+      input[type="text"][name="title"][value=Post.Title].border
+
+    div.group.flex.flex-col.mb-5
+      label Content
+      textarea[name="content"][rows=10].border
+        | #{$.Post.Content}
+
+    div.group.flex.flex-col.mb-5
+      label Category
+      select[name="cat"].border
+        if $.Post.Cat == "blog"
+          option[value="blog"][selected="true"] Blog
+        else
+          option[value="blog"] Blog
+
+        if $.Post.Cat == "page"
+          option[value="page"][selected="true"] Page
+        else
+          option[value="page"] Page
+
+    div.group.flex.flex-col.mb-5
+      label Node
+      select[name="node_id"].border
+        each $node in Nodes
+          option[value=$node.Id] #{$node.Name}
+
+    div.group.flex.flex-col
+      label Custom Path
+      input[type="text"][name="custom_path"][value=$.Post.CustomPath].border
+
+    div.group.mt-5
+      button.btn[type="submit"] Update Post

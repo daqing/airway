@@ -11,6 +11,8 @@ block content
           th.px-4 ID
           th.px-4 Name
           th.px-4 Key
+          th.px-4 Level
+          th.px-4 Parent
           th.px-4
       tbody
         each $node in Nodes
@@ -18,9 +20,11 @@ block content
             td.px-4 #{$node.Id}
             td.px-4 #{$node.Name}
             td.px-4 #{$node.Key}
+            td.px-4 #{$node.Level}
+            td.px-4 #{$node.ParentKey}
             td.px-4.flex.gap-4
-              a[href="#"] Edit
-              a[href="#"] Delete
+              a[href="/admin/node/edit?id="+$node.Id] Edit
+              a[href="/admin/node/delete?id="+$node.Id] Delete
 
     div.flex[class="w-1/4"].px-4
       a[href="/admin/node/new"]

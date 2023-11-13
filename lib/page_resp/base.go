@@ -19,7 +19,9 @@ func defaultData() map[string]any {
 	if config.IsLocal {
 		data["ts"] = time.Now().UnixNano()
 	} else {
-		data["ts"] = 1
+		version := utils.GetEnvMust("AW_ASSET_VERSION")
+
+		data["ts"] = version
 	}
 
 	return data

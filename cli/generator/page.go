@@ -12,16 +12,16 @@ import (
 const DEFAULT_PREFIX_FOLDER = "."
 
 func GenPage(args []string) {
-	if len(args) < 2 {
-		helper.Help("cli g page [api] [action]")
+	if len(args) < 3 {
+		helper.Help("cli g page [top-dir] [api] [action]")
 	}
 
-	fmt.Printf("gen page for %s, %s\n", args[0], args[1])
+	fmt.Printf("gen page for %s/%s, %s\n", args[0], args[1], args[2])
 
-	GeneratePage(args[0], args[1])
+	GeneratePage(args[0], args[1], args[2])
 }
 
-func GeneratePage(name string, action string) {
+func GeneratePage(topDir, name, action string) {
 	var prefixFolder = DEFAULT_PREFIX_FOLDER
 
 	if strings.Contains(name, ".") {
@@ -32,31 +32,33 @@ func GeneratePage(name string, action string) {
 	}
 
 	dir := fmt.Sprintf("%s/%s_page", prefixFolder, name)
+	dirPath := fmt.Sprintf("./%s/pages/%s", topDir, dir)
 
-	dirPath := fmt.Sprintf("./pages/%s", dir)
 	if err := os.Mkdir(dirPath, 0755); err != nil {
 		// page directory exists, generate new action
-		GeneratePageAction(prefixFolder, name, action)
-		GeneratePageActionTemplate(prefixFolder, name, action)
-		GeneratePageReactJS(prefixFolder, name, action)
+		GeneratePageAction(topDir, prefixFolder, name, action)
+		GeneratePageActionTemplate(topDir, prefixFolder, name, action)
+		GeneratePageReactJS(topDir, prefixFolder, name, action)
 
 		os.Exit(0)
 	}
 
-	GeneratePageAction(prefixFolder, name, action)
+	GeneratePageAction(topDir, prefixFolder, name, action)
 
-	GeneratePageActionTemplate(prefixFolder, name, action)
+	GeneratePageActionTemplate(topDir, prefixFolder, name, action)
 
-	GeneratePageLayout(prefixFolder, name)
-	GeneratePageRoutes(prefixFolder, name, action)
+	GeneratePageLayout(topDir, prefixFolder, name)
+	GeneratePageRoutes(topDir, prefixFolder, name, action)
 
-	GeneratePageReactJS(prefixFolder, name, action)
+	GeneratePageReactJS(topDir, prefixFolder, name, action)
 }
 
-func GeneratePageAction(prefixFolder string, page string, action string) {
+func GeneratePageAction(topDir, prefixFolder, page, action string) {
 	targetFileName := strings.Join(
 		[]string{
-			"./pages",
+			".",
+			topDir,
+			"pages",
 			prefixFolder,
 			page + "_page",
 			action + "_action.go",
@@ -82,10 +84,12 @@ type PageGenerator struct {
 	Action string
 }
 
-func GeneratePageActionTemplate(prefixFolder string, page string, action string) {
+func GeneratePageActionTemplate(topDir, prefixFolder string, page string, action string) {
 	targetFileName := strings.Join(
 		[]string{
-			"./pages",
+			".",
+			topDir,
+			"pages",
 			prefixFolder,
 			page + "_page",
 			action + ".amber",
@@ -104,10 +108,12 @@ func GeneratePageActionTemplate(prefixFolder string, page string, action string)
 	}
 }
 
-func GeneratePageLayout(prefixFolder, page string) {
+func GeneratePageLayout(topDir, prefixFolder, page string) {
 	targetFileName := strings.Join(
 		[]string{
-			"./pages",
+			".",
+			topDir,
+			"pages",
 			prefixFolder,
 			page + "_page",
 			"layout.amber",
@@ -126,10 +132,12 @@ func GeneratePageLayout(prefixFolder, page string) {
 	}
 }
 
-func GeneratePageRoutes(prefixFolder, page string, action string) {
+func GeneratePageRoutes(topDir, prefixFolder, page string, action string) {
 	targetFileName := strings.Join(
 		[]string{
-			"./pages",
+			".",
+			topDir,
+			"pages",
 			prefixFolder,
 			page + "_page",
 			"routes.go",

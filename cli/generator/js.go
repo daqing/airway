@@ -8,19 +8,14 @@ import (
 )
 
 func GenJS(args []string) {
-	if len(args) < 2 {
-		helper.Help("cli g js [prefix] [api] [action]")
+	if len(args) < 3 {
+		helper.Help("cli g js [top-dir] [prefix] [api] [action]")
 	}
 
-	if len(args) == 2 {
-		GeneratePageReactJS(DEFAULT_PREFIX_FOLDER, args[0], args[1])
-	} else {
-		GeneratePageReactJS(args[0], args[1], args[2])
-	}
-
+	GeneratePageReactJS(args[0], args[1], args[2], args[3])
 }
 
-func GeneratePageReactJS(prefixFolder string, page string, action string) {
+func GeneratePageReactJS(topDir, prefixFolder string, page string, action string) {
 	filename := page + "_" + action + ".jsx"
 
 	// TODO: add const definition for default value "."
@@ -30,7 +25,7 @@ func GeneratePageReactJS(prefixFolder string, page string, action string) {
 
 	targetFileName := strings.Join(
 		[]string{
-			"./core/frontend/javascripts/src",
+			"./frontend/javascripts/src",
 			filename,
 		},
 		"/",

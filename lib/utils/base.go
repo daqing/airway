@@ -1,7 +1,5 @@
 package utils
 
-import "os"
-
 const API_PREFIX = "airway_"
 
 func GenerateApiToken() string {
@@ -17,7 +15,7 @@ const EMPTY_PATH = ""
 // with "blog" will return "/blog", otherwise returns
 // empty string
 func PathPrefix(app string) string {
-	multiApp := os.Getenv("AIRWAY_MULTI_APP")
+	multiApp, _ := GetEnv("AIRWAY_MULTI_APP")
 
 	if multiApp == "1" {
 		return ROOT_PATH + app

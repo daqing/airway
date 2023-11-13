@@ -5,8 +5,10 @@ import "time"
 type Node struct {
 	Id int64
 
-	Name string
-	Key  string
+	Name      string
+	Key       string
+	ParentKey string
+	Level     int
 
 	CreatedAt time.Time
 	UpdatedAt time.Time

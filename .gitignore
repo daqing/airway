@@ -9,3 +9,5 @@
 !/public/js/.keep
 
 node_modules
+
+*.sock

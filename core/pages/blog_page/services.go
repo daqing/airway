@@ -1,6 +1,16 @@
 package blog_page
 
-import "os"
+import "github.com/daqing/airway/lib/utils"
 
-func BlogTitle() string   { return os.Getenv("AW_BLOG_TITLE") }
-func BlogTagline() string { return os.Getenv("AW_BLOG_TAGLINE") }
+func BlogTitle() string {
+	return utils.GetEnvMust("AW_BLOG_TITLE")
+}
+
+func BlogTagline() string {
+	tagline, err := utils.GetEnv("AW_BLOG_TAGLINE")
+	if err != nil {
+		return ""
+	}
+
+	return tagline
+}
