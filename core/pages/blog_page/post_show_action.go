@@ -1,6 +1,8 @@
 package blog_page
 
 import (
+	"bytes"
+	"html/template"
 	"strconv"
 	"time"
 
@@ -10,6 +12,7 @@ import (
 	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/utils"
 	"github.com/gin-gonic/gin"
+	"github.com/yuin/goldmark"
 )
 
 func PostShowAction(c *gin.Context) {
@@ -54,6 +57,14 @@ func PostShowAction(c *gin.Context) {
 		"Post":         post,
 		"Menus":        menus,
 	}
+
+	var buf bytes.Buffer
+	if err := goldmark.Convert([]byte(post.Content), &buf); err != nil {
+		page_resp.Error(c, err)
+		return
+	}
+
+	data["ContentHTML"] = template.HTML(buf.String())
 
 	page_resp.Page(c, "core", "blog", "post_show", data)
 

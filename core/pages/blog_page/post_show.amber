@@ -13,5 +13,5 @@ block content
   div.flex.flex-col.items-center.px-2.pt-12.pb-4.mb-4
     h1.font-medium.text-2xl #{Post.Title}
     p.mt-2.text-gray-500.text-sm.font-mono #{PostDate}
-  article.px-10.prose.max-w-none
-    p #{Post.Content}
+  article.px-10.post.max-w-none
+    #{ContentHTML}

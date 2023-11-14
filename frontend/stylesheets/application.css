@@ -10,4 +10,24 @@
   input[type="text"], input[type="password"] {
     @apply px-2 py-1;
   }
+
+  article.post h1 {
+    @apply text-2xl py-4;
+  }
+
+  article.post h2 {
+    @apply text-lg py-2;
+  }
+
+  article.post p {
+    @apply text-sm py-2;
+  }
+
+  article.post ul {
+    @apply list-disc ml-4;
+  }
+
+  article.post ol {
+    @apply list-decimal ml-6;
+  }
 }
