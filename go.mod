@@ -3,7 +3,7 @@ module github.com/daqing/airway
 go 1.21.3
 
 require (
-	github.com/daqing/amber v0.0.0-20231029122315-1c7f2629b8ca
+	github.com/daqing/amber v0.0.1
 	github.com/gin-contrib/cors v1.4.0
 	github.com/gin-gonic/gin v1.9.1
 	github.com/iancoleman/strcase v0.3.0
@@ -11,6 +11,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/redis/go-redis/v9 v9.1.0
 	github.com/samber/slog-gin v1.1.0
+	github.com/yuin/goldmark v1.6.0
 	golang.org/x/crypto v0.9.0
 )
 
@@ -38,7 +39,6 @@ require (
 	github.com/pelletier/go-toml/v2 v2.0.8 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.11 // indirect
-	github.com/yuin/goldmark v1.6.0 // indirect
 	golang.org/x/arch v0.3.0 // indirect
 	golang.org/x/net v0.10.0 // indirect
 	golang.org/x/sync v0.1.0 // indirect
