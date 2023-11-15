@@ -7,11 +7,4 @@ func Routes(r *gin.RouterGroup) {
 	{
 		g.GET("/map", MapAction)
 	}
-
-	admin := g.Group("/admin")
-	{
-		admin.GET("/index", AdminIndexAction)
-		admin.POST("/create", AdminCreateAction)
-		admin.POST("/update", AdminUpdateAction)
-	}
 }
