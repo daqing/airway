@@ -20,6 +20,7 @@ block content
       select[name="place"].border
         option[value=""] Default
         option[value="blog"] Blog
+        option[value="forum"] Forum
 
     div.group.mt-5
       button.btn[type="submit"] Update Node
