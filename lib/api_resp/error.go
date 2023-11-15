@@ -6,15 +6,21 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func ErrorMsg(c *gin.Context, msg string) {
-	fmt.Printf("===> Response Error: %s", msg)
+type ErrCode int
 
-	c.JSON(200, gin.H{"ok": false, "data": gin.H{}, "message": msg})
+const ErrGeneral ErrCode = 10000
+
+func ErrorCodeMsg(c *gin.Context, code ErrCode, message string) {
+	c.JSON(200, gin.H{"code": code, "data": gin.H{}, "message": message})
 	c.Abort()
 }
 
+func ErrorCode(c *gin.Context, code ErrCode, err error) {
+	ErrorCodeMsg(c, code, err.Error())
+}
+
 func Error(c *gin.Context, err error) {
-	ErrorMsg(c, err.Error())
+	ErrorCode(c, ErrGeneral, err)
 }
 
 const DefaultMessage = "===> Got server error: "
