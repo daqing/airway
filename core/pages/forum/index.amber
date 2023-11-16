@@ -14,9 +14,14 @@ block content
     each $post in Posts
       div.post.px-4.py-4.border-b.border-zinc-100
         div.flex.gap-4
-          +avatar("")
+          +avatar($post.AvatarURL)
 
           div
             h2.text-gray-900
               a[href=$post.Url] #{$post.Title}
-            span.mt-3.text-gray-400.text-sm #{$post.Date}
+            div.mt-3.text-gray-400.text-sm.flex.gap-2
+              span #{$post.UserName}
+              span &middot;
+              span #{$post.NodeName}
+              span &middot;
+              span #{$post.Date}

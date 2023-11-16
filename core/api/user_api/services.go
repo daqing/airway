@@ -198,3 +198,18 @@ func Users(fields []string, order string, page, limit int) ([]*User, error) {
 		limit,
 	)
 }
+
+func Nickname(id int64) string {
+	user, err := repo.FindRow[User](
+		[]string{"id", "nickname"},
+		[]repo.KVPair{
+			repo.KV("id", id),
+		},
+	)
+
+	if err != nil {
+		return ""
+	}
+
+	return user.Nickname
+}

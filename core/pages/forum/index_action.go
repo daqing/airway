@@ -6,17 +6,21 @@ import (
 
 	"github.com/daqing/airway/core/api/node_api"
 	"github.com/daqing/airway/core/api/post_api"
+	"github.com/daqing/airway/core/api/user_api"
 	"github.com/daqing/airway/lib/page_resp"
 	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/utils"
 	"github.com/gin-gonic/gin"
 )
 
-type PostItemIndex struct {
-	Id    int64
-	Title string
-	Url   string
-	Date  string
+type PostItem struct {
+	Id        int64
+	Title     string
+	Url       string
+	Date      string
+	UserName  string
+	NodeName  string
+	AvatarURL string
 }
 
 type NodeItem struct {
@@ -27,7 +31,7 @@ type NodeItem struct {
 
 func IndexAction(c *gin.Context) {
 	posts, err := post_api.Posts(
-		[]string{"id", "title", "custom_path"},
+		[]string{"id", "title", "custom_path", "user_id", "node_id"},
 		"forum", // TODO: define constant
 		"id DESC",
 		0,
@@ -39,7 +43,14 @@ func IndexAction(c *gin.Context) {
 		return
 	}
 
-	postsShow := []*PostItemIndex{}
+	nameMap, err := node_api.NameMap("forum")
+
+	if err != nil {
+		page_resp.Error(c, err)
+		return
+	}
+
+	postsShow := []*PostItem{}
 
 	for _, post := range posts {
 		url := fmt.Sprintf("/forum/post/%d", post.Id)
@@ -49,11 +60,13 @@ func IndexAction(c *gin.Context) {
 		}
 
 		postsShow = append(postsShow,
-			&PostItemIndex{
-				Id:    post.Id,
-				Title: post.Title,
-				Url:   url,
-				Date:  post.CreatedAt.Format("2006-01-02 15:04"),
+			&PostItem{
+				Id:       post.Id,
+				Title:    post.Title,
+				Url:      url,
+				Date:     post.CreatedAt.Format("2006-01-02 15:04"),
+				NodeName: nameMap[post.NodeId],
+				UserName: user_api.Nickname(post.UserId),
 			},
 		)
 	}

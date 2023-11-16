@@ -6,6 +6,7 @@ import (
 
 	"github.com/daqing/airway/core/api/node_api"
 	"github.com/daqing/airway/core/api/post_api"
+	"github.com/daqing/airway/core/api/user_api"
 	"github.com/daqing/airway/lib/page_resp"
 	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/utils"
@@ -28,7 +29,7 @@ func NodeAction(c *gin.Context) {
 	}
 
 	posts, err := repo.Find[post_api.Post](
-		[]string{"id", "title"},
+		[]string{"id", "title", "user_id"},
 		[]repo.KVPair{
 			repo.KV("node_id", node.Id),
 			repo.KV("place", "forum"),
@@ -40,7 +41,7 @@ func NodeAction(c *gin.Context) {
 		return
 	}
 
-	postsShow := []*PostItemIndex{}
+	postsShow := []*PostItem{}
 
 	for _, post := range posts {
 		url := fmt.Sprintf("/forum/post/%d", post.Id)
@@ -50,11 +51,12 @@ func NodeAction(c *gin.Context) {
 		}
 
 		postsShow = append(postsShow,
-			&PostItemIndex{
-				Id:    post.Id,
-				Title: post.Title,
-				Url:   url,
-				Date:  post.CreatedAt.Format("2006-01-02 15:04"),
+			&PostItem{
+				Id:       post.Id,
+				Title:    post.Title,
+				Url:      url,
+				Date:     post.CreatedAt.Format("2006-01-02 15:04"),
+				UserName: user_api.Nickname(post.UserId),
 			},
 		)
 	}
