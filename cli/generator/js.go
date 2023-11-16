@@ -1,27 +1,24 @@
 package generator
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/daqing/airway/cli/helper"
 	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/utils"
 )
 
 func GenJS(args []string) {
 	if len(args) < 3 {
-		helper.Help("cli g js [top-dir] [prefix] [api] [action]")
+		helper.Help("cli g js [top-dir] [page] [action]")
 	}
 
-	GeneratePageReactJS(args[0], args[1], args[2], args[3])
+	GeneratePageReactJS(args[0], args[1], args[2])
 }
 
-func GeneratePageReactJS(topDir, prefixFolder string, page string, action string) {
-	filename := page + "_" + action + ".jsx"
-
-	// TODO: add const definition for default value "."
-	if prefixFolder != DEFAULT_PREFIX_FOLDER {
-		filename = prefixFolder + "_" + filename
-	}
+func GeneratePageReactJS(topDir, page, action string) {
+	filename := topDir + "_" + utils.NormalizePage(page) + "_" + action + ".jsx"
 
 	targetFileName := strings.Join(
 		[]string{
@@ -34,10 +31,10 @@ func GeneratePageReactJS(topDir, prefixFolder string, page string, action string
 	err := helper.ExecTemplate(
 		"./cli/template/js/react.txt",
 		targetFileName,
-		PageGenerator{Page: page, Name: action, Action: repo.ToCamel(action)},
+		PageGenerator{Page: utils.NormalizePage(page), Name: action, Action: repo.ToCamel(action)},
 	)
 
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
 	}
 }

@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/daqing/airway/cli/helper"
@@ -42,7 +43,7 @@ func GenerateAPIAction(topDir, mod string, name string) {
 	)
 
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
 	}
 
 }

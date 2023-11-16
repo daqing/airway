@@ -9,7 +9,7 @@ import (
 
 func Page(c *gin.Context, topDir, page string, action string, obj map[string]any) {
 	pwd := utils.GetEnvMust("AIRWAY_PWD")
-	prefix := fmt.Sprintf("%s/%s/pages/%s_page", pwd, topDir, page)
+	prefix := fmt.Sprintf("%s/%s", pwd, utils.PageDirPath(topDir, page))
 
 	renderTemplate(c, prefix, action, obj)
 }

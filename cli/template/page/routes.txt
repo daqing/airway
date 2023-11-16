@@ -1,4 +1,4 @@
-package {{.Page}}_page
+package {{.PkgName}}
 
 import "github.com/gin-gonic/gin"
 

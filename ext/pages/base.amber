@@ -1,0 +1,18 @@
+import mixin
+
+doctype 5
+html
+  head
+    block meta
+      meta[charset="utf-8"]
+      meta[name="viewport"][content="width=device-width, initial-scale=1"]
+
+    title
+      block title
+      block subtitle
+
+    +css("tailwind")
+    block style
+
+  body
+    block body

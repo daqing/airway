@@ -1,4 +1,4 @@
-package {{.Page}}_page
+package {{.PkgName}}
 
 import (
 	"github.com/gin-gonic/gin"
@@ -6,5 +6,5 @@ import (
 
 func {{.Action}}Action(c *gin.Context) {
   data := map[string]any{}
-  page_resp.Page(c, "{{.Page}}", "{{.Name}}", data)
+  page_resp.Page(c, "{{.TopDir}}", "{{.Page}}", "{{.Name}}", data)
 }

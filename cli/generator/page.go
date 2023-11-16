@@ -7,60 +7,46 @@ import (
 
 	"github.com/daqing/airway/cli/helper"
 	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/utils"
 )
-
-const DEFAULT_PREFIX_FOLDER = "."
 
 func GenPage(args []string) {
 	if len(args) < 3 {
-		helper.Help("cli g page [top-dir] [api] [action]")
+		helper.Help("cli g page [top-dir] [page] [action]")
 	}
 
-	fmt.Printf("gen page for %s/%s, %s\n", args[0], args[1], args[2])
+	fmt.Printf("gen page for %s, %s, %s\n", args[0], args[1], args[2])
 
 	GeneratePage(args[0], args[1], args[2])
 }
 
-func GeneratePage(topDir, name, action string) {
-	var prefixFolder = DEFAULT_PREFIX_FOLDER
+func GeneratePage(topDir, page, action string) {
+	dirName := utils.PageDirPath(topDir, page)
 
-	if strings.Contains(name, ".") {
-		parts := strings.Split(name, ".")
-
-		prefixFolder = parts[0]
-		name = parts[1]
-	}
-
-	dir := fmt.Sprintf("%s/%s_page", prefixFolder, name)
-	dirPath := fmt.Sprintf("./%s/pages/%s", topDir, dir)
-
-	if err := os.Mkdir(dirPath, 0755); err != nil {
+	if err := os.MkdirAll(dirName, 0755); err != nil {
 		// page directory exists, generate new action
-		GeneratePageAction(topDir, prefixFolder, name, action)
-		GeneratePageActionTemplate(topDir, prefixFolder, name, action)
-		GeneratePageReactJS(topDir, prefixFolder, name, action)
+		GeneratePageAction(topDir, page, action)
+		GeneratePageActionTemplate(topDir, page, action)
+		GeneratePageReactJS(topDir, page, action)
 
 		os.Exit(0)
 	}
 
-	GeneratePageAction(topDir, prefixFolder, name, action)
+	GeneratePageAction(topDir, page, action)
+	GeneratePageActionTemplate(topDir, page, action)
 
-	GeneratePageActionTemplate(topDir, prefixFolder, name, action)
+	GeneratePageLayout(topDir, page)
+	GeneratePageRoutes(topDir, page, action)
 
-	GeneratePageLayout(topDir, prefixFolder, name)
-	GeneratePageRoutes(topDir, prefixFolder, name, action)
-
-	GeneratePageReactJS(topDir, prefixFolder, name, action)
+	GeneratePageReactJS(topDir, page, action)
 }
 
-func GeneratePageAction(topDir, prefixFolder, page, action string) {
+func GeneratePageAction(topDir, page, action string) {
+	dirName := utils.PageDirPath(topDir, page)
+
 	targetFileName := strings.Join(
 		[]string{
-			".",
-			topDir,
-			"pages",
-			prefixFolder,
-			page + "_page",
+			dirName,
 			action + "_action.go",
 		},
 		"/",
@@ -69,11 +55,17 @@ func GeneratePageAction(topDir, prefixFolder, page, action string) {
 	err := helper.ExecTemplate(
 		"./cli/template/page/action.txt",
 		targetFileName,
-		PageGenerator{Page: page, Name: action, Action: repo.ToCamel(action)},
+		PageGenerator{
+			Page:    page,
+			Name:    action,
+			Action:  repo.ToCamel(action),
+			TopDir:  topDir,
+			PkgName: utils.PagePkgName(topDir, page),
+		},
 	)
 
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
 	}
 
 }
@@ -82,16 +74,17 @@ type PageGenerator struct {
 	Page   string
 	Name   string
 	Action string
+
+	TopDir  string
+	PkgName string
 }
 
-func GeneratePageActionTemplate(topDir, prefixFolder string, page string, action string) {
+func GeneratePageActionTemplate(topDir, page, action string) {
+	dirName := utils.PageDirPath(topDir, page)
+
 	targetFileName := strings.Join(
 		[]string{
-			".",
-			topDir,
-			"pages",
-			prefixFolder,
-			page + "_page",
+			dirName,
 			action + ".amber",
 		},
 		"/",
@@ -100,46 +93,47 @@ func GeneratePageActionTemplate(topDir, prefixFolder string, page string, action
 	err := helper.ExecTemplate(
 		"./cli/template/page/action.amber",
 		targetFileName,
-		PageGenerator{Page: page, Action: repo.ToCamel(action)},
+		PageGenerator{Page: utils.NormalizePage(page), Action: repo.ToCamel(action)},
 	)
 
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
 	}
 }
 
-func GeneratePageLayout(topDir, prefixFolder, page string) {
+func GeneratePageLayout(topDir, page string) {
+	dirName := utils.PageDirPath(topDir, page)
+	layoutFile := "layout.amber"
+
+	if strings.Contains(page, ".") {
+		layoutFile = "parent_layout.amber"
+	}
+
 	targetFileName := strings.Join(
 		[]string{
-			".",
-			topDir,
-			"pages",
-			prefixFolder,
-			page + "_page",
+			dirName,
 			"layout.amber",
 		},
 		"/",
 	)
 
 	err := helper.ExecTemplate(
-		"./cli/template/page/layout.amber",
+		"./cli/template/page/"+layoutFile,
 		targetFileName,
-		PageGenerator{Page: page},
+		PageGenerator{},
 	)
 
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
 	}
 }
 
-func GeneratePageRoutes(topDir, prefixFolder, page string, action string) {
+func GeneratePageRoutes(topDir, page, action string) {
+	dirName := utils.PageDirPath(topDir, page)
+
 	targetFileName := strings.Join(
 		[]string{
-			".",
-			topDir,
-			"pages",
-			prefixFolder,
-			page + "_page",
+			dirName,
 			"routes.go",
 		},
 		"/",
@@ -148,11 +142,16 @@ func GeneratePageRoutes(topDir, prefixFolder, page string, action string) {
 	err := helper.ExecTemplate(
 		"./cli/template/page/routes.txt",
 		targetFileName,
-		PageGenerator{Page: page, Name: action, Action: repo.ToCamel(action)},
+		PageGenerator{
+			Page:    utils.NormalizePage(page),
+			Name:    action,
+			Action:  repo.ToCamel(action),
+			PkgName: utils.PagePkgName(topDir, page),
+		},
 	)
 
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
 	}
 
 }

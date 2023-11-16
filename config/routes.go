@@ -21,6 +21,11 @@ import (
 func Routes(r *gin.Engine) {
 	r.GET("/", home_page.IndexAction)
 
+	coreRoutes(r)
+	extRoutes(r)
+}
+
+func coreRoutes(r *gin.Engine) {
 	up_page.Routes(r)
 	session_page.Routes(r)
 
@@ -29,10 +34,10 @@ func Routes(r *gin.Engine) {
 
 	admin.Routes(r)
 
-	apiRoutes(r)
+	coreAPIRoutes(r)
 }
 
-func apiRoutes(r *gin.Engine) {
+func coreAPIRoutes(r *gin.Engine) {
 	v1 := r.Group("/api/v1")
 
 	checkin_api.Routes(v1)
@@ -42,6 +47,14 @@ func apiRoutes(r *gin.Engine) {
 	post_api.Routes(v1)
 	setting_api.Routes(v1)
 	user_api.Routes(v1)
+}
+
+func extRoutes(r *gin.Engine) {
+	extAPIRoutes(r)
+}
+
+func extAPIRoutes(r *gin.Engine) {
+	v1 := r.Group("/api/v1")
 
 	ext_date_api.Routes(v1)
 }
