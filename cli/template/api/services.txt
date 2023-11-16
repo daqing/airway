@@ -1,1 +1,1 @@
-package {{.Mod}}_api
+package {{.APIName}}

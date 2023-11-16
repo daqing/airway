@@ -10,7 +10,7 @@ import (
 
 const DOT = "."
 
-// Plain renders page without adding "_page" suffix
+// Expand renders page without adding "_page" suffix
 func Expand(c *gin.Context, topDir, page, action string, obj map[string]any) {
 	pwd := utils.GetEnvMust("AIRWAY_PWD")
 

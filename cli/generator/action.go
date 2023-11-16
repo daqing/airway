@@ -8,8 +8,9 @@ import (
 )
 
 type ActionGenerator struct {
-	Mod  string
-	Name string
+	Mod     string
+	Name    string
+	APIName string
 }
 
 func GenAction(xargs []string) {
@@ -21,12 +22,14 @@ func GenAction(xargs []string) {
 }
 
 func GenerateAPIAction(topDir, mod string, name string) {
+	apiName := apiDirName(topDir, mod)
+
 	targetFileName := strings.Join(
 		[]string{
 			".",
 			topDir,
 			"api",
-			mod + "_api",
+			apiName,
 			name + "_action.go",
 		},
 		"/",
@@ -35,7 +38,7 @@ func GenerateAPIAction(topDir, mod string, name string) {
 	err := helper.ExecTemplate(
 		"./cli/template/api/action.txt",
 		targetFileName,
-		ActionGenerator{Mod: mod, Name: repo.ToCamel(name)},
+		ActionGenerator{Mod: mod, Name: repo.ToCamel(name), APIName: apiName},
 	)
 
 	if err != nil {
