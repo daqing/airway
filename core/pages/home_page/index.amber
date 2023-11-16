@@ -35,4 +35,4 @@ block body
       h2.text-cyan-700.font-light.text-4xl The full-stack web framework for Go
       div.mt-4#react-root
 
-    script[type="text/javascript"][src="/public/js/home_index.js?ts=" + ts]
+    +js("home_index")
