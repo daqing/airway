@@ -9,7 +9,7 @@ import (
 	"github.com/daqing/airway/core/api/setting_api"
 	"github.com/daqing/airway/core/api/user_api"
 	"github.com/daqing/airway/core/pages/admin"
-	"github.com/daqing/airway/core/pages/blog_page"
+	"github.com/daqing/airway/core/pages/blog"
 	"github.com/daqing/airway/core/pages/forum"
 	"github.com/daqing/airway/core/pages/home_page"
 	"github.com/daqing/airway/core/pages/session_page"
@@ -24,11 +24,15 @@ func Routes(r *gin.Engine) {
 	up_page.Routes(r)
 	session_page.Routes(r)
 
-	blog_page.Routes(r)
+	blog.Routes(r)
 	forum.Routes(r)
 
 	admin.Routes(r)
 
+	apiRoutes(r)
+}
+
+func apiRoutes(r *gin.Engine) {
 	v1 := r.Group("/api/v1")
 
 	checkin_api.Routes(v1)

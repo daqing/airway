@@ -1,4 +1,4 @@
-package blog_page
+package blog
 
 import (
 	"fmt"
@@ -70,5 +70,5 @@ func IndexAction(c *gin.Context) {
 		"Posts":        postsShow,
 	}
 
-	page_resp.Page(c, "core", "blog", "index", data)
+	page_resp.Expand(c, "core", "blog", "index", data)
 }

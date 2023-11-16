@@ -1,4 +1,4 @@
-package blog_page
+package blog
 
 import (
 	"bytes"
@@ -66,6 +66,6 @@ func PostShowAction(c *gin.Context) {
 
 	data["ContentHTML"] = template.HTML(buf.String())
 
-	page_resp.Page(c, "core", "blog", "post_show", data)
+	page_resp.Expand(c, "core", "blog", "post_show", data)
 
 }

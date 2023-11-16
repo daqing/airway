@@ -1,4 +1,4 @@
-package blog_page
+package blog
 
 import "github.com/daqing/airway/lib/utils"
 
