@@ -14,6 +14,7 @@ import (
 	"github.com/daqing/airway/core/pages/home_page"
 	"github.com/daqing/airway/core/pages/session_page"
 	"github.com/daqing/airway/core/pages/up_page"
+	"github.com/daqing/airway/ext/api/ext_date_api"
 	"github.com/gin-gonic/gin"
 )
 
@@ -37,4 +38,6 @@ func Routes(r *gin.Engine) {
 	post_api.Routes(v1)
 	setting_api.Routes(v1)
 	user_api.Routes(v1)
+
+	ext_date_api.Routes(v1)
 }
