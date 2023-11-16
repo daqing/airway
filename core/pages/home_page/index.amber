@@ -6,9 +6,11 @@ block title
 block body
   div.w-screen.h-screen[style="background-image: url('/public/header-bg.jpg')"]
     header.mx-auto.py-5.flex.flex-row.justify-between.items-center.font-light[class="w-2/3"]
-      div.flex.items-center.gap-8
-        h1.text-2xl
-          a[href="/"] Airway
+      div.flex.items-center.gap-10
+        div.flex.gap-4
+          +logo
+          h1.text-2xl
+            a[href="/"] Airway
         ul.flex.gap-8
           li
             a[href="/"] Home

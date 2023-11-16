@@ -3,3 +3,6 @@ mixin js($filename)
 
 mixin css($filename)
   link[rel="stylesheet"][href="/public/css/"+ $filename + ".css?ts=" + ts]
+
+mixin logo
+  img[src="/public/logo.png"][width="36"][height="36"][title="Airway Logo"].rounded-lg
