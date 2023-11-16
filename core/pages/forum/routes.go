@@ -11,5 +11,7 @@ func Routes(r *gin.Engine) {
 
 		g.GET("/post/:id", ShowAction)
 		g.GET("/node/:key", NodeAction)
+
+		g.GET("/post/new", NewAction)
 	}
 }

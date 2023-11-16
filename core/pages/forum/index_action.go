@@ -20,6 +20,7 @@ type PostItemIndex struct {
 }
 
 type NodeItem struct {
+	Id   int64
 	Name string
 	URL  string
 }
