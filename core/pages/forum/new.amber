@@ -19,7 +19,7 @@ block content
           textarea[name="content"][rows="10"].border
         div.group.flex.flex-col.mb-5
           label Nodes
-          select[name="nodes"].border
+          select[name="node_id"].border
             each $node in Nodes
               option[value=$node.Id] #{$node.Name}
 

@@ -13,5 +13,6 @@ func Routes(r *gin.Engine) {
 		g.GET("/node/:key", NodeAction)
 
 		g.GET("/post/new", NewAction)
+		g.POST("/post/create", CreateAction)
 	}
 }
