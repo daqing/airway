@@ -29,6 +29,11 @@ block content
         else
           option[value="page"] Page
 
+        if $.Post.Place == "forum"
+          option[value="forum"][selected="true"] Forum
+        else
+          option[value="forum"] Forum
+
     div.group.flex.flex-col.mb-5
       label Node
       select[name="node_id"].border
