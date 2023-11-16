@@ -10,8 +10,9 @@ import (
 )
 
 type CreateParams struct {
-	Name string `form:"name"`
-	Key  string `form:"key"`
+	Name  string `form:"name"`
+	Key   string `form:"key"`
+	Place string `form:"place"`
 }
 
 func CreateAction(c *gin.Context) {
@@ -30,7 +31,7 @@ func CreateAction(c *gin.Context) {
 		return
 	}
 
-	_, err := node_api.CreateNode(name, key, "", 0)
+	_, err := node_api.CreateNode(name, key, p.Place, "", 0)
 	if err != nil {
 		page_resp.Error(c, err)
 		return

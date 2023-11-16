@@ -15,6 +15,8 @@ block body
           li
             a[href="/blog"] Blog
           li
+            a[href="/forum"] Forum
+          li
             a[href="https://github.com/daqing/airway"][target="_blank"] GitHub
 
 

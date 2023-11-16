@@ -1,4 +1,4 @@
-package {{.Mod}}_api
+package {{.APIName}}
 
 import (
 	"time"

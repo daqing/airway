@@ -10,6 +10,7 @@ import (
 	"github.com/daqing/airway/core/api/user_api"
 	"github.com/daqing/airway/core/pages/admin"
 	"github.com/daqing/airway/core/pages/blog_page"
+	"github.com/daqing/airway/core/pages/forum"
 	"github.com/daqing/airway/core/pages/home_page"
 	"github.com/daqing/airway/core/pages/session_page"
 	"github.com/daqing/airway/core/pages/up_page"
@@ -17,10 +18,13 @@ import (
 )
 
 func Routes(r *gin.Engine) {
-	home_page.Routes(r)
+	r.GET("/", home_page.IndexAction)
+
 	up_page.Routes(r)
 	session_page.Routes(r)
+
 	blog_page.Routes(r)
+	forum.Routes(r)
 
 	admin.Routes(r)
 

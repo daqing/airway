@@ -7,13 +7,14 @@ func GenerateApiToken() string {
 }
 
 const ROOT_PATH = "/"
-const EMPTY_PATH = ""
+
+// const EMPTY_PATH = ""
 
 // PathPrefix returns the path for an app,
 // regarding the env variable `AIRWAY_MULTI_APP`
 // if AIRWAY_MULTI_APP is "1", then call this function
 // with "blog" will return "/blog", otherwise returns
-// empty string
+// root path
 func PathPrefix(app string) string {
 	multiApp, _ := GetEnv("AIRWAY_MULTI_APP")
 
@@ -21,5 +22,5 @@ func PathPrefix(app string) string {
 		return ROOT_PATH + app
 	}
 
-	return EMPTY_PATH
+	return ROOT_PATH
 }
