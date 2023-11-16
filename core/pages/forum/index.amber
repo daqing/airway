@@ -8,7 +8,7 @@ block content
     each $post in Posts
       div.post.px-4.py-4.border-b.border-zinc-200
         div.flex.gap-4
-          img[src="https://l.ruby-china.com/user/avatar/96037/125d0f.jpg!md"].rounded-full
+          +avatar("")
 
           div
             h2.text-gray-900
