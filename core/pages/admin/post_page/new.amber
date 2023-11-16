@@ -13,7 +13,7 @@ block content
       textarea[name="content"][rows=10].border
     div.group.flex.flex-col.mb-5
       label Type
-      select[name="cat"].border
+      select[name="place"].border
         option[value="blog"] Blog
         option[value="page"] Page
         option[value="forum"] Forum

@@ -31,7 +31,7 @@ func NodeAction(c *gin.Context) {
 		[]string{"id", "title"},
 		[]repo.KVPair{
 			repo.KV("node_id", node.Id),
-			repo.KV("cat", "forum"),
+			repo.KV("place", "forum"),
 		},
 	)
 

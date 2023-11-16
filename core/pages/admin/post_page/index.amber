@@ -11,7 +11,7 @@ block content
           th.px-4 ID
           th.px-4 Title
           th.px-4 Custom Path
-          th.px-4 Type
+          th.px-4 Place
           th.px-4 User ID
           th.px-4 Node ID
           th.px-4
@@ -21,7 +21,7 @@ block content
             td.px-4 #{$post.Id}
             td.px-4 #{$post.Title}
             td.px-4 #{$post.CustomPath}
-            td.px-4 #{$post.Cat}
+            td.px-4 #{$post.Place}
             td.px-4 #{$post.UserId}
             td.px-4 #{$post.NodeId}
             td.px-4.flex.gap-4

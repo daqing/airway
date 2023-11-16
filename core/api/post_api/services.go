@@ -8,15 +8,15 @@ import (
 	"github.com/daqing/airway/lib/repo"
 )
 
-func Posts(fields []string, cat, order string, page, limit int) ([]*Post, error) {
+func Posts(fields []string, place, order string, page, limit int) ([]*Post, error) {
 	if page == 0 {
 		page = 1
 	}
 
 	where := []repo.KVPair{}
 
-	if len(cat) > 0 {
-		where = append(where, repo.KV("cat", cat))
+	if len(place) > 0 {
+		where = append(where, repo.KV("place", place))
 	}
 
 	return repo.FindLimit[Post](
@@ -28,7 +28,7 @@ func Posts(fields []string, cat, order string, page, limit int) ([]*Post, error)
 	)
 }
 
-func CreatePost(title, customPath, cat, content string, user_id, node_id int64, fee int, tags []string) (*Post, error) {
+func CreatePost(title, customPath, place, content string, user_id, node_id int64, fee int, tags []string) (*Post, error) {
 	if len(title) == 0 {
 		return nil, fmt.Errorf("title can't be empty")
 	}
@@ -37,8 +37,8 @@ func CreatePost(title, customPath, cat, content string, user_id, node_id int64, 
 		return nil, fmt.Errorf("content can't be empty")
 	}
 
-	if len(cat) == 0 {
-		return nil, fmt.Errorf("cat can't be empty")
+	if len(place) == 0 {
+		return nil, fmt.Errorf("place can't be empty")
 	}
 
 	if user_id <= 0 {
@@ -55,7 +55,7 @@ func CreatePost(title, customPath, cat, content string, user_id, node_id int64, 
 			repo.KV("node_id", node_id),
 			repo.KV("title", title),
 			repo.KV("custom_path", customPath),
-			repo.KV("cat", cat),
+			repo.KV("place", place),
 			repo.KV("content", content),
 			repo.KV("fee", fee),
 		},
