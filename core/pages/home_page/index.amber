@@ -31,7 +31,7 @@ block body
 
           a[href="/session/sign_out"] Logout
         else
-          a[href="/session/sign_in"] Sign In
+          a[href="/session/sign_in"].btn-outline Sign In
 
     main.flex.flex-col.items-center.pt-20
       h2.text-cyan-700.font-light.text-4xl The full-stack web framework for Go

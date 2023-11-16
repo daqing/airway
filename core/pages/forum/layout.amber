@@ -37,7 +37,7 @@ block body
 
             a[href="/session/sign_out"] Logout
           else
-            a[href="/session/sign_in"] Login
+            a[href="/session/sign_in"].btn-outline Login
     main.w-full.px-10.py-4
       div.mx-auto[class="w-2/3"]
         block content

@@ -30,4 +30,12 @@
   #markdown a {
     @apply text-blue-500 cursor-pointer;
   }
+
+  a {
+    @apply hover:text-blue-500 hover:cursor-pointer;
+  }
+
+  .btn-outline {
+    @apply text-blue-500 border border-blue-500 px-4 py-1 rounded-full hover:bg-blue-500 hover:text-white;
+  }
 }
