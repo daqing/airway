@@ -1,4 +1,4 @@
-package forum_home
+package forum
 
 import "github.com/daqing/airway/lib/utils"
 

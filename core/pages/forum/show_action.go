@@ -1,4 +1,4 @@
-package blog
+package forum
 
 import (
 	"bytes"
@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/daqing/airway/core/api/menu_api"
+	"github.com/daqing/airway/core/api/node_api"
 	"github.com/daqing/airway/core/api/post_api"
 	"github.com/daqing/airway/lib/page_resp"
 	"github.com/daqing/airway/lib/repo"
@@ -15,8 +16,8 @@ import (
 	"github.com/yuin/goldmark"
 )
 
-func PostShowAction(c *gin.Context) {
-	var segment = c.Param("segment")
+func ShowAction(c *gin.Context) {
+	segment := c.Param("id")
 
 	var where []repo.KVPair
 
@@ -40,7 +41,19 @@ func PostShowAction(c *gin.Context) {
 
 	menus, err := menu_api.MenuPlace(
 		[]string{"name", "url"},
-		"blog",
+		"forum",
+	)
+
+	if err != nil {
+		page_resp.Error(c, err)
+		return
+	}
+
+	nodes, err := repo.Find[node_api.Node](
+		[]string{"id", "name", "key"},
+		[]repo.KVPair{
+			repo.KV("place", "forum"),
+		},
 	)
 
 	if err != nil {
@@ -49,13 +62,13 @@ func PostShowAction(c *gin.Context) {
 	}
 
 	data := map[string]any{
-		"Title":        BlogTitle(),
-		"Tagline":      BlogTagline(),
-		"Year":         time.Now().Year(),
-		"BlogRootPath": utils.PathPrefix("blog"),
-		"PostDate":     post.CreatedAt.Format("2006-01-02"),
-		"Post":         post,
-		"Menus":        menus,
+		"Title":    ForumTitle(),
+		"Tagline":  ForumTagline(),
+		"Year":     time.Now().Year(),
+		"RootPath": utils.PathPrefix("forum"),
+		"Menus":    menus,
+		"Nodes":    nodes,
+		"Post":     post,
 	}
 
 	var buf bytes.Buffer
@@ -66,6 +79,5 @@ func PostShowAction(c *gin.Context) {
 
 	data["ContentHTML"] = template.HTML(buf.String())
 
-	page_resp.Expand(c, "core", "blog", "post_show", data)
-
+	page_resp.Page(c, "core", "forum!", "show", data)
 }

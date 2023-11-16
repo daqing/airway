@@ -62,13 +62,13 @@ func IndexAction(c *gin.Context) {
 	}
 
 	data := map[string]any{
-		"Title":        BlogTitle(),
-		"Tagline":      BlogTagline(),
-		"Year":         time.Now().Year(),
-		"BlogRootPath": utils.PathPrefix("blog"),
-		"Menus":        menus,
-		"Posts":        postsShow,
+		"Title":    BlogTitle(),
+		"Tagline":  BlogTagline(),
+		"Year":     time.Now().Year(),
+		"RootPath": utils.PathPrefix("blog"),
+		"Menus":    menus,
+		"Posts":    postsShow,
 	}
 
-	page_resp.Expand(c, "core", "blog", "index", data)
+	page_resp.Page(c, "core", "blog!", "index", data)
 }

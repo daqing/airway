@@ -1,14 +1,30 @@
-extends ../../base
+extends ../base
 
 block subtitle
-  | &nbsp;-&nbsp;#{Tagline}
+  if Tagline
+    | &nbsp;-&nbsp;#{Tagline}
+
+block style
+  style
+    body {
+      background-color: #F5F5F5;
+    }
+
+    header {
+      background-color: #fff;
+    }
+
+    img {
+      width: 40px;
+      height: 40px;
+    }
 
 block body
   div.w-screen
     header.w-full.border-b.border-zinc-200.px-10.py-6
       div.mx-auto[class="w-2/3"].flex.flex-row.justify-between.items-center
         div
-          a[href=BlogRootPath].text-lg #{Title}
+          a[href=RootPath].text-lg #{Title}
           if Tagline
             p.text-zinc-400.mt-2 #{Tagline}
         div.flex.gap-4

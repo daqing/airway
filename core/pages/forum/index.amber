@@ -3,21 +3,6 @@ extends layout
 block title
   #{Title}
 
-block style
-  style
-    body {
-      background-color: #F5F5F5;
-    }
-
-    header {
-      background-color: #fff;
-    }
-
-    img {
-      width: 40px;
-      height: 40px;
-    }
-
 block content
   div#posts.mt-10.bg-white.rounded-md.shadow
     each $post in Posts

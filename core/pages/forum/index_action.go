@@ -1,4 +1,4 @@
-package forum_home
+package forum
 
 import (
 	"fmt"
@@ -85,5 +85,5 @@ func IndexAction(c *gin.Context) {
 		"Posts":    postsShow,
 	}
 
-	page_resp.Expand(c, "core", "forum.home", "index", data)
+	page_resp.Page(c, "core", "forum!", "index", data)
 }

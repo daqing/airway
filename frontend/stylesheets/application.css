@@ -11,23 +11,23 @@
     @apply px-2 py-1;
   }
 
-  article.post h1 {
+  #markdown h1 {
     @apply text-2xl py-4;
   }
 
-  article.post h2 {
+  #markdown h2 {
     @apply text-lg py-2;
   }
 
-  article.post p {
+  #markdown p {
     @apply text-sm py-2;
   }
 
-  article.post ul {
+  #markdown ul {
     @apply list-disc ml-4;
   }
 
-  article.post ol {
+  #markdown ol {
     @apply list-decimal ml-6;
   }
 }

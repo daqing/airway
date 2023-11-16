@@ -1,0 +1,18 @@
+extends layout
+
+block title
+  #{Post.Title}
+
+block subtitle
+  if Tagline == ""
+    | &nbsp;-&nbsp;#{Title}
+  else
+    | &nbsp;-&nbsp;#{Tagline}
+
+block content
+  article.mt-10.bg-white.rounded-md.shadow
+    div.flex.gap-4.p-4.items-center
+      img[src="https://l.ruby-china.com/user/avatar/96037/125d0f.jpg!md"].rounded-full
+      h1.text-xl #{$.Post.Title}
+    main.border-t.border-gray-200.p-4#markdown
+      #{ContentHTML}
