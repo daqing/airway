@@ -10,7 +10,7 @@ block subtitle
     | &nbsp;-&nbsp;#{Tagline}
 
 block content
-  article.mt-10.bg-white.rounded-md.shadow
+  article.mt-2.bg-white.rounded-md.shadow
     div.flex.gap-4.p-4.items-center
       +avatar("")
       h1.text-xl #{$.Post.Title}

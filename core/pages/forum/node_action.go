@@ -12,25 +12,27 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type PostItemIndex struct {
-	Id    int64
-	Title string
-	Url   string
-	Date  string
-}
+func NodeAction(c *gin.Context) {
+	nodeKey := c.Param("key")
 
-type NodeItem struct {
-	Name string
-	URL  string
-}
+	node, err := repo.FindRow[node_api.Node](
+		[]string{"id", "name"},
+		[]repo.KVPair{
+			repo.KV("key", nodeKey),
+		},
+	)
 
-func IndexAction(c *gin.Context) {
-	posts, err := post_api.Posts(
-		[]string{"id", "title", "custom_path"},
-		"forum", // TODO: define constant
-		"id DESC",
-		0,
-		50,
+	if err != nil {
+		page_resp.Error(c, err)
+		return
+	}
+
+	posts, err := repo.Find[post_api.Post](
+		[]string{"id", "title"},
+		[]repo.KVPair{
+			repo.KV("node_id", node.Id),
+			repo.KV("cat", "forum"),
+		},
 	)
 
 	if err != nil {
@@ -57,15 +59,7 @@ func IndexAction(c *gin.Context) {
 		)
 	}
 
-	// menus, err := menu_api.MenuPlace(
-	// 	[]string{"name", "url"},
-	// 	"forum",
-	// )
-
-	// if err != nil {
-	// 	page_resp.Error(c, err)
-	// 	return
-	// }
+	rootPath := utils.PathPrefix("forum")
 
 	nodes, err := repo.Find[node_api.Node](
 		[]string{"id", "name", "key"},
@@ -78,8 +72,6 @@ func IndexAction(c *gin.Context) {
 		page_resp.Error(c, err)
 		return
 	}
-
-	rootPath := utils.PathPrefix("forum")
 
 	nodeItems := []*NodeItem{}
 
@@ -96,9 +88,10 @@ func IndexAction(c *gin.Context) {
 		"Tagline":  ForumTagline(),
 		"Year":     time.Now().Year(),
 		"RootPath": rootPath,
+		"Node":     node,
 		"Nodes":    nodeItems,
 		"Posts":    postsShow,
 	}
 
-	page_resp.Page(c, "core", "forum!", "index", data)
+	page_resp.Page(c, "core", "forum!", "node", data)
 }

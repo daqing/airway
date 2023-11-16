@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/daqing/airway/core/api/menu_api"
 	"github.com/daqing/airway/core/api/node_api"
 	"github.com/daqing/airway/core/api/post_api"
 	"github.com/daqing/airway/lib/page_resp"
@@ -39,15 +38,15 @@ func ShowAction(c *gin.Context) {
 		return
 	}
 
-	menus, err := menu_api.MenuPlace(
-		[]string{"name", "url"},
-		"forum",
-	)
+	// menus, err := menu_api.MenuPlace(
+	// 	[]string{"name", "url"},
+	// 	"forum",
+	// )
 
-	if err != nil {
-		page_resp.Error(c, err)
-		return
-	}
+	// if err != nil {
+	// 	page_resp.Error(c, err)
+	// 	return
+	// }
 
 	nodes, err := repo.Find[node_api.Node](
 		[]string{"id", "name", "key"},
@@ -61,13 +60,24 @@ func ShowAction(c *gin.Context) {
 		return
 	}
 
+	rootPath := utils.PathPrefix("forum")
+
+	nodeItems := []*NodeItem{}
+
+	for _, node := range nodes {
+		nodeItems = append(nodeItems,
+			&NodeItem{
+				Name: node.Name,
+				URL:  rootPath + "node/" + node.Key,
+			})
+	}
+
 	data := map[string]any{
 		"Title":    ForumTitle(),
 		"Tagline":  ForumTagline(),
 		"Year":     time.Now().Year(),
-		"RootPath": utils.PathPrefix("forum"),
-		"Menus":    menus,
-		"Nodes":    nodes,
+		"RootPath": rootPath,
+		"Nodes":    nodeItems,
 		"Post":     post,
 	}
 

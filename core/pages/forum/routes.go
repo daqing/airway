@@ -10,5 +10,6 @@ func Routes(r *gin.Engine) {
 		g.GET("", IndexAction)
 
 		g.GET("/post/:id", ShowAction)
+		g.GET("/node/:key", NodeAction)
 	}
 }

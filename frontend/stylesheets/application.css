@@ -12,11 +12,7 @@
   }
 
   #markdown h1 {
-    @apply text-2xl py-4;
-  }
-
-  #markdown h2 {
-    @apply text-lg py-2;
+    @apply text-xl pb-1 pt-6;
   }
 
   #markdown p {
@@ -29,5 +25,9 @@
 
   #markdown ol {
     @apply list-decimal ml-6;
+  }
+
+  #markdown a {
+    @apply text-blue-500 cursor-pointer;
   }
 }

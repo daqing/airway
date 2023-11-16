@@ -22,14 +22,15 @@ block style
 block body
   div.w-screen
     header.w-full.border-b.border-zinc-200.px-10.py-6
-      div.mx-auto[class="w-2/3"].flex.flex-row.justify-between.items-center
-        div
-          a[href=RootPath].text-lg #{Title}
-          if Tagline
-            p.text-zinc-400.mt-2 #{Tagline}
-        div.flex.gap-4
-          each $menu in Menus
-            a[href=$menu.URL] #{$menu.Name}
+      div.mx-auto[class="w-2/3"].flex.justify-between.items-center
+        div.flex.gap-10
+          h1
+            a[href=RootPath].text-xl #{Title}
+          div.flex.gap-6.items-center
+            each $node in Nodes
+              a[href=$node.URL] #{$node.Name}
+        div.flex
+          a[href=""] Login
     main.w-full.px-10.py-4
       div.mx-auto[class="w-2/3"]
         block content

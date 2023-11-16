@@ -4,6 +4,7 @@ block title
   #{Title}
 
 block content
+  h1.text-xl #{Node.Name}
   div#posts.mt-2.bg-white.rounded-md.shadow
     each $post in Posts
       div.post.px-4.py-4.border-b.border-zinc-200

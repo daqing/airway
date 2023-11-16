@@ -25,9 +25,7 @@ func EditAction(c *gin.Context) {
 
 	nodes, err := repo.Find[node_api.Node](
 		[]string{"id", "name"},
-		[]repo.KVPair{
-			repo.KV("place", "blog"),
-		},
+		[]repo.KVPair{},
 	)
 
 	if err != nil {
