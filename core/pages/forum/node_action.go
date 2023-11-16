@@ -79,9 +79,11 @@ func NodeAction(c *gin.Context) {
 		nodeItems = append(nodeItems,
 			&NodeItem{
 				Name: node.Name,
-				URL:  rootPath + "node/" + node.Key,
+				URL:  "/forum/node/" + node.Key,
 			})
 	}
+
+	token, _ := c.Cookie("user_api_token")
 
 	data := map[string]any{
 		"Title":    ForumTitle(),
@@ -91,6 +93,7 @@ func NodeAction(c *gin.Context) {
 		"Node":     node,
 		"Nodes":    nodeItems,
 		"Posts":    postsShow,
+		"Session":  SessionData(token),
 	}
 
 	page_resp.Page(c, "core", "forum!", "node", data)

@@ -7,6 +7,6 @@ func Routes(r *gin.Engine) {
 	{
 		g.GET("/sign_in", SignInAction)
 		g.POST("/create", CreateAction)
-		g.GET("/destroy", DestroyAction)
+		g.GET("/sign_out", DestroyAction)
 	}
 }

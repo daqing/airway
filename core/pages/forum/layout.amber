@@ -29,8 +29,15 @@ block body
           div.flex.gap-6.items-center
             each $node in Nodes
               a[href=$node.URL] #{$node.Name}
-        div.flex
-          a[href=""] Login
+        div.flex.gap-4
+          if Session.SignedIn
+            a[href=""] #{Session.Nickname}
+            if Session.IsAdmin
+              a[href="/admin"] Admin
+
+            a[href="/session/sign_out"] Logout
+          else
+            a[href="/session/sign_in"] Login
     main.w-full.px-10.py-4
       div.mx-auto[class="w-2/3"]
         block content

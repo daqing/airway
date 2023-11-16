@@ -29,7 +29,7 @@ block body
           if IsAdmin
             a[href="/admin"] Admin
 
-          a[href="/session/destroy"] Logout
+          a[href="/session/sign_out"] Logout
         else
           a[href="/session/sign_in"] Sign In
 

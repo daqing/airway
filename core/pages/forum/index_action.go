@@ -57,16 +57,6 @@ func IndexAction(c *gin.Context) {
 		)
 	}
 
-	// menus, err := menu_api.MenuPlace(
-	// 	[]string{"name", "url"},
-	// 	"forum",
-	// )
-
-	// if err != nil {
-	// 	page_resp.Error(c, err)
-	// 	return
-	// }
-
 	nodes, err := repo.Find[node_api.Node](
 		[]string{"id", "name", "key"},
 		[]repo.KVPair{
@@ -87,9 +77,11 @@ func IndexAction(c *gin.Context) {
 		nodeItems = append(nodeItems,
 			&NodeItem{
 				Name: node.Name,
-				URL:  rootPath + "node/" + node.Key,
+				URL:  "/forum/node/" + node.Key,
 			})
 	}
+
+	token, _ := c.Cookie("user_api_token")
 
 	data := map[string]any{
 		"Title":    ForumTitle(),
@@ -98,6 +90,7 @@ func IndexAction(c *gin.Context) {
 		"RootPath": rootPath,
 		"Nodes":    nodeItems,
 		"Posts":    postsShow,
+		"Session":  SessionData(token),
 	}
 
 	page_resp.Page(c, "core", "forum!", "index", data)
