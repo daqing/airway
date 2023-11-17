@@ -17,6 +17,8 @@ func Generate(args []string) {
 	switch thing {
 	case "action":
 		GenAction(xargs)
+	case "page_action":
+		GenPageAction(xargs)
 	case "migration":
 		GenMigration(xargs)
 	case "api":

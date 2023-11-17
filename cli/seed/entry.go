@@ -9,7 +9,7 @@ import (
 
 func Generate(args []string) {
 	if len(args) == 0 {
-		fmt.Println("cli seed root [nickname] [username] [password]")
+		fmt.Println("cli seed root [password]")
 		fmt.Println("cli seed user [nickname] [username] [password]")
 
 		os.Exit(1)
@@ -20,12 +20,12 @@ func Generate(args []string) {
 	case "root":
 		xargs := args[1:]
 
-		if len(xargs) < 3 {
-			fmt.Println("cli seed root [nickname] [username] [password]")
+		if len(xargs) == 0 {
+			fmt.Println("cli seed root [password]")
 			os.Exit(1)
 		}
 
-		SeedRoot(xargs[0], xargs[1], xargs[2])
+		SeedRoot(xargs[0])
 	case "user":
 		xargs := args[1:]
 		if len(xargs) < 3 {
@@ -38,8 +38,8 @@ func Generate(args []string) {
 
 }
 
-func SeedRoot(nickname, username, password string) {
-	_, err := user_api.CreateAdminUser(nickname, username, password)
+func SeedRoot(password string) {
+	_, err := user_api.CreateAdminUser("root", "root", password)
 	if err != nil {
 		panic(err)
 	}
