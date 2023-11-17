@@ -16,4 +16,5 @@ func GenPageAction(xargs []string) {
 	}
 
 	GeneratePageAction(xargs[0], xargs[1], xargs[2])
+	GeneratePageActionTemplate(xargs[0], xargs[1], xargs[2])
 }
