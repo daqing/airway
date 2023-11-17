@@ -19,7 +19,11 @@ func LoginAction(c *gin.Context) {
 		return
 	}
 
-	user, err := LoginUser(p.Username, p.Password)
+	user, err := LoginUser(
+		[]repo.KVPair{repo.KV("username", p.Username)},
+		p.Password,
+	)
+
 	if err != nil {
 		api_resp.LogError(c, err)
 		return

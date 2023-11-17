@@ -55,9 +55,9 @@ func createUser(nickname, username string, role userRole, password string) (*Use
 	return user, err
 }
 
-func LoginUser(username string, password string) (*User, error) {
-	if len(username) == 0 {
-		return nil, fmt.Errorf("username can't be empty")
+func LoginUser(where []repo.KVPair, password string) (*User, error) {
+	if len(where) == 0 {
+		return nil, fmt.Errorf("where can't be empty")
 	}
 
 	if len(password) == 0 {
@@ -69,9 +69,7 @@ func LoginUser(username string, password string) (*User, error) {
 			"id", "username", "nickname", "phone", "email", "avatar",
 			"encrypted_password", "api_token",
 		},
-		[]repo.KVPair{
-			repo.KV("username", username),
-		},
+		where,
 	)
 
 	if err != nil {
