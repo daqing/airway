@@ -1,0 +1,27 @@
+extends layout
+
+block title
+  #{Title}
+
+block content
+  div#posts.mt-2.bg-white.rounded-md.shadow
+    div.posts-header.px-4.py-2.border-b.border-zinc-100
+      div.flex.justify-between.items-center
+        h1.text-lg Posts
+        div
+          if Session.SignedIn
+            a[href="/forum/post/new"].btn-outline + Post
+    each $post in Posts
+      div.post.px-4.py-4.border-b.border-zinc-100
+        div.flex.gap-4
+          +avatar($post.AvatarURL)
+
+          div
+            h2.text-gray-900
+              a[href=$post.Url] #{$post.Title}
+            div.mt-3.text-gray-400.text-sm.flex.gap-2
+              span #{$post.UserName}
+              span &middot;
+              span #{$post.NodeName}
+              span &middot;
+              span #{$post.Date}

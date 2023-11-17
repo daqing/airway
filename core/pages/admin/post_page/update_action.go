@@ -13,7 +13,7 @@ type UpdateParams struct {
 	Id         int64  `form:"id"`
 	Title      string `form:"title"`
 	Content    string `form:"content"`
-	Cat        string `form:"cat"`
+	Place      string `form:"place"`
 	NodeId     string `form:"node_id"`
 	CustomPath string `form:"custom_path"`
 }
@@ -31,7 +31,7 @@ func UpdateAction(c *gin.Context) {
 		[]repo.KVPair{
 			repo.KV("title", p.Title),
 			repo.KV("content", p.Content),
-			repo.KV("cat", p.Cat),
+			repo.KV("place", p.Place),
 			repo.KV("node_id", p.NodeId),
 			repo.KV("custom_path", p.CustomPath),
 		},

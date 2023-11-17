@@ -12,7 +12,7 @@ func EditAction(c *gin.Context) {
 	id := c.Query("id")
 
 	post, err := repo.FindRow[post_api.Post](
-		[]string{"id", "title", "custom_path", "cat", "content"},
+		[]string{"id", "title", "custom_path", "place", "content"},
 		[]repo.KVPair{
 			repo.KV("id", id),
 		},
@@ -25,9 +25,7 @@ func EditAction(c *gin.Context) {
 
 	nodes, err := repo.Find[node_api.Node](
 		[]string{"id", "name"},
-		[]repo.KVPair{
-			repo.KV("place", "blog"),
-		},
+		[]repo.KVPair{},
 	)
 
 	if err != nil {

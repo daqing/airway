@@ -6,7 +6,7 @@ func GenerateApiToken() string {
 	return API_PREFIX + RandomHex(20)
 }
 
-const ROOT_PATH = "/"
+const SLASH = "/"
 
 // const EMPTY_PATH = ""
 
@@ -19,8 +19,8 @@ func PathPrefix(app string) string {
 	multiApp, _ := GetEnv("AIRWAY_MULTI_APP")
 
 	if multiApp == "1" {
-		return ROOT_PATH + app
+		return SLASH + app + SLASH
 	}
 
-	return ROOT_PATH
+	return SLASH
 }

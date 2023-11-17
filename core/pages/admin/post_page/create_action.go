@@ -14,7 +14,7 @@ type CreateParams struct {
 	Title      string `form:"title"`
 	CustomPath string `form:"custom_path"`
 	Content    string `form:"content"`
-	Cat        string `form:"cat"`
+	Place      string `form:"place"`
 	NodeId     int64  `form:"node_id"`
 }
 
@@ -29,10 +29,10 @@ func CreateAction(c *gin.Context) {
 	title := utils.TrimFull(p.Title)
 	content := utils.TrimFull(p.Content)
 	customPath := utils.TrimFull(p.CustomPath)
-	cat := utils.TrimFull(p.Cat)
+	place := utils.TrimFull(p.Place)
 
-	if len(title) == 0 || len(content) == 0 || len(cat) == 0 {
-		page_resp.Error(c, fmt.Errorf("title or content or cat must not be empty"))
+	if len(title) == 0 || len(content) == 0 || len(place) == 0 {
+		page_resp.Error(c, fmt.Errorf("title or content or place must not be empty"))
 		return
 	}
 
@@ -44,7 +44,7 @@ func CreateAction(c *gin.Context) {
 
 	admin := user_api.CurrentAdmin(token)
 
-	_, err = post_api.CreatePost(title, customPath, cat, content, admin.Id, p.NodeId, 0, []string{})
+	_, err = post_api.CreatePost(title, customPath, place, content, admin.Id, p.NodeId, 0, []string{})
 	if err != nil {
 		page_resp.Error(c, err)
 		return

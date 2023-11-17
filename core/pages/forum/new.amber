@@ -1,0 +1,27 @@
+extends layout
+
+block title
+  #{Title}
+
+block content
+  div.mt-2.bg-white.rounded-md.shadow
+    div.posts-header.px-4.py-2.border-b.border-zinc-100
+      div.flex.justify-between.items-center
+        h1.text-lg New Post
+
+    form[action="/forum/post/create"][method="POST"]
+      div.px-4.py-2
+        div.group.flex.flex-col.mb-5
+          label Title
+          input[type="text"][name="title"].border
+        div.group.flex.flex-col.mb-5
+          label Content
+          textarea[name="content"][rows="10"].border
+        div.group.flex.flex-col.mb-5
+          label Nodes
+          select[name="node_id"].border
+            each $node in Nodes
+              option[value=$node.Id] #{$node.Name}
+
+        div.group.mt-5
+          button.btn-outline[type="submit"] Create Post

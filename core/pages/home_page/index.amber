@@ -6,9 +6,11 @@ block title
 block body
   div.w-screen.h-screen[style="background-image: url('/public/header-bg.jpg')"]
     header.mx-auto.py-5.flex.flex-row.justify-between.items-center.font-light[class="w-2/3"]
-      div.flex.items-center.gap-8
-        h1.text-2xl
-          a[href="/"] Airway
+      div.flex.items-center.gap-10
+        div.flex.gap-4
+          +logo
+          h1.text-2xl
+            a[href="/"] Airway
         ul.flex.gap-8
           li
             a[href="/"] Home
@@ -27,9 +29,9 @@ block body
           if IsAdmin
             a[href="/admin"] Admin
 
-          a[href="/session/destroy"] Logout
+          a[href="/session/sign_out"] Logout
         else
-          a[href="/session/sign_in"] Sign In
+          a[href="/session/sign_in"].btn-outline Sign In
 
     main.flex.flex-col.items-center.pt-20
       h2.text-cyan-700.font-light.text-4xl The full-stack web framework for Go

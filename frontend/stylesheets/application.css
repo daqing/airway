@@ -11,23 +11,31 @@
     @apply px-2 py-1;
   }
 
-  article.post h1 {
-    @apply text-2xl py-4;
+  #markdown h1 {
+    @apply text-xl pb-1 pt-6;
   }
 
-  article.post h2 {
-    @apply text-lg py-2;
-  }
-
-  article.post p {
+  #markdown p {
     @apply text-sm py-2;
   }
 
-  article.post ul {
+  #markdown ul {
     @apply list-disc ml-4;
   }
 
-  article.post ol {
+  #markdown ol {
     @apply list-decimal ml-6;
+  }
+
+  #markdown a {
+    @apply text-blue-500 cursor-pointer;
+  }
+
+  a {
+    @apply hover:text-blue-500 hover:cursor-pointer;
+  }
+
+  .btn-outline {
+    @apply text-blue-500 border border-blue-500 px-4 py-1 rounded-full hover:bg-blue-500 hover:text-white;
   }
 }

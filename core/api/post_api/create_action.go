@@ -12,7 +12,7 @@ import (
 type CreateParams struct {
 	NodeId  int64  `json:"node_id"`
 	Title   string `json:"title"`
-	Cat     string `json:"cat"`
+	Place   string `json:"place"`
 	Content string `json:"content"`
 	Fee     int    `json:"fee"`
 	Tags    string `json:"tags"` // 使用英文逗号分隔
@@ -36,7 +36,7 @@ func CreateAction(c *gin.Context) {
 	tags := strings.Split(p.Tags, ",")
 
 	// TODO: add custom path parameters
-	post, err := CreatePost(p.Title, "", p.Cat, p.Content, user.Id, p.NodeId, p.Fee, tags)
+	post, err := CreatePost(p.Title, "", p.Place, p.Content, user.Id, p.NodeId, p.Fee, tags)
 	if err != nil {
 		api_resp.LogError(c, err)
 		return

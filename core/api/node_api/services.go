@@ -29,3 +29,25 @@ func Nodes(fields []string, order string, page, limit int) ([]*Node, error) {
 		limit,
 	)
 }
+
+func NameMap(place string) (map[int64]string, error) {
+	nodes, err := repo.Find[Node](
+		[]string{"id", "name"},
+		[]repo.KVPair{
+			repo.KV("place", place),
+		},
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	var result = make(map[int64]string)
+
+	for _, node := range nodes {
+		result[node.Id] = node.Name
+	}
+
+	return result, nil
+
+}
