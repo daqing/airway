@@ -14,6 +14,8 @@ block content
     div.group.flex.flex-col
       label Place
       select[name="place"].border
+        option[value="default"] Default
         option[value="blog"] Blog
+        option[value="forum"] Forum
     div.group.mt-5
       button.btn[type="submit"] Create Menu
