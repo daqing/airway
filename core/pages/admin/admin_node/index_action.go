@@ -1,4 +1,4 @@
-package node_page
+package admin_node
 
 import (
 	"github.com/daqing/airway/core/api/node_api"
@@ -19,7 +19,7 @@ func IndexAction(c *gin.Context) {
 	}
 
 	nodes, err := node_api.Nodes(
-		[]string{"id", "name", "key", "parent_key", "place"},
+		[]string{"id", "name", "key", "parent_id", "place", "level"},
 		"id DESC",
 		p.Page,
 		50,
@@ -34,5 +34,5 @@ func IndexAction(c *gin.Context) {
 		"Nodes": nodes,
 	}
 
-	page_resp.Page(c, "core", "admin/node", "index", data)
+	page_resp.Page(c, "core", "admin.node", "index", data)
 }

@@ -1,9 +1,9 @@
 package admin
 
 import (
+	"github.com/daqing/airway/core/pages/admin/admin_node"
 	"github.com/daqing/airway/core/pages/admin/dashboard_page"
 	"github.com/daqing/airway/core/pages/admin/menu_page"
-	"github.com/daqing/airway/core/pages/admin/node_page"
 	"github.com/daqing/airway/core/pages/admin/post_page"
 	"github.com/daqing/airway/core/pages/admin/user_page"
 	"github.com/gin-gonic/gin"
@@ -16,7 +16,7 @@ func Routes(r *gin.Engine) {
 
 		user_page.Routes(g)
 		post_page.Routes(g)
-		node_page.Routes(g)
+		admin_node.Routes(g)
 		menu_page.Routes(g)
 	}
 }

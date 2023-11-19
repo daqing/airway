@@ -1,4 +1,4 @@
-package node_page
+package admin_node
 
 import (
 	"fmt"

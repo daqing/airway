@@ -1,4 +1,4 @@
-package node_page
+package admin_node
 
 import (
 	"github.com/daqing/airway/core/pages/admin/helper"
@@ -17,5 +17,8 @@ func Routes(r *gin.RouterGroup) {
 
 		// TODO: csrf protection
 		g.GET("/delete", helper.CheckAdmin(DeleteAction))
+
+		g.GET("/add_sub", helper.CheckAdmin(AddSubAction))
+		g.POST("/create_sub", helper.CheckAdmin(CreateSubAction))
 	}
 }

@@ -1,4 +1,4 @@
-package node_page
+package admin_node
 
 import (
 	"github.com/daqing/airway/core/api/node_api"
@@ -7,10 +7,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func DeleteAction(c *gin.Context) {
+func EditAction(c *gin.Context) {
 	id := c.Query("id")
 
-	err := repo.Delete[node_api.Node](
+	node, err := repo.FindRow[node_api.Node](
+		[]string{"id", "name", "key"},
 		[]repo.KVPair{
 			repo.KV("id", id),
 		},
@@ -21,5 +22,9 @@ func DeleteAction(c *gin.Context) {
 		return
 	}
 
-	page_resp.Redirect(c, "/admin/node")
+	data := map[string]any{
+		"Node": node,
+	}
+
+	page_resp.Page(c, "core", "admin.node", "edit", data)
 }

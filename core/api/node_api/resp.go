@@ -17,5 +17,5 @@ type NodeResp struct {
 }
 
 func (ur NodeResp) Fields() []string {
-	return []string{"id", "name", "key", "parent_key", "level"}
+	return []string{"id", "name", "key", "parent_id", "level"}
 }

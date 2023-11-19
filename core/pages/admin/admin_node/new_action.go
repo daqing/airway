@@ -1,4 +1,4 @@
-package node_page
+package admin_node
 
 import (
 	"github.com/daqing/airway/lib/page_resp"
@@ -6,5 +6,5 @@ import (
 )
 
 func NewAction(c *gin.Context) {
-	page_resp.Page(c, "core", "admin/node", "new", nil)
+	page_resp.Page(c, "core", "admin.node", "new", nil)
 }

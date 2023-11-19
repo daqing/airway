@@ -4,13 +4,13 @@ import (
 	"github.com/daqing/airway/lib/repo"
 )
 
-func CreateNode(name, key, place, parentKey string, level int) (*Node, error) {
+func CreateNode(name, key, place string, parentId int64, level int) (*Node, error) {
 	return repo.Insert[Node](
 		[]repo.KVPair{
 			repo.KV("name", name),
 			repo.KV("key", key),
 			repo.KV("place", place),
-			repo.KV("parent_key", parentKey),
+			repo.KV("parent_id", parentId),
 			repo.KV("level", level),
 		},
 	)

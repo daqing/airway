@@ -5,11 +5,13 @@ import "time"
 type Node struct {
 	Id int64
 
-	Name      string
-	Key       string
-	ParentKey string
-	Level     int
-	Place     string
+	ParentId int64
+
+	Name string
+	Key  string
+
+	Level int
+	Place string
 
 	CreatedAt time.Time
 	UpdatedAt time.Time

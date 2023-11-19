@@ -1,4 +1,4 @@
-package node_page
+package admin_node
 
 import (
 	"fmt"
@@ -31,7 +31,7 @@ func CreateAction(c *gin.Context) {
 		return
 	}
 
-	_, err := node_api.CreateNode(name, key, p.Place, "", 0)
+	_, err := node_api.CreateNode(name, key, p.Place, 0, 0)
 	if err != nil {
 		page_resp.Error(c, err)
 		return
