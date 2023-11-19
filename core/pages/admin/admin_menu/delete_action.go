@@ -1,4 +1,4 @@
-package menu_page
+package admin_menu
 
 import (
 	"github.com/daqing/airway/core/api/menu_api"

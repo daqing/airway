@@ -1,4 +1,4 @@
-package menu_page
+package admin_menu
 
 import (
 	"fmt"
