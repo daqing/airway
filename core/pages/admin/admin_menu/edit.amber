@@ -18,10 +18,20 @@ block content
     div.group.flex.flex-col
       label Place
       select[name="place"].border
+        if Menu.Place == "default"
+          option[value="default"][selected="true"] Default
+        else
+            option[value="default"] Default
+
         if Menu.Place == "blog"
           option[value="blog"][selected="true"] Blog
         else
             option[value="blog"] Blog
+
+        if Menu.Place == "forum"
+          option[value="forum"][selected="true"] Forum
+        else
+            option[value="forum"] Forum
 
     div.group.mt-5
       button.btn[type="submit"] Update Menu
