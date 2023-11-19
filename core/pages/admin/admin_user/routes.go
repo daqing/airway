@@ -1,4 +1,4 @@
-package user_page
+package admin_user
 
 import (
 	"github.com/daqing/airway/core/pages/admin/helper"

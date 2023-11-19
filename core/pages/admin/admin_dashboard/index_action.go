@@ -1,4 +1,4 @@
-package dashboard_page
+package admin_dashboard
 
 import (
 	"github.com/daqing/airway/lib/page_resp"
@@ -7,5 +7,5 @@ import (
 
 func IndexAction(c *gin.Context) {
 	data := map[string]any{}
-	page_resp.Page(c, "core", "admin/dashboard", "index", data)
+	page_resp.Page(c, "core", "admin.dashboard", "index", data)
 }

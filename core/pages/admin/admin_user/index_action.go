@@ -1,4 +1,4 @@
-package user_page
+package admin_user
 
 import (
 	"github.com/daqing/airway/core/api/user_api"
@@ -34,5 +34,5 @@ func IndexAction(c *gin.Context) {
 		"Users": users,
 	}
 
-	page_resp.Page(c, "core", "admin/user", "index", data)
+	page_resp.Page(c, "core", "admin.user", "index", data)
 }

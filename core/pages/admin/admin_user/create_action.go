@@ -1,4 +1,4 @@
-package user_page
+package admin_user
 
 import (
 	"fmt"

@@ -1,4 +1,4 @@
-package dashboard_page
+package admin_dashboard
 
 import (
 	"github.com/daqing/airway/core/pages/admin/helper"
