@@ -23,5 +23,5 @@ func IndexAction(c *gin.Context) {
 		"Menus": menus,
 	}
 
-	page_resp.Page(c, "core", "admin/menu", "index", data)
+	page_resp.Page(c, "core", "admin.menu", "index", data)
 }

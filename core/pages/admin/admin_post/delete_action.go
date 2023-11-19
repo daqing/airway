@@ -1,4 +1,4 @@
-package post_page
+package admin_post
 
 import (
 	"github.com/daqing/airway/core/api/post_api"

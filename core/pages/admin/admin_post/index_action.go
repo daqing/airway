@@ -1,4 +1,4 @@
-package post_page
+package admin_post
 
 import (
 	"github.com/daqing/airway/core/api/post_api"
@@ -36,5 +36,5 @@ func IndexAction(c *gin.Context) {
 		"Posts": posts,
 	}
 
-	page_resp.Page(c, "core", "admin/post", "index", data)
+	page_resp.Page(c, "core", "admin.post", "index", data)
 }

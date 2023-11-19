@@ -1,4 +1,4 @@
-package post_page
+package admin_post
 
 import (
 	"github.com/daqing/airway/core/api/node_api"
@@ -22,5 +22,5 @@ func NewAction(c *gin.Context) {
 		"Nodes": nodes,
 	}
 
-	page_resp.Page(c, "core", "admin/post", "new", data)
+	page_resp.Page(c, "core", "admin.post", "new", data)
 }

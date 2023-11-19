@@ -24,5 +24,5 @@ func EditAction(c *gin.Context) {
 		"Menu": menu,
 	}
 
-	page_resp.Page(c, "core", "admin/menu", "edit", data)
+	page_resp.Page(c, "core", "admin.menu", "edit", data)
 }

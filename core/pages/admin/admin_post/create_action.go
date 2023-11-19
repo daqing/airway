@@ -1,4 +1,4 @@
-package post_page
+package admin_post
 
 import (
 	"fmt"

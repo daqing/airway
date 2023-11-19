@@ -6,5 +6,5 @@ import (
 )
 
 func NewAction(c *gin.Context) {
-	page_resp.Page(c, "core", "admin/menu", "new", nil)
+	page_resp.Page(c, "core", "admin.menu", "new", nil)
 }
