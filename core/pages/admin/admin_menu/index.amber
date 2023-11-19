@@ -1,7 +1,7 @@
 extends layout
 
 block title
-  | Hello, menu
+  | Menus
 
 block content
   div.flex

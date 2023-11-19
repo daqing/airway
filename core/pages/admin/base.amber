@@ -1,5 +1,8 @@
 extends ../base
 
+block subtitle
+  | &nbsp;&nbsp;-&nbsp;&nbsp;Admin Panel
+
 block body
   div.w-screen
     header.w-full.bg-zinc-100.py-1.px-10.shadow.border.border-b-zinc-200
