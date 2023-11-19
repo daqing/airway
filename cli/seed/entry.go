@@ -39,7 +39,7 @@ func Generate(args []string) {
 }
 
 func SeedRoot(username, password string) {
-	_, err := user_api.CreateAdminUser(username, username, password)
+	_, err := user_api.CreateRootUser(username, password)
 	if err != nil {
 		panic(err)
 	}

@@ -8,15 +8,19 @@ import (
 	"github.com/daqing/airway/lib/utils"
 )
 
-func CreateBasicUser(nickname, username string, password string) (*User, error) {
-	return createUser(nickname, username, basicRole, password)
+func CreateRootUser(username string, password string) (*User, error) {
+	return createUser(username, username, RootRole, password)
 }
 
 func CreateAdminUser(nickname, username string, password string) (*User, error) {
-	return createUser(nickname, username, adminRole, password)
+	return createUser(nickname, username, AdminRole, password)
 }
 
-func createUser(nickname, username string, role userRole, password string) (*User, error) {
+func CreateBasicUser(nickname, username string, password string) (*User, error) {
+	return createUser(nickname, username, BasicRole, password)
+}
+
+func createUser(nickname, username string, role UserRole, password string) (*User, error) {
 	if len(nickname) == 0 {
 		return nil, fmt.Errorf("nickname can't be empty")
 	}
@@ -106,7 +110,7 @@ func LoginAdmin(username string, password string) (*User, error) {
 		},
 		[]repo.KVPair{
 			repo.KV("username", username),
-			repo.KV("role", adminRole),
+			repo.KV("role", AdminRole),
 		},
 	)
 
@@ -149,20 +153,20 @@ func UserFromAPIToken(token string) *User {
 }
 
 func CurrentUser(authToken string) *User {
-	return userFromToken(authToken, basicRole)
+	return userFromToken(authToken, AllRole)
 }
 
 func CurrentAdmin(authToken string) *User {
-	return userFromToken(authToken, adminRole)
+	return userFromToken(authToken, AdminRole)
 }
 
-func userFromToken(apiToken string, role userRole) *User {
+func userFromToken(apiToken string, role UserRole) *User {
 	user := UserFromAPIToken(apiToken)
 	if user == nil {
 		return nil
 	}
 
-	if user.Role == role {
+	if role == AllRole || user.Role == role {
 		return user
 	}
 
@@ -172,7 +176,7 @@ func userFromToken(apiToken string, role userRole) *User {
 func CheckAdmin(authToken string) bool {
 	ok, err := repo.Exists[User]([]repo.KVPair{
 		repo.KV("api_token", authToken),
-		repo.KV("role", adminRole),
+		repo.KV("role", AdminRole),
 	})
 
 	if err != nil {
