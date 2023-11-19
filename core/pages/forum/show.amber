@@ -12,7 +12,7 @@ block subtitle
 block content
   article.mt-2.bg-white.rounded-md.shadow
     div.flex.gap-4.p-4.items-center
-      +avatar("")
+      +avatar(AvatarURL)
       h1.text-xl #{$.Post.Title}
     main.border-t.border-gray-200.p-4#markdown
       #{ContentHTML}

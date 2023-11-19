@@ -20,24 +20,24 @@ func UploadAction(c *gin.Context) {
 		return
 	}
 
-	file, _ := c.FormFile("file")
+	fileHeader, _ := c.FormFile("file")
 
-	f, err := file.Open()
+	file, err := fileHeader.Open()
 	if err != nil {
 		api_resp.Error(c, err)
 		return
 	}
 
-	hash, err := utils.MD5SumFile(f)
+	hash, err := utils.MD5SumFile(file)
 	if err != nil {
 		api_resp.Error(c, err)
 		return
 	}
 
-	newFilename := replace(file.Filename, hash)
-	mime := file.Header.Get("Content-Type")
+	newFilename := replace(fileHeader.Filename, hash)
+	mime := fileHeader.Header.Get("Content-Type")
 
-	row, err := SaveFile(currentUser.Id, newFilename, mime, file.Size)
+	row, err := SaveFile(currentUser.Id, newFilename, mime, fileHeader.Size)
 	if err != nil {
 		api_resp.Error(c, err)
 		return
@@ -65,13 +65,7 @@ func UploadAction(c *gin.Context) {
 
 	destFile := destDir + "/" + newFilename
 
-	c.SaveUploadedFile(file, destFile)
+	c.SaveUploadedFile(fileHeader, destFile)
 
-	assetHost, err := utils.GetEnv("AIRWAY_ASSET_HOST")
-	if err != nil {
-		api_resp.Error(c, err)
-		return
-	}
-
-	api_resp.OK(c, gin.H{"filename": newFilename, "url": assetHostPath(assetHost, newFilename)})
+	api_resp.OK(c, gin.H{"filename": newFilename, "url": AssetHostPath(newFilename)})
 }

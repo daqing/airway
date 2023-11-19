@@ -1,6 +1,12 @@
 package post_api
 
-import "time"
+import (
+	"log"
+	"time"
+
+	"github.com/daqing/airway/core/api/user_api"
+	"github.com/daqing/airway/lib/repo"
+)
 
 type Post struct {
 	Id         int64
@@ -23,3 +29,20 @@ const polyType = "post"
 
 func (p *Post) PolyId() int64    { return p.Id }
 func (p *Post) PolyType() string { return polyType }
+
+func (p *Post) UserAvatar() string {
+	user, err := repo.FindRow[user_api.User](
+		[]string{"avatar"},
+		[]repo.KVPair{
+			repo.KV("id", p.UserId),
+		},
+	)
+
+	if err != nil {
+		// TODO: fix logging
+		log.Println(err)
+		return repo.EMPTY_STRING
+	}
+
+	return user.Avatar
+}

@@ -1,6 +1,7 @@
 package forum
 
 import (
+	"github.com/daqing/airway/core/api/media_api"
 	"github.com/daqing/airway/core/api/user_api"
 	"github.com/daqing/airway/lib/utils"
 )
@@ -18,18 +19,17 @@ func ForumTagline() string {
 	return tagline
 }
 
-func SessionData(token string) map[string]any {
-	var currentUser *user_api.User
+func SessionData(currentUser *user_api.User) map[string]any {
 	var nickname string
 	var signedIn bool
 	var isAdmin bool
-
-	currentUser = user_api.UserFromAPIToken(token)
+	var avatarURL string
 
 	if currentUser != nil {
 		nickname = currentUser.Nickname
 		signedIn = true
 		isAdmin = currentUser.IsAdmin()
+		avatarURL = media_api.AssetHostPath(currentUser.Avatar)
 	}
 
 	return map[string]any{
@@ -37,5 +37,6 @@ func SessionData(token string) map[string]any {
 		"Nickname":    nickname,
 		"SignedIn":    signedIn,
 		"IsAdmin":     isAdmin,
+		"AvatarURL":   avatarURL,
 	}
 }

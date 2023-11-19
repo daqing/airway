@@ -1,0 +1,17 @@
+extends layout
+
+block title
+  | Hello, forum
+
+block content
+  div#settings.mt-2.bg-white.rounded-md.shadow
+    h1.text-xl.px-4.py-2 Avatar
+
+    form[action="/forum/settings/update_avatar"][method="post"][enctype="multipart/form-data"]
+      div.px-4.py-2
+        +avatar(AvatarURL)
+      div.px-4.py-2
+        label Choose a new avatar
+        input[type="file"][name="avatar"]
+      div.px-4.py-2
+        input[type="submit"][value="Update Avatar"].btn-outline

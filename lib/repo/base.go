@@ -51,14 +51,14 @@ func (attr *Attribute) Operator() string {
 	return eq_op
 }
 
-const EMPTY_KEY = ""
+const EMPTY_STRING = ""
 
 type OrQuery struct {
 	Pairs []KVPair
 }
 
 func (or *OrQuery) Key() string {
-	return EMPTY_KEY
+	return EMPTY_STRING
 }
 
 func (or *OrQuery) Value() any {

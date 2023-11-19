@@ -44,6 +44,10 @@ func GeneratePage(topDir, page, action string) {
 func GeneratePageAction(topDir, page, action string) {
 	dirName := utils.PageDirPath(topDir, page)
 
+	if err := os.MkdirAll(dirName, 0755); err != nil {
+		fmt.Println(err)
+	}
+
 	targetFileName := strings.Join(
 		[]string{
 			dirName,

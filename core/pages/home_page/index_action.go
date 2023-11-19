@@ -3,6 +3,7 @@ package home_page
 import (
 	"github.com/daqing/airway/core/api/user_api"
 	"github.com/daqing/airway/lib/page_resp"
+	"github.com/daqing/airway/lib/utils"
 	"github.com/gin-gonic/gin"
 )
 
@@ -13,7 +14,7 @@ func IndexAction(c *gin.Context) {
 	var signedIn bool
 	var isAdmin bool
 
-	apiToken, err := c.Cookie("user_api_token")
+	apiToken, err := utils.CookieToken(c)
 	if err == nil {
 		currentUser = user_api.UserFromAPIToken(apiToken)
 	}

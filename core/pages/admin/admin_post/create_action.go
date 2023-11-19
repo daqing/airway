@@ -36,7 +36,7 @@ func CreateAction(c *gin.Context) {
 		return
 	}
 
-	token, err := c.Cookie("user_api_token")
+	token, err := utils.CookieToken(c)
 	if err != nil {
 		page_resp.Error(c, err)
 		return

@@ -45,7 +45,7 @@ func CreateAction(c *gin.Context) {
 		return
 	}
 
-	token, _ := c.Cookie("user_api_token")
+	token, _ := utils.CookieToken(c)
 
 	currentUser := user_api.CurrentUser(token)
 	if currentUser == nil {

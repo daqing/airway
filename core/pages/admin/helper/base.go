@@ -3,12 +3,13 @@ package helper
 import (
 	"github.com/daqing/airway/core/api/user_api"
 	"github.com/daqing/airway/lib/page_resp"
+	"github.com/daqing/airway/lib/utils"
 	"github.com/gin-gonic/gin"
 )
 
 func CheckAdmin(action gin.HandlerFunc) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		token, err := c.Cookie("user_api_token")
+		token, err := utils.CookieToken(c)
 		if err != nil {
 			page_resp.Redirect(c, "/")
 			return

@@ -43,19 +43,10 @@ func TestDirParts(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		actual := dirParts(test.Path)
+		actual := DirParts(test.Path)
 
 		if actual != test.Expected {
 			t.Errorf("expected %s, got %s", test.Expected, actual)
 		}
-	}
-}
-
-func TestAssetHostPath(t *testing.T) {
-	expected := "https://abcd.com/ab/abcd/abcdefg.png"
-	actual := assetHostPath("https://abcd.com", "abcdefg.png")
-
-	if actual != expected {
-		t.Errorf("expected %s, got %s", expected, actual)
 	}
 }

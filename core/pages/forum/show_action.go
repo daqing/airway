@@ -6,8 +6,10 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/daqing/airway/core/api/media_api"
 	"github.com/daqing/airway/core/api/node_api"
 	"github.com/daqing/airway/core/api/post_api"
+	"github.com/daqing/airway/core/api/user_api"
 	"github.com/daqing/airway/lib/page_resp"
 	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/utils"
@@ -29,7 +31,7 @@ func ShowAction(c *gin.Context) {
 	}
 
 	post, err := repo.FindRow[post_api.Post](
-		[]string{"id", "title", "content"},
+		[]string{"id", "title", "content", "user_id", "node_id"},
 		where,
 	)
 
@@ -62,16 +64,18 @@ func ShowAction(c *gin.Context) {
 			})
 	}
 
-	token, _ := c.Cookie("user_api_token")
+	token, _ := utils.CookieToken(c)
+	currentUser := user_api.CurrentUser(token)
 
 	data := map[string]any{
-		"Title":    ForumTitle(),
-		"Tagline":  ForumTagline(),
-		"Year":     time.Now().Year(),
-		"RootPath": rootPath,
-		"Nodes":    nodeItems,
-		"Post":     post,
-		"Session":  SessionData(token),
+		"Title":     ForumTitle(),
+		"Tagline":   ForumTagline(),
+		"Year":      time.Now().Year(),
+		"RootPath":  rootPath,
+		"Nodes":     nodeItems,
+		"Post":      post,
+		"Session":   SessionData(currentUser),
+		"AvatarURL": media_api.AssetHostPath(post.UserAvatar()),
 	}
 
 	var buf bytes.Buffer

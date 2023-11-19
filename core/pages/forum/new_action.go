@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/daqing/airway/core/api/node_api"
+	"github.com/daqing/airway/core/api/user_api"
 	"github.com/daqing/airway/lib/page_resp"
 	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/utils"
@@ -36,7 +37,8 @@ func NewAction(c *gin.Context) {
 			})
 	}
 
-	token, _ := c.Cookie("user_api_token")
+	token, _ := utils.CookieToken(c)
+	currentUser := user_api.CurrentUser(token)
 
 	data := map[string]any{
 		"Title":    ForumTitle(),
@@ -44,7 +46,7 @@ func NewAction(c *gin.Context) {
 		"Year":     time.Now().Year(),
 		"RootPath": rootPath,
 		"Nodes":    nodeItems,
-		"Session":  SessionData(token),
+		"Session":  SessionData(currentUser),
 	}
 
 	page_resp.Page(c, "core", "forum!", "new", data)

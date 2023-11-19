@@ -1,10 +1,13 @@
 package media_api
 
 import (
+	"mime/multipart"
+	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/utils"
 )
 
 func SaveFile(
@@ -40,10 +43,10 @@ func replace(filename string, part string) string {
 }
 
 func hashDirPath(prefix string, path string) string {
-	return assetFullPath(prefix, dirParts(path))
+	return assetFullPath(prefix, DirParts(path))
 }
 
-func dirParts(path string) string {
+func DirParts(path string) string {
 	if len(path) < 4 {
 		return path
 	}
@@ -58,6 +61,48 @@ func assetFullPath(assetDir string, path string) string {
 	return assetDir + path
 }
 
-func assetHostPath(prefix string, filename string) string {
-	return prefix + dirParts(filename) + "/" + filename
+func AssetHostPath(filename string) string {
+	if filename == repo.EMPTY_STRING {
+		return repo.EMPTY_STRING
+	}
+
+	subPath := "/public/assets" + filename
+
+	host, err := utils.GetEnv("AIRWAY_ASSET_HOST")
+	if err != nil {
+		return subPath
+	}
+
+	return host + "/" + subPath
+}
+
+func DestFilePath(fileHeader *multipart.FileHeader) (destPath string, filePath string, err error) {
+	file, err := fileHeader.Open()
+	if err != nil {
+		return
+	}
+
+	hash, err := utils.MD5SumFile(file)
+	if err != nil {
+		return
+	}
+
+	newFilename := replace(fileHeader.Filename, hash)
+
+	assetDir, err := utils.GetEnv("AIRWAY_STORAGE_DIR")
+	if err != nil {
+		return
+	}
+
+	parts := DirParts(newFilename)
+
+	destDir := assetFullPath(assetDir, parts)
+	if err = os.MkdirAll(destDir, 0755); err != nil {
+		return
+	}
+
+	destPath = destDir + "/" + newFilename
+	filePath = parts + "/" + newFilename
+
+	return destPath, filePath, nil
 }

@@ -10,7 +10,6 @@ block content
       div.post.px-4.py-4.border-b.border-zinc-200
         div.flex.gap-4
           +avatar($post.AvatarURL)
-
           div
             h2.text-gray-900
               a[href=$post.Url] #{$post.Title}

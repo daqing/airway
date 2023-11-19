@@ -1,0 +1,7 @@
+extends layout
+
+block title
+  | Hello, forum
+
+block body
+  h1 Hello, forum#UpdateAvatar

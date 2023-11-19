@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/daqing/airway/core/api/media_api"
 	"github.com/daqing/airway/core/api/node_api"
 	"github.com/daqing/airway/core/api/post_api"
 	"github.com/daqing/airway/core/api/user_api"
@@ -52,11 +53,12 @@ func NodeAction(c *gin.Context) {
 
 		postsShow = append(postsShow,
 			&PostItem{
-				Id:       post.Id,
-				Title:    post.Title,
-				Url:      url,
-				Date:     post.CreatedAt.Format("2006-01-02 15:04"),
-				UserName: user_api.Nickname(post.UserId),
+				Id:        post.Id,
+				Title:     post.Title,
+				Url:       url,
+				Date:      post.CreatedAt.Format("2006-01-02 15:04"),
+				UserName:  user_api.Nickname(post.UserId),
+				AvatarURL: media_api.AssetHostPath(post.UserAvatar()),
 			},
 		)
 	}
@@ -85,7 +87,8 @@ func NodeAction(c *gin.Context) {
 			})
 	}
 
-	token, _ := c.Cookie("user_api_token")
+	token, _ := utils.CookieToken(c)
+	currentUser := user_api.CurrentUser(token)
 
 	data := map[string]any{
 		"Title":    ForumTitle(),
@@ -95,7 +98,7 @@ func NodeAction(c *gin.Context) {
 		"Node":     node,
 		"Nodes":    nodeItems,
 		"Posts":    postsShow,
-		"Session":  SessionData(token),
+		"Session":  SessionData(currentUser),
 	}
 
 	page_resp.Page(c, "core", "forum!", "node", data)
