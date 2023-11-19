@@ -38,4 +38,16 @@
   .btn-outline {
     @apply text-blue-500 border border-blue-500 px-4 py-1 rounded-full hover:bg-blue-500 hover:text-white;
   }
+
+  .dropdown-menu {
+    @apply flex flex-col bg-white absolute right-0 border border-gray-200;
+  }
+
+  .dropdown-menu a {
+    @apply px-4 py-1 hover:bg-gray-100;
+  }
+
+  .dropdown-menu a.sep {
+    @apply border-b border-zinc-200;
+  }
 }

@@ -31,11 +31,14 @@ block body
               a[href=$node.URL] #{$node.Name}
         div.flex.gap-4
           if Session.SignedIn
-            a[href=""] #{Session.Nickname}
-            if Session.IsAdmin
-              a[href="/admin"] Admin
+            div.dropdown-container.relative.float-right[data-menu-target=".profile-menu"]
+              a[href=""] #{Session.Nickname}
+              div.profile-menu.dropdown-menu[class="min-w-[128px]"].hidden
+                a[href="/forum/settings"].sep Settings
+                if Session.IsAdmin
+                  a[href="/admin"] Admin
 
-            a[href="/session/sign_out"] Logout
+                a[href="/session/sign_out"] Logout
           else
             a[href="/session/sign_in"].btn-outline Login
     main.w-full.px-10.py-4

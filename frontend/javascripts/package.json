@@ -1,1 +1,1 @@
-{ "dependencies": { "react": "^18.2.0", "react-dom": "^18.2.0" } }
+{ "dependencies": { "jquery": "^3.7.1", "react": "^18.2.0", "react-dom": "^18.2.0" } }

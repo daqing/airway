@@ -15,5 +15,7 @@ html
     +css("tailwind")
     block style
 
+    +js("base")
+
   body
     block body
