@@ -16,14 +16,14 @@ block content
           th.px-4 Balance
           th.px-4
       tbody
-        each $user in Users
+        each $item in Users
           tr.text-left
-            td.px-4 #{$user.Id}
-            td.px-4 #{$user.Nickname}
-            td.px-4 #{$user.Username}
-            td.px-4 #{$user.Role}
-            td.px-4 #{$user.ApiToken}
-            td.px-4 #{$user.Balance}
+            td.px-4 #{$item.Id}
+            td.px-4 #{$item.Nickname}
+            td.px-4 #{$item.Username}
+            td.px-4 #{$item.RoleName}
+            td.px-4 #{$item.APIToken}
+            td.px-4 #{$item.Balance}
             td.px-4.flex.gap-4
               a[href="#"] Edit
               a[href="#"] Delete

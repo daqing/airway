@@ -16,7 +16,7 @@ type User struct {
 	Email             string
 	Avatar            string
 	Role              UserRole
-	ApiToken          string
+	APIToken          string
 	EncryptedPassword string
 	Balance           repo.PriceCent
 

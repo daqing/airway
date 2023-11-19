@@ -42,7 +42,7 @@ createdb:
 dropdb:
   psql -U $POSTGRES_USER -d postgres -c "drop database airway"
 
-reset: dropdb createdb migrate
+resetdb: dropdb createdb migrate
 
 db:
   psql -U $POSTGRES_USER -d airway

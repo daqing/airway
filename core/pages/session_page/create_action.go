@@ -42,6 +42,6 @@ func CreateAction(c *gin.Context) {
 	}
 
 	// login ok, set cookie
-	page_resp.SetCookie(c, "user_api_token", user.ApiToken)
+	page_resp.SetCookie(c, "user_api_token", user.APIToken)
 	page_resp.Redirect(c, "/")
 }

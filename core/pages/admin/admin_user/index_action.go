@@ -6,6 +6,15 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+type UserItem struct {
+	Id       int64
+	Nickname string
+	Username string
+	RoleName string
+	APIToken string
+	Balance  string
+}
+
 type IndexParams struct {
 	Page int `form:"page"`
 }
@@ -30,8 +39,22 @@ func IndexAction(c *gin.Context) {
 		return
 	}
 
+	var items []*UserItem
+
+	for _, user := range users {
+		items = append(items,
+			&UserItem{
+				Id:       user.Id,
+				Nickname: user.Nickname,
+				Username: user.Username,
+				RoleName: user_api.RoleName(user.Role),
+				APIToken: user.APIToken,
+				Balance:  user.Balance.Yuan(),
+			})
+	}
+
 	data := map[string]any{
-		"Users": users,
+		"Users": items,
 	}
 
 	page_resp.Page(c, "core", "admin.user", "index", data)
