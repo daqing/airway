@@ -1,7 +1,6 @@
 package media_api
 
 import (
-	"os"
 	"testing"
 )
 
@@ -22,10 +21,6 @@ func TestReplace(t *testing.T) {
 }
 
 func TestHashDirPath(t *testing.T) {
-	if err := os.Setenv("AIRWAY_STORAGE_DIR", "/tmp"); err != nil {
-		t.Error(err)
-	}
-
 	expected := "/tmp/a2/a2b3"
 
 	if actual := hashDirPath("/tmp", "a2b3041922.png"); actual != expected {

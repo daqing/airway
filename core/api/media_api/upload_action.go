@@ -50,13 +50,7 @@ func UploadAction(c *gin.Context) {
 	}
 
 	// move uplaoded file to asset directory
-	assetDir, err := utils.GetEnv("AIRWAY_STORAGE_DIR")
-	if err != nil {
-		api_resp.Error(c, err)
-		return
-	}
-
-	destDir := hashDirPath(assetDir, newFilename)
+	destDir := hashDirPath(AssetStorageDir(), newFilename)
 
 	if err := os.MkdirAll(destDir, 0755); err != nil {
 		api_resp.Error(c, err)

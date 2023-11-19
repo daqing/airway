@@ -89,14 +89,9 @@ func DestFilePath(fileHeader *multipart.FileHeader) (destPath string, filePath s
 
 	newFilename := replace(fileHeader.Filename, hash)
 
-	assetDir, err := utils.GetEnv("AIRWAY_STORAGE_DIR")
-	if err != nil {
-		return
-	}
-
 	parts := DirParts(newFilename)
 
-	destDir := assetFullPath(assetDir, parts)
+	destDir := assetFullPath(AssetStorageDir(), parts)
 	if err = os.MkdirAll(destDir, 0755); err != nil {
 		return
 	}
@@ -105,4 +100,14 @@ func DestFilePath(fileHeader *multipart.FileHeader) (destPath string, filePath s
 	filePath = parts + "/" + newFilename
 
 	return destPath, filePath, nil
+}
+
+func AssetStorageDir() string {
+	assetDir, err := utils.GetEnv("AIRWAY_STORAGE_DIR")
+	if err != nil {
+		// env not set
+		return utils.GetEnvMust("AIRWAY_PWD") + "/public/assets"
+	}
+
+	return assetDir
 }
