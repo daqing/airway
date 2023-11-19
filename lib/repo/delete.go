@@ -8,7 +8,7 @@ import (
 func Delete[T TableNameType](conds []KVPair) error {
 	var t T
 
-	condQuery, vals, _ := buildCondQuery(conds, 0, AND)
+	condQuery, vals, _ := buildCondQuery(conds, 0, and_sep)
 
 	sql := fmt.Sprintf("DELETE FROM %s WHERE %s", t.TableName(), condQuery)
 	fmt.Println(sql)

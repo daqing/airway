@@ -6,7 +6,7 @@ import (
 )
 
 func Count[T TableNameType](conds []KVPair) (n int64, err error) {
-	condQuery, values, _ := buildCondQuery(conds, 0, AND)
+	condQuery, values, _ := buildCondQuery(conds, 0, and_sep)
 
 	var t T
 

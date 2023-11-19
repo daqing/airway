@@ -35,7 +35,7 @@ func Find[T TableNameType](fields []string, conds []KVPair) ([]*T, error) {
 func FindLimit[T TableNameType](fields []string, conds []KVPair, orderBy string, offset int, limit int) ([]*T, error) {
 	var _t T // only used for get table name
 
-	condQuery, values, _ := buildCondQuery(conds, 0, AND)
+	condQuery, values, _ := buildCondQuery(conds, 0, and_sep)
 
 	fields = append(fields, "created_at", "updated_at")
 	fieldsQuery := strings.Join(fields, ", ")

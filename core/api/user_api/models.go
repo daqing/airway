@@ -47,4 +47,17 @@ func (u *User) Membership() (*membership_api.MembershipResp, error) {
 	return membership_api.MembershipFor(u.Id)
 }
 
-func (u *User) IsAdmin() bool { return u.Role == AdminRole }
+func (u *User) IsAdmin() bool { return u.Role == AdminRole || u.Role == RootRole }
+
+func RoleName(role UserRole) string {
+	switch role {
+	case RootRole:
+		return "ROOT"
+	case AdminRole:
+		return "ADMIN"
+	case BasicRole:
+		return "BASIC"
+	default:
+		return "[OTHER]"
+	}
+}
