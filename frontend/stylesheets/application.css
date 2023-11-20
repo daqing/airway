@@ -3,9 +3,9 @@
 @tailwind utilities;
 
 @layer components {
-  .btn {
-    @apply bg-zinc-200 px-4 py-1 rounded-md hover:bg-zinc-400 hover:text-white hover:font-bold
-  }
+  /* .btn {
+    @apply bg-zinc-200 px-4 py-1 rounded-md hover:bg-zinc-400 hover:text-white hover:font-bold;
+  } */
 
   input[type="text"], input[type="password"] {
     @apply px-2 py-1;
@@ -35,6 +35,10 @@
     @apply hover:text-blue-500 hover:cursor-pointer;
   }
 
+  .btn {
+    @apply border border-blue-500 text-sm px-2 bg-white hover:bg-blue-500 hover:text-white cursor-pointer rounded-md;
+  }
+
   .btn-outline {
     @apply text-blue-500 border border-blue-500 px-4 py-1 rounded-full hover:bg-blue-500 hover:text-white;
   }
@@ -49,5 +53,15 @@
 
   .dropdown-menu a.sep {
     @apply border-b border-zinc-200;
+  }
+
+  main img.avatar {
+    width: 40px;
+    height: 40px;
+  }
+
+  header img.avatar {
+    width: 24px;
+    height: 24px;
   }
 }

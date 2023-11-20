@@ -27,7 +27,7 @@ func CreateAction(c *gin.Context) {
 		return
 	}
 
-	comment, err := CreateComment(currentUser, p.TargetType, p.TargetId, p.Content)
+	comment, err := createComment(currentUser, p.TargetType, p.TargetId, p.Content)
 	if err != nil {
 		api_resp.LogError(c, err)
 		return

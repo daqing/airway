@@ -14,14 +14,9 @@ block style
       background-color: #fff;
     }
 
-    img {
-      width: 40px;
-      height: 40px;
-    }
-
 block body
   div.w-screen
-    header.w-full.border-b.border-zinc-200.px-10.py-6
+    header.w-full.border-b.border-zinc-200.px-10.py-2
       div.mx-auto[class="w-2/3"].flex.justify-between.items-center
         div.flex.gap-10
           h1

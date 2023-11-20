@@ -17,5 +17,7 @@ func Routes(r *gin.Engine) {
 
 		g.GET("/settings", SettingsAction)
 		g.POST("/settings/update_avatar", UpdateAvatarAction)
+
+		g.POST("/comment/create", CreateCommentAction)
 	}
 }

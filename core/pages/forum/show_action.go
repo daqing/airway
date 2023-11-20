@@ -67,6 +67,18 @@ func ShowAction(c *gin.Context) {
 	token, _ := utils.CookieToken(c)
 	currentUser := user_api.CurrentUser(token)
 
+	postUser := post.User()
+	if postUser == nil {
+		// user not found
+		page_resp.Redirect(c, "/forum")
+		return
+	}
+
+	postNode := post.Node()
+	if postNode == nil {
+		postNode = &node_api.Node{}
+	}
+
 	data := map[string]any{
 		"Title":     ForumTitle(),
 		"Tagline":   ForumTagline(),
@@ -74,6 +86,8 @@ func ShowAction(c *gin.Context) {
 		"RootPath":  rootPath,
 		"Nodes":     nodeItems,
 		"Post":      post,
+		"PostUser":  postUser,
+		"PostNode":  postNode,
 		"Session":   SessionData(currentUser),
 		"AvatarURL": media_api.AssetHostPath(post.UserAvatar()),
 	}
