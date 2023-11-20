@@ -1,7 +1,6 @@
 package forum
 
 import (
-	"bytes"
 	"html/template"
 	"strconv"
 	"time"
@@ -14,8 +13,14 @@ import (
 	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/utils"
 	"github.com/gin-gonic/gin"
-	"github.com/yuin/goldmark"
 )
+
+type CommentItem struct {
+	Nickname    string
+	AvatarURL   string
+	ContentHTML template.HTML
+	CreatedAt   string
+}
 
 func ShowAction(c *gin.Context) {
 	segment := c.Param("id")
@@ -79,26 +84,46 @@ func ShowAction(c *gin.Context) {
 		postNode = &node_api.Node{}
 	}
 
-	data := map[string]any{
-		"Title":     ForumTitle(),
-		"Tagline":   ForumTagline(),
-		"Year":      time.Now().Year(),
-		"RootPath":  rootPath,
-		"Nodes":     nodeItems,
-		"Post":      post,
-		"PostUser":  postUser,
-		"PostNode":  postNode,
-		"Session":   SessionData(currentUser),
-		"AvatarURL": media_api.AssetHostPath(post.UserAvatar()),
-	}
-
-	var buf bytes.Buffer
-	if err := goldmark.Convert([]byte(post.Content), &buf); err != nil {
+	comments, err := post.Comments()
+	if err != nil {
 		page_resp.Error(c, err)
 		return
 	}
 
-	data["ContentHTML"] = template.HTML(buf.String())
+	commentItems := []*CommentItem{}
+
+	for _, comment := range comments {
+		user := comment.User()
+		if user == nil {
+			continue
+		}
+
+		commentItems = append(commentItems,
+			&CommentItem{
+				Nickname:    user.Nickname,
+				AvatarURL:   media_api.AssetHostPath(user.Avatar),
+				ContentHTML: utils.RenderMarkdown(comment.Content),
+				CreatedAt:   utils.TimeAgo(comment.CreatedAt),
+			},
+		)
+	}
+
+	data := map[string]any{
+		"Title":       ForumTitle(),
+		"Tagline":     ForumTagline(),
+		"Year":        time.Now().Year(),
+		"RootPath":    rootPath,
+		"Nodes":       nodeItems,
+		"Post":        post,
+		"PostUser":    postUser,
+		"PostNode":    postNode,
+		"Session":     SessionData(currentUser),
+		"AvatarURL":   media_api.AssetHostPath(post.UserAvatar()),
+		"Comments":    commentItems,
+		"HasComments": len(commentItems) > 0,
+	}
+
+	data["ContentHTML"] = utils.RenderMarkdown(post.Content)
 
 	page_resp.Page(c, "core", "forum!", "show", data)
 }

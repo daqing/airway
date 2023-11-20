@@ -12,8 +12,8 @@ block content
           +avatar($post.AvatarURL)
           div
             h2.text-gray-900
-              a[href=$post.Url] #{$post.Title}
-            div.mt-3.text-gray-400.text-sm.gap-4
+              a[href=$post.Url].text-lg #{$post.Title}
+            div.mt-1.text-gray-400.text-sm.gap-4
               span #{$post.UserName}
               span &middot;
-              span #{$post.Date}
+              span #{$post.TimeAgo}

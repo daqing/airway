@@ -35,4 +35,4 @@ block body
             label Password
             input[type="password"][name="password"].border
           div.group
-            button.btn[type="submit"] Sign In
+            button.btn.py-1[type="submit"] Sign In

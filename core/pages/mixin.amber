@@ -9,6 +9,6 @@ mixin logo
 
 mixin avatar($path)
   if $path == ""
-    img[src="/public/forum/default_avatar.png"].avatar
+    img[src="/public/forum/default_avatar.png"].rounded-full.avatar
   else
     img[src=$path].rounded-full.avatar

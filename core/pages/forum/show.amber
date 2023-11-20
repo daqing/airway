@@ -22,6 +22,18 @@ block content
         main.border-t.border-gray-200.p-4#markdown
           #{ContentHTML}
 
+      if HasComments
+        div.bg-white.rounded-md.shadow.mt-4
+          each $comment in Comments
+            div.comment.flex.gap-4.px-4.py-4.border-b.border-gray-100
+              div
+                +avatar($comment.AvatarURL)
+              div.flex.flex-col.gap-2
+                div.flex.items-baseline.gap-4
+                  span.text-gray-600 #{$comment.Nickname}
+                  span.text-xs.text-gray-400 #{$comment.CreatedAt}
+                p #{$comment.ContentHTML}
+
       if Session.SignedIn
         div.bg-white.rounded-md.shadow.mt-4
           div.px-4.py-1 Add comment
@@ -32,7 +44,7 @@ block content
               input[type="submit"][value="Submit"].mt-2.btn
       else
         div.mt-4
-          a[href="/session/sign_in"].text-blue-500 Login
+          a[href="/session/sign_in"].btn-plain Login
           span to comment
     div[class="w-1/3"]
       div.bg-white.rounded-md.shadow.flex.p-4.items-center.gap-2

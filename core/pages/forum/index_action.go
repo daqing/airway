@@ -18,7 +18,7 @@ type PostItem struct {
 	Id        int64
 	Title     string
 	Url       string
-	Date      string
+	TimeAgo   string
 	UserName  string
 	NodeName  string
 	AvatarURL string
@@ -65,7 +65,7 @@ func IndexAction(c *gin.Context) {
 				Id:        post.Id,
 				Title:     post.Title,
 				Url:       url,
-				Date:      post.CreatedAt.Format("2006-01-02 15:04"),
+				TimeAgo:   utils.TimeAgo(post.CreatedAt),
 				NodeName:  nameMap[post.NodeId],
 				UserName:  user_api.Nickname(post.UserId),
 				AvatarURL: media_api.AssetHostPath(post.UserAvatar()),

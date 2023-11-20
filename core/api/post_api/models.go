@@ -3,6 +3,7 @@ package post_api
 import (
 	"time"
 
+	"github.com/daqing/airway/core/api/comment_api"
 	"github.com/daqing/airway/core/api/node_api"
 	"github.com/daqing/airway/core/api/user_api"
 	"github.com/daqing/airway/lib/repo"
@@ -68,4 +69,14 @@ func (p *Post) Node() *node_api.Node {
 	}
 
 	return node
+}
+
+func (p *Post) Comments() ([]*comment_api.Comment, error) {
+	return repo.Find[comment_api.Comment](
+		[]string{"id", "user_id", "content"},
+		[]repo.KVPair{
+			repo.KV("target_type", p.PolyType()),
+			repo.KV("target_id", p.PolyId()),
+		},
+	)
 }

@@ -56,7 +56,7 @@ func NodeAction(c *gin.Context) {
 				Id:        post.Id,
 				Title:     post.Title,
 				Url:       url,
-				Date:      post.CreatedAt.Format("2006-01-02 15:04"),
+				TimeAgo:   utils.TimeAgo(post.CreatedAt),
 				UserName:  user_api.Nickname(post.UserId),
 				AvatarURL: media_api.AssetHostPath(post.UserAvatar()),
 			},
