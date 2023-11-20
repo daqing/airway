@@ -3,7 +3,7 @@ package checkin_api
 import (
 	"time"
 
-	"github.com/daqing/airway/lib/utils"
+	"github.com/daqing/airway/lib/repo"
 )
 
 type CheckinResp struct {
@@ -17,8 +17,8 @@ type CheckinResp struct {
 
 	Acc int // 连续签到次数
 
-	CreatedAt utils.Timestamp
-	UpdatedAt utils.Timestamp
+	CreatedAt repo.Timestamp
+	UpdatedAt repo.Timestamp
 }
 
 func (c CheckinResp) Fields() []string {

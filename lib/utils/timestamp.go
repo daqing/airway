@@ -5,15 +5,6 @@ import (
 	"time"
 )
 
-type Timestamp time.Time
-
-func (ts Timestamp) MarshalJSON() ([]byte, error) {
-	t := time.Time(ts)
-	str := fmt.Sprintf("%d", t.Unix())
-
-	return []byte(str), nil
-}
-
 func TimeAgo(target time.Time) string {
 	return timeAgo(time.Now(), target)
 }
