@@ -33,6 +33,13 @@ docker: build build-cli-docker
 dbdocker:
   docker build -t airway_db -f Dockerfile.db  --platform linux/amd64 .
 
+push:
+  docker tag airway reg.appmz.cn/daqing/airway
+  docker push reg.appmz.cn/daqing/airway
+
+  docker tag airway_db reg.appmz.cn/daqing/airway_db
+  docker push reg.appmz.cn/daqing/airway_db
+
 migrate:
   find db/*.sql | xargs -I{} psql -U $POSTGRES_USER -d airway -f {}
 
