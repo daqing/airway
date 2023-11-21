@@ -6,7 +6,8 @@ RUN mkdir /app/bin
 RUN mkdir /app/core
 RUN mkdir /app/public
 
-COPY ./bin/airway /app/bin/
+COPY ./bin/airway /app/bin
+COPY ./bin/cli_amd /app/bin
 COPY ./core /app/core
 COPY ./public /app/public
 
