@@ -39,6 +39,10 @@ func (ft FieldType) SQLType() string {
 	}
 }
 
+func (ft FieldType) SkipTrim() bool {
+	return ft.Type == "int64"
+}
+
 func (sf *Scaffold) FieldTypes() []FieldType {
 	return sf.FieldPairs
 }
@@ -137,6 +141,7 @@ func (sf *Scaffold) generate() {
 	sf.genAction("delete", false)
 
 	sf.genRoutes()
+	sf.genModel()
 }
 
 func (sf *Scaffold) genAction(action string, hasView bool) {
@@ -206,6 +211,32 @@ func (sf *Scaffold) genRoutes() {
 	err := helper.ExecTemplate(
 		"./cli/template/scaffold/routes.txt",
 		targetRoutesFile,
+		sf,
+	)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+}
+
+func (sf *Scaffold) genModel() {
+	dirName := utils.PageDirPath(sf.TopDir, sf.Page)
+
+	if err := os.MkdirAll(dirName, 0755); err != nil {
+		fmt.Println(err)
+	}
+
+	targetFile := strings.Join(
+		[]string{
+			dirName,
+			"models.go",
+		},
+		"/",
+	)
+
+	err := helper.ExecTemplate(
+		"./cli/template/scaffold/models.txt",
+		targetFile,
 		sf,
 	)
 

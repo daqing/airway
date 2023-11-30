@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/daqing/airway/lib/page_resp"
+	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/utils"
 	"github.com/gin-gonic/gin"
 )
@@ -23,11 +24,13 @@ func CreateAction(c *gin.Context) {
 	}
 
   {{ range $k, $v := .FieldTypes }}
-    {{ $v.Name }} := utils.TrimFull(p.{{ $v.NameCamel }})
-    if len({{ $v.Name }}) == 0 {
-      page_resp.Error(c, fmt.Errorf("{{ $v.Name }} must not be empty"))
-      return
-    }
+		{{ if not $v.SkipTrim }}
+			{{ $v.Name }} := utils.TrimFull(p.{{ $v.NameCamel }})
+			if len({{ $v.Name }}) == 0 {
+				page_resp.Error(c, fmt.Errorf("{{ $v.Name }} must not be empty"))
+				return
+			}
+		{{ end }}
   {{ end }}
 
 	_, err := repo.Insert[{{ .Model }}]([]repo.KVPair{

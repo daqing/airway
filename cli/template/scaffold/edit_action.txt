@@ -2,6 +2,7 @@ package {{ .PkgName }}
 
 import (
 	"github.com/daqing/airway/lib/page_resp"
+	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/utils"
 	"github.com/gin-gonic/gin"
 )
