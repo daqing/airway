@@ -1,4 +1,4 @@
-extends layout
+extends /views/admin/layout
 
 block title
   | Dashboard

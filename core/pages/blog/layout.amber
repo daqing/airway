@@ -1,4 +1,4 @@
-extends ../base
+extends /views/layout
 
 block subtitle
   if Tagline
@@ -9,7 +9,7 @@ block body
     header.w-full.border-b.border-zinc-200.px-10.py-6
       div.mx-auto[class="w-2/3"].flex.flex-row.justify-between.items-center
         div
-          a[href=RootPath].text-2xl #{Title}
+          a[href="/blog"].text-2xl #{Title}
           if Tagline
             p.text-zinc-400.mt-2 #{Tagline}
         div.flex.gap-4
