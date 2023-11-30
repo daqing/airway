@@ -35,7 +35,6 @@ func GeneratePage(topDir, page, action string) {
 	GeneratePageAction(topDir, page, action)
 	GeneratePageActionTemplate(topDir, page, action)
 
-	GeneratePageLayout(topDir, page)
 	GeneratePageRoutes(topDir, page, action)
 
 	GeneratePageReactJS(topDir, page, action)
@@ -98,33 +97,6 @@ func GeneratePageActionTemplate(topDir, page, action string) {
 		"./cli/template/page/action.amber",
 		targetFileName,
 		PageGenerator{Page: utils.NormalizePage(page), Action: repo.ToCamel(action)},
-	)
-
-	if err != nil {
-		fmt.Println(err)
-	}
-}
-
-func GeneratePageLayout(topDir, page string) {
-	dirName := utils.PageDirPath(topDir, page)
-	layoutFile := "layout.amber"
-
-	if strings.Contains(page, ".") {
-		layoutFile = "parent_layout.amber"
-	}
-
-	targetFileName := strings.Join(
-		[]string{
-			dirName,
-			"layout.amber",
-		},
-		"/",
-	)
-
-	err := helper.ExecTemplate(
-		"./cli/template/page/"+layoutFile,
-		targetFileName,
-		PageGenerator{},
 	)
 
 	if err != nil {
