@@ -1,0 +1,26 @@
+package {{.PkgName}}
+
+import (
+	"github.com/daqing/airway/lib/page_resp"
+	"github.com/gin-gonic/gin"
+)
+
+func IndexAction(c *gin.Context) {
+	list, err := repo.Find[{{.Model}}](
+		{{.Fields}},
+		"id DESC",
+		0,
+		50,
+	)
+
+	if err != nil {
+		page_resp.Error(c, err)
+		return
+	}
+
+	data := map[string]any{
+		"List": list,
+	}
+
+	page_resp.Page(c, "{{.TopDir}}", "{{.Page}}", "index", data)
+}

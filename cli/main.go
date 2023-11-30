@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/daqing/airway/cli/generator"
+	"github.com/daqing/airway/cli/scaffold"
 	"github.com/daqing/airway/cli/seed"
 	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/utils"
@@ -25,6 +26,8 @@ func main() {
 	switch args[0] {
 	case "g":
 		generator.Generate(args[1:])
+	case "sf":
+		scaffold.Generate(args[1:])
 	case "seed":
 		seed.Generate(args[1:])
 	default:
@@ -36,6 +39,7 @@ func main() {
 func showHelp() {
 	fmt.Println("cli g [what] [params]")
 	fmt.Println("cli seed [what] [params]")
+	fmt.Println("cli sf [model] [attr:type] [attr:type]")
 }
 
 func setUpDB() {
