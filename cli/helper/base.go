@@ -24,6 +24,22 @@ func ExecTemplate(path string, out string, data any) error {
 		return fmt.Errorf("template %s does not exist", path)
 	}
 
+	return execTemplate(path, out, data)
+}
+
+func ExecTemplateForce(path string, out string, data any) error {
+	if !pathExists(out) {
+		return fmt.Errorf("target file %s must exists", out)
+	}
+
+	if !pathExists(path) {
+		return fmt.Errorf("template %s does not exist", path)
+	}
+
+	return execTemplate(path, out, data)
+}
+
+func execTemplate(path, out string, data any) error {
 	txt, err := os.ReadFile(path)
 	if err != nil {
 		return err

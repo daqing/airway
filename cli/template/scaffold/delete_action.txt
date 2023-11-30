@@ -20,5 +20,5 @@ func DeleteAction(c *gin.Context) {
 		return
 	}
 
-	page_resp.Redirect(c, "/admin/{{ .Model }}")
+	page_resp.Redirect(c, "{{ .RedirectURL }}")
 }

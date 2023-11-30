@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/daqing/airway/cli/generator"
 	"github.com/daqing/airway/cli/helper"
 	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/utils"
@@ -16,12 +17,38 @@ type Scaffold struct {
 	IsAdmin    bool
 	PkgName    string
 	Model      string
-	FieldTypes []FieldType
+	Lower      string
+	FieldPairs []FieldType
 }
 
 type FieldType struct {
 	Name string
 	Type string
+}
+
+func (ft FieldType) SQLType() string {
+	switch ft.Type {
+	case "string":
+		return "VARCHAR(255) NOT NULL"
+	case "int":
+		return "INT NOT NULL"
+	case "int64", "bigint":
+		return "BIGINT NOT NULL"
+	default:
+		return "<unknown>"
+	}
+}
+
+func (sf *Scaffold) FieldTypes() []FieldType {
+	return sf.FieldPairs
+}
+
+func (sf *Scaffold) RedirectURL() string {
+	if sf.IsAdmin {
+		return "/admin/" + sf.Lower
+	}
+
+	return "/" + sf.Lower
 }
 
 func (sf *Scaffold) LayoutName() string {
@@ -51,14 +78,14 @@ func Generate(xargs []string) {
 		parts := strings.Split(sf.Page, ".")
 		sf.IsAdmin = parts[0] == "admin"
 		sf.Model = repo.ToCamel(parts[1])
+		sf.Lower = parts[1]
 	} else {
 		sf.IsAdmin = false
 		sf.Model = repo.ToCamel(sf.Page)
+		sf.Lower = sf.Page
 	}
 
 	sf.PkgName = utils.PagePkgName(sf.TopDir, sf.Page)
-
-	sf.FieldTypes = append(sf.FieldTypes, FieldType{"id", "int64"})
 
 	for _, pair := range xargs[2:] {
 		var name string
@@ -73,24 +100,38 @@ func Generate(xargs []string) {
 			typ = "string"
 		}
 
-		sf.FieldTypes = append(sf.FieldTypes, FieldType{name, typ})
+		sf.FieldPairs = append(sf.FieldPairs, FieldType{name, typ})
 	}
 
-	fmt.Println("top dir:", sf.TopDir)
-	fmt.Println("page:", sf.Page)
-	fmt.Println("is admin?:", sf.IsAdmin)
-	fmt.Println("modal name:", sf.Model)
-	fmt.Println("fields:", sf.Fields())
-
 	sf.generate()
+
+	path := generator.GenerateMigration("create_" + sf.Lower + "_table")
+
+	sf.genTableSQL(path)
+}
+
+func (sf *Scaffold) genTableSQL(path string) {
+	err := helper.ExecTemplateForce(
+		"./cli/template/scaffold/sql.txt",
+		path,
+		sf,
+	)
+
+	if err != nil {
+		fmt.Println(err)
+	}
 }
 
 func (sf *Scaffold) generate() {
-	fmt.Println("generate scaffold...")
 	sf.genAction("index", true)
 	sf.genAction("new", true)
+	sf.genAction("edit", true)
+
 	sf.genAction("create", false)
+	sf.genAction("update", false)
 	sf.genAction("delete", false)
+
+	sf.genRoutes()
 }
 
 func (sf *Scaffold) genAction(action string, hasView bool) {
@@ -142,10 +183,36 @@ func (sf *Scaffold) genAction(action string, hasView bool) {
 
 }
 
+func (sf *Scaffold) genRoutes() {
+	dirName := utils.PageDirPath(sf.TopDir, sf.Page)
+
+	if err := os.MkdirAll(dirName, 0755); err != nil {
+		fmt.Println(err)
+	}
+
+	targetRoutesFile := strings.Join(
+		[]string{
+			dirName,
+			"routes.go",
+		},
+		"/",
+	)
+
+	err := helper.ExecTemplate(
+		"./cli/template/scaffold/routes.txt",
+		targetRoutesFile,
+		sf,
+	)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+}
+
 func (sf *Scaffold) Fields() string {
 	var result []string
 
-	for _, f := range sf.FieldTypes {
+	for _, f := range sf.FieldPairs {
 		result = append(result, fmt.Sprintf(`"%s"`, f.Name))
 	}
 

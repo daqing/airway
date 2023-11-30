@@ -1,0 +1,33 @@
+package {{ .PkgName }}
+
+import (
+	"github.com/daqing/airway/lib/page_resp"
+	"github.com/daqing/airway/lib/utils"
+	"github.com/gin-gonic/gin"
+)
+
+func EditAction(c *gin.Context) {
+	id := utils.TrimFull(c.Query("id"))
+
+	if len(id) == 0 {
+		page_resp.Redirect(c, "/admin/{{ .Model }}")
+	}
+
+	item, err := repo.FindRow[{{ .Model }}](
+    {{ .Fields }},
+    []repo.KVPair{
+      repo.KV("id", id),
+    },
+  )
+
+	if err != nil {
+		page_resp.Error(c, err)
+		return
+	}
+
+	data := map[string]any{
+		"Item": item,
+	}
+
+	page_resp.Page(c, "{{ .TopDir }}", "{{ .Page }}", "edit", data)
+}

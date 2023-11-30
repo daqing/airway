@@ -3,7 +3,7 @@ package scaffold
 import "testing"
 
 func TestGenerate(t *testing.T) {
-	sf := Scaffold{FieldTypes: []FieldType{
+	sf := Scaffold{FieldPairs: []FieldType{
 		{"name", "string"},
 		{"age", "int"},
 	}}
