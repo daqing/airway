@@ -32,7 +32,7 @@ func (ft FieldType) SQLType() string {
 		return "VARCHAR(255) NOT NULL"
 	case "int":
 		return "INT NOT NULL"
-	case "int64", "bigint":
+	case "int64":
 		return "BIGINT NOT NULL"
 	default:
 		return "<unknown>"
@@ -95,6 +95,11 @@ func Generate(xargs []string) {
 			parts := strings.Split(pair, ":")
 			name = parts[0]
 			typ = parts[1]
+
+			if typ == "bigint" {
+				typ = "int64"
+			}
+
 		} else {
 			name = pair
 			typ = "string"
