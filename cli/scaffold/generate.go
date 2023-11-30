@@ -1,6 +1,7 @@
 package scaffold
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -37,6 +38,11 @@ func (ft FieldType) SQLType() string {
 	default:
 		return "<unknown>"
 	}
+}
+
+func LogError(prefix string, err error) {
+	fmt.Println(prefix, ":", err)
+	panic(err)
 }
 
 func (ft FieldType) SkipTrim() bool {
@@ -126,8 +132,8 @@ func (sf *Scaffold) genTableSQL(path string) {
 		sf,
 	)
 
-	if err != nil {
-		fmt.Println(err)
+	if err != nil && !errors.Is(err, os.ErrExist) {
+		LogError("genTableSQL", err)
 	}
 }
 
@@ -165,8 +171,8 @@ func (sf *Scaffold) genAction(action string, hasView bool) {
 		sf,
 	)
 
-	if err != nil {
-		fmt.Println(err)
+	if err != nil && !errors.Is(err, os.ErrExist) {
+		LogError(fmt.Sprintf("generate action file: %s", action), err)
 	}
 
 	if !hasView {
@@ -187,8 +193,8 @@ func (sf *Scaffold) genAction(action string, hasView bool) {
 		sf,
 	)
 
-	if err != nil {
-		fmt.Println(err)
+	if err != nil && !errors.Is(err, os.ErrExist) {
+		LogError(fmt.Sprintf("generate view file: %s", action), err)
 	}
 
 }
@@ -214,8 +220,8 @@ func (sf *Scaffold) genRoutes() {
 		sf,
 	)
 
-	if err != nil {
-		fmt.Println(err)
+	if err != nil && !errors.Is(err, os.ErrExist) {
+		LogError("generate routes", err)
 	}
 }
 
@@ -240,8 +246,8 @@ func (sf *Scaffold) genModel() {
 		sf,
 	)
 
-	if err != nil {
-		fmt.Println(err)
+	if err != nil && !errors.Is(err, os.ErrExist) {
+		LogError("generate models", err)
 	}
 }
 

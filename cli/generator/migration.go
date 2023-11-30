@@ -13,7 +13,7 @@ func GenMigration(xargs []string) {
 		helper.Help("cli g migration [name]")
 	}
 
-	GenerateMigration(xargs[0])
+	fmt.Println(GenerateMigration(xargs[0]))
 }
 
 func GenerateMigration(name string) string {
@@ -29,8 +29,6 @@ func GenerateMigration(name string) string {
 	if err := os.WriteFile(targetPath, []byte("\n"), 0644); err != nil {
 		panic(err)
 	}
-
-	fmt.Println(targetPath)
 
 	return targetPath
 }

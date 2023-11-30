@@ -17,7 +17,7 @@ func pathExists(path string) bool {
 // Execute the data with template from path and write to out
 func ExecTemplate(path string, out string, data any) error {
 	if pathExists(out) {
-		return fmt.Errorf("target file %s already exists", out)
+		return os.ErrExist
 	}
 
 	if !pathExists(path) {
@@ -29,7 +29,7 @@ func ExecTemplate(path string, out string, data any) error {
 
 func ExecTemplateForce(path string, out string, data any) error {
 	if !pathExists(out) {
-		return fmt.Errorf("target file %s must exists", out)
+		return os.ErrExist
 	}
 
 	if !pathExists(path) {
