@@ -1,0 +1,45 @@
+package {{ .PkgName }}
+
+import (
+	"fmt"
+
+	"github.com/daqing/airway/lib/page_resp"
+	"github.com/daqing/airway/lib/utils"
+	"github.com/gin-gonic/gin"
+)
+
+type CreateParams struct {
+  {{ range $k, $v := .FieldTypes }}
+	{{ $v.NameCamel }} {{ $v.Type }} `form:"{{ $v.Name}}"`
+  {{ end }}
+}
+
+func CreateAction(c *gin.Context) {
+	var p CreateParams
+
+	if err := c.ShouldBind(&p); err != nil {
+		page_resp.Error(c, err)
+		return
+	}
+
+  {{ range $k, $v := .FieldTypes }}
+    {{ $v.Name }} := utils.TrimFull(p.{{ $v.NameCamel }})
+    if len({{ $v.Name }}) == 0 {
+      page_resp.Error(c, fmt.Errorf("{{ $v.Name }} must not be empty"))
+      return
+    }
+  {{ end }}
+
+	_, err := repo.Insert[{{ .Model }}]([]repo.KVPair{
+    {{ range $k, $v := .FieldTypes }}
+    repo.KV("{{ $v.Name }}", p.{{ $v.NameCamel }}),
+    {{ end }}
+  })
+
+	if err != nil {
+		page_resp.Error(c, err)
+		return
+	}
+
+	page_resp.Redirect(c, "{{ .RedirectURL }}")
+}

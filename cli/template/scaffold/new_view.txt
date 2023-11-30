@@ -1,0 +1,15 @@
+extends {{ .LayoutName }}
+
+block title
+  | New {{ .Model }}
+
+block content
+  form[action="#/create"][method="post"][class="w-1/4 mx-auto"].mt-5
+    {{ range $key, $value := .FieldTypes }}
+    div.group.flex.flex-col.mb-5
+      label {{ $value.NameCamel }}
+      input[type="text"][name="{{ $value.Name }}"].border
+    {{ end }}
+
+    div.group.mt-5
+      button.btn[type="submit"] Create {{ .Model }}

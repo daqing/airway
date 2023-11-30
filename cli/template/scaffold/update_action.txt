@@ -1,0 +1,55 @@
+package {{ .PkgName }}
+
+import (
+	"fmt"
+
+	"github.com/daqing/airway/lib/page_resp"
+	"github.com/daqing/airway/lib/utils"
+	"github.com/gin-gonic/gin"
+)
+
+type UpdateParams struct {
+  Id    int64  `form:"id"`
+  {{ range $k, $v := .FieldTypes }}
+	{{ $v.NameCamel }} {{ $v.Type }} `form:"{{ $v.Name}}"`
+  {{ end }}
+}
+
+func UpdateAction(c *gin.Context) {
+	var p UpdateParams
+
+	if err := c.ShouldBind(&p); err != nil {
+		page_resp.Error(c, err)
+		return
+	}
+
+  id := p.Id
+
+	if id <= 0 {
+		page_resp.Error(c, fmt.Errorf("id must be greater than 0"))
+		return
+	}
+
+  {{ range $k, $v := .FieldTypes }}
+    {{ $v.Name }} := utils.TrimFull(p.{{ $v.NameCamel }})
+    if len({{ $v.Name }}) == 0 {
+      page_resp.Error(c, fmt.Errorf("{{ $v.Name }} must not be empty"))
+      return
+    }
+  {{ end }}
+
+	ok := repo.UpdateFields[{{ .Model }}](id,
+    []repo.KVPair{
+        {{ range $k, $v := .FieldTypes }}
+        repo.KV("{{ $v.Name }}", p.{{ $v.NameCamel }}),
+        {{ end }}
+    },
+  )
+
+  if !ok {
+		page_resp.Error(c, fmt.Errorf("update menu failed"))
+		return
+	}
+
+	page_resp.Redirect(c, "{{ .RedirectURL }}")
+}

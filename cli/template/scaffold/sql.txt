@@ -1,0 +1,8 @@
+create table {{ .Lower }}s (
+  id BIGSERIAL PRIMARY KEY,
+  {{ range $k, $v := .FieldTypes }}
+  {{ $v.Name }} {{ $v.SQLType }},
+  {{ end }}
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

@@ -16,14 +16,14 @@ func GenMigration(xargs []string) {
 	GenerateMigration(xargs[0])
 }
 
-func GenerateMigration(name string) {
+func GenerateMigration(name string) string {
 	ts := time.Now().Format("20060102150405")
 
 	targetPath := fmt.Sprintf("./db/%s_%s.sql", ts, name)
 	if _, err := os.Stat(targetPath); err == nil {
 		// target file exists
 		fmt.Println("target file exists")
-		return
+		return ""
 	}
 
 	if err := os.WriteFile(targetPath, []byte("\n"), 0644); err != nil {
@@ -31,4 +31,6 @@ func GenerateMigration(name string) {
 	}
 
 	fmt.Println(targetPath)
+
+	return targetPath
 }
