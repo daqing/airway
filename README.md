@@ -20,10 +20,10 @@ Replace `example.com/foo/bar` with your real module name.
 
 ## 2. Setup local development environment
 
-### Create `.env.local` file
+### Create `.env` file
 
 ```bash
-$ cp .env.example .env.local
+$ cp .env.example .env
 ```
 
 This file defines a few environment variables:

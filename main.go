@@ -22,7 +22,7 @@ func main() {
 	}
 
 	if appConfig.IsLocal {
-		envFile := fmt.Sprintf(".env.%s", appConfig.Env)
+		envFile := ".env"
 		err := godotenv.Load(envFile)
 		if err != nil {
 			log.Printf("Loading env file: %s failed", envFile)

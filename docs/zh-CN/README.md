@@ -62,10 +62,10 @@ $ just install-deps
 
 其次，项目使用了 `.env` 作为配置。
 
-需要创建 `.env.local` 文件：
+需要创建 `.env` 文件：
 
 ```bash
-$ cp .env.example .env.local
+$ cp .env.example .env
 ```
 
 这个文件，定义了几个环境变量，说明如下：
@@ -144,18 +144,29 @@ $ just bun
 修改 `Dockerfile`，把里面的`airway`，替换为项目名称。
 
 ```
-FROM golang:1.21.1-bookworm
+FROM alpine
 
 WORKDIR /app
 
-COPY ./bin/airway /app/
+RUN mkdir /app/bin
+RUN mkdir /app/core
+RUN mkdir /app/public
+
+COPY ./bin/airway /app/bin
+COPY ./bin/cli_amd /app/bin
+COPY ./core /app/core
+COPY ./public /app/public
 
 ENV AIRWAY_ENV=production
-ENV PORT=1900
+ENV AIRWAY_PORT=1900
+ENV AIRWAY_PWD=/app
+
+ENV AW_ASSET_VERSION=1
+ENV TZ="Asia/Shanghai"
 
 EXPOSE 1900
 
-CMD ["/app/airway"]
+CMD ["/app/bin/airway"]
 ```
 
 假设你的项目目录是 `foobar-site`，那么，当执行 go build 时，所生成的二进制名称就是 `foobar-site`。
@@ -173,6 +184,6 @@ $ just
 
 就可以启动本地开发服务器。
 
-根据你的 `.env.local` 中配置的端口，就可以访问对应的网址。
+根据你的 `.env` 中配置的端口，就可以访问对应的网址。
 
 假设你配置的端口是 **2023**, 那么，访问 [http://localhost:2023](http://localhost:2023) 即可。
