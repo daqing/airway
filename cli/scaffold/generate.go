@@ -87,10 +87,13 @@ func Generate(xargs []string) {
 
 func (sf *Scaffold) generate() {
 	fmt.Println("generate scaffold...")
-	sf.genAction("index")
+	sf.genAction("index", true)
+	sf.genAction("new", true)
+	sf.genAction("create", false)
+	sf.genAction("delete", false)
 }
 
-func (sf *Scaffold) genAction(action string) {
+func (sf *Scaffold) genAction(action string, hasView bool) {
 	dirName := utils.PageDirPath(sf.TopDir, sf.Page)
 
 	if err := os.MkdirAll(dirName, 0755); err != nil {
@@ -106,13 +109,17 @@ func (sf *Scaffold) genAction(action string) {
 	)
 
 	err := helper.ExecTemplate(
-		"./cli/template/scaffold/"+action+".txt",
+		"./cli/template/scaffold/"+action+"_action.txt",
 		targetActionFile,
 		sf,
 	)
 
 	if err != nil {
 		fmt.Println(err)
+	}
+
+	if !hasView {
+		return
 	}
 
 	targetViewFile := strings.Join(
