@@ -11,9 +11,10 @@ import (
 
 type UpdateParams struct {
   Id    int64  `form:"id"`
-  {{ range $k, $v := .FieldTypes }}
+
+  {{- range $k, $v := .FieldTypes }}
 	{{ $v.NameCamel }} {{ $v.Type }} `form:"{{ $v.Name}}"`
-  {{ end }}
+  {{- end }}
 }
 
 func UpdateAction(c *gin.Context) {
@@ -31,21 +32,21 @@ func UpdateAction(c *gin.Context) {
 		return
 	}
 
-  {{ range $k, $v := .FieldTypes }}
-		{{ if not $v.SkipTrim }}
-			{{ $v.Name }} := utils.TrimFull(p.{{ $v.NameCamel }})
-			if len({{ $v.Name }}) == 0 {
-				page_resp.Error(c, fmt.Errorf("{{ $v.Name }} must not be empty"))
-				return
-			}
-		{{ end }}
-  {{ end }}
+  {{- range $k, $v := .FieldTypes }}
+	{{ if not $v.SkipTrim }}
+	{{ $v.Name }} := utils.TrimFull(p.{{ $v.NameCamel }})
+	if len({{ $v.Name }}) == 0 {
+		page_resp.Error(c, fmt.Errorf("{{ $v.Name }} must not be empty"))
+		return
+	}
+	{{ end }}
+  {{- end }}
 
 	ok := repo.UpdateFields[{{ .Model }}](id,
     []repo.KVPair{
-        {{ range $k, $v := .FieldTypes }}
-        repo.KV("{{ $v.Name }}", p.{{ $v.NameCamel }}),
-        {{ end }}
+			{{- range $k, $v := .FieldTypes }}
+			repo.KV("{{ $v.Name }}", p.{{ $v.NameCamel }}),
+			{{- end }}
     },
   )
 

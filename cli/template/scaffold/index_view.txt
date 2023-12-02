@@ -8,17 +8,17 @@ block content
     table[class=""].border.grow
       thead.border-b.border-zinc-100
         tr.text-left
-          {{ range $key, $value := .FieldTypes }}
+          {{- range $key, $value := .FieldTypes }}
           th.px-4 {{ $value.NameCamel }}
-          {{ end }}
+          {{- end }}
 
           th.px-4
       tbody
         each $el in List
           tr.text-left
-            {{ range $key, $value := .FieldTypes }}
+            {{- range $key, $value := .FieldTypes }}
             td.px-4 #{$el.{{ $value.NameCamel }}}
-            {{ end }}
+            {{- end }}
 
             td.px-4.flex.gap-4
               a[href="__{{ .Model }}__/edit?id="+$el.Id] Edit

@@ -5,11 +5,11 @@ block title
 
 block content
   form[action="__{{ .Model }}__/create"][method="post"][class="w-1/4 mx-auto"].mt-5
-    {{ range $key, $value := .FieldTypes }}
+    {{- range $key, $value := .FieldTypes }}
     div.group.flex.flex-col.mb-5
       label {{ $value.NameCamel }}
       input[type="text"][name="{{ $value.Name }}"].border
-    {{ end }}
+    {{- end }}
 
     div.group.mt-5
       button.btn[type="submit"] Create {{ .Model }}

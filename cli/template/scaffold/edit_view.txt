@@ -7,11 +7,11 @@ block content
   form[action="__{{ .Model }}__/update"][method="post"][class="w-1/4 mx-auto"].mt-5
     input[type="hidden"][name="id"][value=Item.Id]
 
-    {{ range $k, $v := .FieldTypes }}
+    {{- range $k, $v := .FieldTypes }}
     div.group.flex.flex-col.mb-5
       label {{ $v.NameCamel }}
       input[type="text"][name="{{ $v.Name }}"][value=Item.{{ $v.NameCamel }}].border
-    {{ end }}
+    {{- end }}
 
     div.group.mt-5
       button.btn[type="submit"] Update {{ .Model }}
