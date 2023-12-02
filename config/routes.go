@@ -8,7 +8,11 @@ import (
 	"github.com/daqing/airway/core/api/post_api"
 	"github.com/daqing/airway/core/api/setting_api"
 	"github.com/daqing/airway/core/api/user_api"
-	"github.com/daqing/airway/core/pages/admin"
+	"github.com/daqing/airway/core/pages/admin/admin_dashboard"
+	"github.com/daqing/airway/core/pages/admin/admin_menu"
+	"github.com/daqing/airway/core/pages/admin/admin_node"
+	"github.com/daqing/airway/core/pages/admin/admin_post"
+	"github.com/daqing/airway/core/pages/admin/admin_user"
 	"github.com/daqing/airway/core/pages/blog"
 	"github.com/daqing/airway/core/pages/forum"
 	"github.com/daqing/airway/core/pages/home_page"
@@ -23,6 +27,20 @@ func Routes(r *gin.Engine) {
 
 	coreRoutes(r)
 	extRoutes(r)
+
+	adminRoutes(r)
+}
+
+func adminRoutes(r *gin.Engine) {
+	g := r.Group("/admin")
+	{
+		admin_dashboard.Routes(g)
+
+		admin_user.Routes(g)
+		admin_post.Routes(g)
+		admin_node.Routes(g)
+		admin_menu.Routes(g)
+	}
 }
 
 func coreRoutes(r *gin.Engine) {
@@ -31,8 +49,6 @@ func coreRoutes(r *gin.Engine) {
 
 	blog.Routes(r)
 	forum.Routes(r)
-
-	admin.Routes(r)
 
 	coreAPIRoutes(r)
 }
