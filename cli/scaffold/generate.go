@@ -48,6 +48,8 @@ func (ft FieldType) SQLType() string {
 		return "INT NOT NULL"
 	case "int64":
 		return "BIGINT NOT NULL"
+	case "bool":
+		return "BOOLEAN NOT NULL"
 	case "text":
 		return "TEXT NOT NULL"
 	default:
