@@ -126,7 +126,7 @@ func Generate(xargs []string) {
 				typ = "int64"
 			}
 
-			if strings.Contains(pair, "unqiue") {
+			if strings.Contains(pair, "unique") {
 				isUnique = true
 			}
 		} else {
