@@ -23,18 +23,33 @@ type Scaffold struct {
 }
 
 type FieldType struct {
-	Name string
-	Type string
+	Name     string
+	Type     string
+	IsUnique bool
+}
+
+func (ft FieldType) ModelType() string {
+	if ft.Type == "text" {
+		return "string"
+	}
+
+	return ft.Type
 }
 
 func (ft FieldType) SQLType() string {
 	switch ft.Type {
 	case "string":
+		if ft.IsUnique {
+			return "VARCHAR(255) UNIQUE NOT NULL"
+		}
+
 		return "VARCHAR(255) NOT NULL"
 	case "int":
 		return "INT NOT NULL"
 	case "int64":
 		return "BIGINT NOT NULL"
+	case "text":
+		return "TEXT NOT NULL"
 	default:
 		return "<unknown>"
 	}
@@ -100,6 +115,7 @@ func Generate(xargs []string) {
 	for _, pair := range xargs[2:] {
 		var name string
 		var typ string
+		var isUnique bool
 
 		if strings.Contains(pair, ":") {
 			parts := strings.Split(pair, ":")
@@ -110,12 +126,15 @@ func Generate(xargs []string) {
 				typ = "int64"
 			}
 
+			if strings.Contains(pair, "unqiue") {
+				isUnique = true
+			}
 		} else {
 			name = pair
 			typ = "string"
 		}
 
-		sf.FieldPairs = append(sf.FieldPairs, FieldType{name, typ})
+		sf.FieldPairs = append(sf.FieldPairs, FieldType{name, typ, isUnique})
 	}
 
 	sf.generate()

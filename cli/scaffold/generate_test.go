@@ -4,8 +4,8 @@ import "testing"
 
 func TestGenerate(t *testing.T) {
 	sf := Scaffold{FieldPairs: []FieldType{
-		{"name", "string"},
-		{"age", "int"},
+		{"name", "string", false},
+		{"age", "int", false},
 	}}
 
 	expected := `[]string{"id", "name", "age"}`
