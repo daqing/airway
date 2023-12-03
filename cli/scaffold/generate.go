@@ -252,7 +252,7 @@ func (sf *Scaffold) genModel() {
 }
 
 func (sf *Scaffold) Fields() string {
-	var result []string
+	var result = []string{`"id"`}
 
 	for _, f := range sf.FieldPairs {
 		result = append(result, fmt.Sprintf(`"%s"`, f.Name))

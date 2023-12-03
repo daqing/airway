@@ -8,7 +8,7 @@ func TestGenerate(t *testing.T) {
 		{"age", "int"},
 	}}
 
-	expected := `[]string{"name", "age"}`
+	expected := `[]string{"id", "name", "age"}`
 
 	if actual := sf.Fields(); actual != expected {
 		t.Errorf("expected %v, got %v", expected, actual)
