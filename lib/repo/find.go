@@ -27,6 +27,10 @@ func FindRow[T TableNameType](fields []string, conds []KVPair) (*T, error) {
 	return rows[0], nil
 }
 
+func FindAll[T TableNameType](fields []string) ([]*T, error) {
+	return Find[T](fields, []KVPair{})
+}
+
 func Find[T TableNameType](fields []string, conds []KVPair) ([]*T, error) {
 	return FindLimit[T](fields, conds, "", 0, 0)
 }
