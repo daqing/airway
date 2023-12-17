@@ -5,5 +5,5 @@ import (
 )
 
 func OK(c *gin.Context, data any) {
-	c.JSON(200, gin.H{"code": 200, "data": data, "message": ""})
+	c.JSON(200, gin.H{"code": 0, "data": data, "message": ""})
 }
