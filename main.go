@@ -9,6 +9,7 @@ import (
 	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/utils"
 	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/contrib/static"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
@@ -57,6 +58,7 @@ func NewApp() *App {
 
 	router.Static("/public", "./public")
 
+	router.Use(static.Serve("/", static.LocalFile("./public", false)))
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
 
