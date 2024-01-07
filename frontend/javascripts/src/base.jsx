@@ -1,5 +1,7 @@
 import $ from 'jquery';
 
+window.$ = $;
+
 $(function () {
   $(".dropdown-container").on("mouseenter", function () {
     var t = $(this).data("menu-target");

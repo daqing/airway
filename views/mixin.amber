@@ -1,5 +1,5 @@
 mixin js($filename)
-  script[type="text/javascript"][src="/public/js/" +$filename + ".js?ts=" + ts]
+  script[type="module"][src="/public/js/" +$filename + ".js?ts=" + ts]
 
 mixin css($filename)
   link[rel="stylesheet"][href="/public/css/"+ $filename + ".css?ts=" + ts]

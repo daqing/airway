@@ -35,6 +35,18 @@ block body
 
     main.flex.flex-col.items-center.pt-20
       h2.text-cyan-700.font-light.text-4xl The full-stack web framework for Go
-      div.mt-4#react-root
+      div.mt-8#react-root
+      script[type="module"]
+        $(function() {
+          setTimeout(function() {
+            $("h2").animate({
+              fontSize: "48px",
+            })
+
+            $("h2").animate({
+              fontWeight: "100",
+            })
+          }, 500);
+        })
 
     +js("home_index")
