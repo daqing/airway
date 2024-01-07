@@ -1,5 +1,7 @@
 package utils
 
+import "fmt"
+
 const API_PREFIX = "airway_"
 
 func GenerateApiToken() string {
@@ -22,4 +24,10 @@ func PathPrefix(app string) string {
 	}
 
 	return EMPTY_PATH
+}
+
+func FullPath(suffix string) string {
+	pwd := GetEnvMust("AIRWAY_PWD")
+
+	return fmt.Sprintf("%s/%s", pwd, suffix)
 }
