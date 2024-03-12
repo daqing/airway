@@ -4,10 +4,15 @@
 .env
 .env.local
 
+/data
+!/data/.keep
+
 /public/css
 !/public/css/.keep
+
 /public/js
 !/public/js/.keep
+
 /public/assets
 !/public/assets/.keep
 
