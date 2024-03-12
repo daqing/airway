@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -25,8 +26,28 @@ func main() {
 	// if _, err = db.Exec(create); err != nil {
 	//		panic(err)
 	// }
+	//
 
-	if _, err = db.Exec("INSERT INTO activities VALUES(NULL, ?, ?)", time.Now(), "Demo testing"); err != nil {
+	const insert = "INSERT INTO activities VALUES(NULL, ?, ?)"
+
+	if _, err = db.Exec(insert, time.Now(), "Demo testing"); err != nil {
 		panic(err)
 	}
+
+	stmt, err := db.Prepare(insert)
+	if err != nil {
+		panic(err)
+	}
+
+	res, err := stmt.Exec(time.Now(), "Demo testing Prepare statement")
+	if err != nil {
+		panic(err)
+	}
+
+	id, err := res.LastInsertId()
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("Last Row Id:", id)
 }
