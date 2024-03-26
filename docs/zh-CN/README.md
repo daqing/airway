@@ -187,3 +187,13 @@ $ just
 根据你的 `.env` 中配置的端口，就可以访问对应的网址。
 
 假设你配置的端口是 **2023**, 那么，访问 [http://localhost:2023](http://localhost:2023) 即可。
+
+## 4. 创建初始账户
+
+执行以下命令：
+
+```
+$ just cli seed root airway airway-root
+```
+
+这样可以创建一个root权限的账户，用户名是 `airway`，登录密码是: `airway-root`
