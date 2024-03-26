@@ -13,7 +13,3 @@ type Menu struct {
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
-
-const tableName = "menus"
-
-func (m Menu) TableName() string { return tableName }

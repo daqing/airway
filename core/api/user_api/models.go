@@ -24,10 +24,6 @@ type User struct {
 	UpdatedAt time.Time
 }
 
-const tableName = "users"
-
-func (u User) TableName() string { return tableName }
-
 type UserRole int
 
 const (

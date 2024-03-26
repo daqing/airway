@@ -22,10 +22,6 @@ type Post struct {
 	UpdatedAt  time.Time
 }
 
-const tableName = "posts"
-
-func (p Post) TableName() string { return tableName }
-
 const polyType = "post"
 
 func (p *Post) PolyId() int64    { return p.Id }

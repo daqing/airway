@@ -16,7 +16,3 @@ type Node struct {
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
-
-const tableName = "nodes"
-
-func (n Node) TableName() string { return tableName }

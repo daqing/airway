@@ -22,10 +22,6 @@ type Payment struct {
 	UpdatedAt time.Time
 }
 
-const tableName = "payments"
-
-func (m Payment) TableName() string { return tableName }
-
 type PaymentStatus string
 
 const FreshStatus PaymentStatus = "fresh"

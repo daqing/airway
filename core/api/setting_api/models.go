@@ -11,7 +11,3 @@ type Setting struct {
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
-
-const tableName = "settings"
-
-func (s Setting) TableName() string { return tableName }

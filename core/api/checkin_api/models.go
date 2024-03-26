@@ -16,7 +16,3 @@ type Checkin struct {
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
-
-const tableName = "checkin"
-
-func (c Checkin) TableName() string { return tableName }

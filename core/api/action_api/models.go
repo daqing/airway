@@ -17,7 +17,3 @@ type Action struct {
 const ActionLike = "like"
 const ActionFollow = "follow"
 const ActionFavorite = "favorite"
-
-const actionTableName = "actions"
-
-func (a Action) TableName() string { return actionTableName }

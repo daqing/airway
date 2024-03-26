@@ -20,10 +20,6 @@ type Comment struct {
 	UpdatedAt time.Time
 }
 
-const tableName = "comments"
-
-func (c Comment) TableName() string { return tableName }
-
 func (c *Comment) User() *user_api.User {
 	user, err := pg_repo.FindRow[user_api.User](
 		[]string{"id", "nickname", "username", "avatar"},

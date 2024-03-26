@@ -15,10 +15,6 @@ type Membership struct {
 	UpdatedAt time.Time
 }
 
-const tableName = "memberships"
-
-func (m Membership) TableName() string { return tableName }
-
 type MembershipType string
 
 const Writer MembershipType = "writer"
