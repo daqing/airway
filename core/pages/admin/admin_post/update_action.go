@@ -5,7 +5,7 @@ import (
 
 	"github.com/daqing/airway/core/api/post_api"
 	"github.com/daqing/airway/lib/page_resp"
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/pg_repo"
 	"github.com/gin-gonic/gin"
 )
 
@@ -26,14 +26,14 @@ func UpdateAction(c *gin.Context) {
 		return
 	}
 
-	ok := repo.UpdateFields[post_api.Post](
+	ok := pg_repo.UpdateFields[post_api.Post](
 		p.Id,
-		[]repo.KVPair{
-			repo.KV("title", p.Title),
-			repo.KV("content", p.Content),
-			repo.KV("place", p.Place),
-			repo.KV("node_id", p.NodeId),
-			repo.KV("custom_path", p.CustomPath),
+		[]pg_repo.KVPair{
+			pg_repo.KV("title", p.Title),
+			pg_repo.KV("content", p.Content),
+			pg_repo.KV("place", p.Place),
+			pg_repo.KV("node_id", p.NodeId),
+			pg_repo.KV("custom_path", p.CustomPath),
 		},
 	)
 

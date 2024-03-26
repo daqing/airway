@@ -6,7 +6,7 @@ import (
 	"github.com/daqing/airway/core/api/media_api"
 	"github.com/daqing/airway/core/api/user_api"
 	"github.com/daqing/airway/lib/page_resp"
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/pg_repo"
 	"github.com/daqing/airway/lib/utils"
 	"github.com/gin-gonic/gin"
 )
@@ -36,10 +36,10 @@ func UpdateAvatarAction(c *gin.Context) {
 
 	c.SaveUploadedFile(fileHeader, destPath)
 
-	ok := repo.UpdateFields[user_api.User](
+	ok := pg_repo.UpdateFields[user_api.User](
 		currentUser.Id,
-		[]repo.KVPair{
-			repo.KV("avatar", filePath),
+		[]pg_repo.KVPair{
+			pg_repo.KV("avatar", filePath),
 		},
 	)
 

@@ -7,7 +7,7 @@ import (
 	"github.com/daqing/airway/core/api/post_api"
 	"github.com/daqing/airway/core/api/user_api"
 	"github.com/daqing/airway/lib/page_resp"
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/pg_repo"
 	"github.com/daqing/airway/lib/utils"
 	"github.com/gin-gonic/gin"
 )
@@ -34,7 +34,7 @@ func CreateAction(c *gin.Context) {
 		return
 	}
 
-	ex, err := repo.Exists[node_api.Node]([]repo.KVPair{repo.KV("id", p.NodeId)})
+	ex, err := pg_repo.Exists[node_api.Node]([]pg_repo.KVPair{pg_repo.KV("id", p.NodeId)})
 	if err != nil {
 		page_resp.Error(c, err)
 		return

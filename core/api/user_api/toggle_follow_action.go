@@ -5,7 +5,7 @@ import (
 
 	"github.com/daqing/airway/core/api/action_api"
 	"github.com/daqing/airway/lib/api_resp"
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/pg_repo"
 
 	"github.com/gin-gonic/gin"
 )
@@ -22,10 +22,10 @@ func ToggleFollowAction(c *gin.Context) {
 		return
 	}
 
-	user, err := repo.FindRow[User]([]string{
+	user, err := pg_repo.FindRow[User]([]string{
 		"id",
-	}, []repo.KVPair{
-		repo.KV("id", p.UserId),
+	}, []pg_repo.KVPair{
+		pg_repo.KV("id", p.UserId),
 	})
 
 	if err != nil {

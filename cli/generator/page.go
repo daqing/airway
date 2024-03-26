@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/daqing/airway/cli/helper"
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/pg_repo"
 	"github.com/daqing/airway/lib/utils"
 )
 
@@ -61,7 +61,7 @@ func GeneratePageAction(topDir, page, action string) {
 		PageGenerator{
 			Page:    page,
 			Name:    action,
-			Action:  repo.ToCamel(action),
+			Action:  pg_repo.ToCamel(action),
 			TopDir:  topDir,
 			PkgName: utils.PagePkgName(topDir, page),
 		},
@@ -96,7 +96,7 @@ func GeneratePageActionTemplate(topDir, page, action string) {
 	err := helper.ExecTemplate(
 		"./cli/template/page/action.amber",
 		targetFileName,
-		PageGenerator{Page: utils.NormalizePage(page), Action: repo.ToCamel(action)},
+		PageGenerator{Page: utils.NormalizePage(page), Action: pg_repo.ToCamel(action)},
 	)
 
 	if err != nil {
@@ -121,7 +121,7 @@ func GeneratePageRoutes(topDir, page, action string) {
 		PageGenerator{
 			Page:    utils.NormalizePage(page),
 			Name:    action,
-			Action:  repo.ToCamel(action),
+			Action:  pg_repo.ToCamel(action),
 			PkgName: utils.PagePkgName(topDir, page),
 		},
 	)

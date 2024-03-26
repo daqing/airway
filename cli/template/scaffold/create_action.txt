@@ -33,9 +33,9 @@ func CreateAction(c *gin.Context) {
 		{{ end }}
   {{- end }}
 
-	_, err := repo.Insert[{{ .Model }}]([]repo.KVPair{
+	_, err := pg_repo.Insert[{{ .Model }}]([]pg_repo.KVPair{
     {{- range $k, $v := .FieldTypes }}
-    repo.KV("{{ $v.Name }}", p.{{ $v.NameCamel }}),
+    pg_repo.KV("{{ $v.Name }}", p.{{ $v.NameCamel }}),
     {{- end }}
   })
 

@@ -2,12 +2,12 @@ package post_api
 
 import (
 	"github.com/daqing/airway/lib/api_resp"
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/pg_repo"
 	"github.com/gin-gonic/gin"
 )
 
 func IndexAction(c *gin.Context) {
-	list, err := repo.ListResp[Post, PostResp]()
+	list, err := pg_repo.ListResp[Post, PostResp]()
 	if err != nil {
 		api_resp.LogError(c, err)
 		return

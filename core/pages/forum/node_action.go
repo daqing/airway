@@ -9,7 +9,7 @@ import (
 	"github.com/daqing/airway/core/api/post_api"
 	"github.com/daqing/airway/core/api/user_api"
 	"github.com/daqing/airway/lib/page_resp"
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/pg_repo"
 	"github.com/daqing/airway/lib/utils"
 	"github.com/gin-gonic/gin"
 )
@@ -17,10 +17,10 @@ import (
 func NodeAction(c *gin.Context) {
 	nodeKey := c.Param("key")
 
-	node, err := repo.FindRow[node_api.Node](
+	node, err := pg_repo.FindRow[node_api.Node](
 		[]string{"id", "name"},
-		[]repo.KVPair{
-			repo.KV("key", nodeKey),
+		[]pg_repo.KVPair{
+			pg_repo.KV("key", nodeKey),
 		},
 	)
 
@@ -29,11 +29,11 @@ func NodeAction(c *gin.Context) {
 		return
 	}
 
-	posts, err := repo.Find[post_api.Post](
+	posts, err := pg_repo.Find[post_api.Post](
 		[]string{"id", "title", "user_id"},
-		[]repo.KVPair{
-			repo.KV("node_id", node.Id),
-			repo.KV("place", "forum"),
+		[]pg_repo.KVPair{
+			pg_repo.KV("node_id", node.Id),
+			pg_repo.KV("place", "forum"),
 		},
 	)
 
@@ -65,10 +65,10 @@ func NodeAction(c *gin.Context) {
 
 	rootPath := utils.PathPrefix("forum")
 
-	nodes, err := repo.Find[node_api.Node](
+	nodes, err := pg_repo.Find[node_api.Node](
 		[]string{"id", "name", "key"},
-		[]repo.KVPair{
-			repo.KV("place", "forum"),
+		[]pg_repo.KVPair{
+			pg_repo.KV("place", "forum"),
 		},
 	)
 

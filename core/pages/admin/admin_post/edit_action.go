@@ -4,17 +4,17 @@ import (
 	"github.com/daqing/airway/core/api/node_api"
 	"github.com/daqing/airway/core/api/post_api"
 	"github.com/daqing/airway/lib/page_resp"
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/pg_repo"
 	"github.com/gin-gonic/gin"
 )
 
 func EditAction(c *gin.Context) {
 	id := c.Query("id")
 
-	post, err := repo.FindRow[post_api.Post](
+	post, err := pg_repo.FindRow[post_api.Post](
 		[]string{"id", "title", "custom_path", "place", "content"},
-		[]repo.KVPair{
-			repo.KV("id", id),
+		[]pg_repo.KVPair{
+			pg_repo.KV("id", id),
 		},
 	)
 
@@ -23,9 +23,9 @@ func EditAction(c *gin.Context) {
 		return
 	}
 
-	nodes, err := repo.Find[node_api.Node](
+	nodes, err := pg_repo.Find[node_api.Node](
 		[]string{"id", "name"},
-		[]repo.KVPair{},
+		[]pg_repo.KVPair{},
 	)
 
 	if err != nil {

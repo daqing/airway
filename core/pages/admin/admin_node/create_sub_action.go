@@ -5,7 +5,7 @@ import (
 
 	"github.com/daqing/airway/core/api/node_api"
 	"github.com/daqing/airway/lib/page_resp"
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/pg_repo"
 	"github.com/daqing/airway/lib/utils"
 	"github.com/gin-gonic/gin"
 )
@@ -25,9 +25,9 @@ func CreateSubAction(c *gin.Context) {
 		return
 	}
 
-	parentNode, err := repo.FindRow[node_api.Node](
+	parentNode, err := pg_repo.FindRow[node_api.Node](
 		[]string{"id", "level"},
-		[]repo.KVPair{repo.KV("id", p.ParentId)},
+		[]pg_repo.KVPair{pg_repo.KV("id", p.ParentId)},
 	)
 
 	if err != nil {

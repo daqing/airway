@@ -16,7 +16,3 @@ type MediaFile struct {
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
-
-const tableName = "media_files"
-
-func (m MediaFile) TableName() string { return tableName }

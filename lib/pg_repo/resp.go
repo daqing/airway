@@ -1,4 +1,4 @@
-package repo
+package pg_repo
 
 import (
 	"reflect"
@@ -34,7 +34,7 @@ func ItemResp[M TableNameType, MR ModelResp](m *M) *MR {
 
 // 把 m 的字段值，赋值给 mr
 // 同时，把 created_at 和 updated_at 字段，自动转换为
-// repo.Timestamp 类型
+// pg_repo.Timestamp 类型
 func m2mr[MR any](m any, fields []string) *MR {
 	fields = append(fields, "CreatedAt", "UpdatedAt")
 

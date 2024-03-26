@@ -2,12 +2,12 @@ package node_api
 
 import (
 	"github.com/daqing/airway/lib/api_resp"
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/pg_repo"
 	"github.com/gin-gonic/gin"
 )
 
 func IndexAction(c *gin.Context) {
-	list, err := repo.ListResp[Node, NodeResp]()
+	list, err := pg_repo.ListResp[Node, NodeResp]()
 
 	if err != nil {
 		api_resp.LogError(c, err)

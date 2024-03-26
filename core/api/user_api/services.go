@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/pg_repo"
 	"github.com/daqing/airway/lib/utils"
 )
 
@@ -39,16 +39,16 @@ func createUser(nickname, username string, role UserRole, password string) (*Use
 		return nil, err
 	}
 
-	user, err := repo.Insert[User](
-		[]repo.KVPair{
-			repo.KV("nickname", nickname),
-			repo.KV("username", username),
-			repo.KV("phone", ""),
-			repo.KV("email", ""),
-			repo.KV("avatar", ""),
-			repo.KV("role", role),
-			repo.KV("encrypted_password", enc),
-			repo.KV("api_token", utils.RandomHex(20)),
+	user, err := pg_repo.Insert[User](
+		[]pg_repo.KVPair{
+			pg_repo.KV("nickname", nickname),
+			pg_repo.KV("username", username),
+			pg_repo.KV("phone", ""),
+			pg_repo.KV("email", ""),
+			pg_repo.KV("avatar", ""),
+			pg_repo.KV("role", role),
+			pg_repo.KV("encrypted_password", enc),
+			pg_repo.KV("api_token", utils.RandomHex(20)),
 		},
 	)
 
@@ -59,7 +59,7 @@ func createUser(nickname, username string, role UserRole, password string) (*Use
 	return user, err
 }
 
-func LoginUser(where []repo.KVPair, password string) (*User, error) {
+func LoginUser(where []pg_repo.KVPair, password string) (*User, error) {
 	if len(where) == 0 {
 		return nil, fmt.Errorf("where can't be empty")
 	}
@@ -68,7 +68,7 @@ func LoginUser(where []repo.KVPair, password string) (*User, error) {
 		return nil, fmt.Errorf("password can't be empty")
 	}
 
-	users, err := repo.Find[User](
+	users, err := pg_repo.Find[User](
 		[]string{
 			"id", "username", "nickname", "phone", "email", "avatar",
 			"encrypted_password", "api_token",
@@ -95,14 +95,14 @@ func LoginUser(where []repo.KVPair, password string) (*User, error) {
 }
 
 func UserFromAPIToken(token string) *User {
-	user, err := repo.FindRow[User](
+	user, err := pg_repo.FindRow[User](
 		[]string{
 			"id", "username", "nickname",
 			"phone", "email", "avatar",
 			"role", "api_token",
 		},
-		[]repo.KVPair{
-			repo.KV("api_token", token),
+		[]pg_repo.KVPair{
+			pg_repo.KV("api_token", token),
 		},
 	)
 
@@ -149,9 +149,9 @@ func Users(fields []string, order string, page, limit int) ([]*User, error) {
 		page = 1
 	}
 
-	return repo.FindLimit[User](
+	return pg_repo.FindLimit[User](
 		fields,
-		[]repo.KVPair{},
+		[]pg_repo.KVPair{},
 		order,
 		(page-1)*limit,
 		limit,
@@ -159,10 +159,10 @@ func Users(fields []string, order string, page, limit int) ([]*User, error) {
 }
 
 func Nickname(id int64) string {
-	user, err := repo.FindRow[User](
+	user, err := pg_repo.FindRow[User](
 		[]string{"id", "nickname"},
-		[]repo.KVPair{
-			repo.KV("id", id),
+		[]pg_repo.KVPair{
+			pg_repo.KV("id", id),
 		},
 	)
 

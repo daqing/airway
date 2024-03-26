@@ -10,7 +10,7 @@ import (
 	"github.com/daqing/airway/core/api/post_api"
 	"github.com/daqing/airway/core/api/user_api"
 	"github.com/daqing/airway/lib/page_resp"
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/pg_repo"
 	"github.com/daqing/airway/lib/utils"
 	"github.com/gin-gonic/gin"
 )
@@ -25,17 +25,17 @@ type CommentItem struct {
 func ShowAction(c *gin.Context) {
 	segment := c.Param("id")
 
-	var where []repo.KVPair
+	var where []pg_repo.KVPair
 
 	id, err := strconv.Atoi(segment)
 	if err != nil {
 		// segment is not numeric id
-		where = []repo.KVPair{repo.KV("custom_path", segment)}
+		where = []pg_repo.KVPair{pg_repo.KV("custom_path", segment)}
 	} else {
-		where = []repo.KVPair{repo.KV("id", id)}
+		where = []pg_repo.KVPair{pg_repo.KV("id", id)}
 	}
 
-	post, err := repo.FindRow[post_api.Post](
+	post, err := pg_repo.FindRow[post_api.Post](
 		[]string{"id", "title", "content", "user_id", "node_id"},
 		where,
 	)
@@ -45,10 +45,10 @@ func ShowAction(c *gin.Context) {
 		return
 	}
 
-	nodes, err := repo.Find[node_api.Node](
+	nodes, err := pg_repo.Find[node_api.Node](
 		[]string{"id", "name", "key"},
-		[]repo.KVPair{
-			repo.KV("place", "forum"),
+		[]pg_repo.KVPair{
+			pg_repo.KV("place", "forum"),
 		},
 	)
 

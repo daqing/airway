@@ -3,7 +3,7 @@ package setting_api
 import (
 	"fmt"
 
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/pg_repo"
 )
 
 func CreateSetting(key string, val string) (*Setting, error) {
@@ -15,17 +15,17 @@ func CreateSetting(key string, val string) (*Setting, error) {
 		return nil, fmt.Errorf("val cannot be empty")
 	}
 
-	return repo.Insert[Setting](
-		[]repo.KVPair{
-			repo.KV("key", key),
-			repo.KV("val", val),
+	return pg_repo.Insert[Setting](
+		[]pg_repo.KVPair{
+			pg_repo.KV("key", key),
+			pg_repo.KV("val", val),
 		},
 	)
 }
 
 func UpdateSetting(id int64, key string, val string) bool {
-	return repo.UpdateFields[Setting](id, []repo.KVPair{
-		repo.KV("key", key),
-		repo.KV("val", val),
+	return pg_repo.UpdateFields[Setting](id, []pg_repo.KVPair{
+		pg_repo.KV("key", key),
+		pg_repo.KV("val", val),
 	})
 }
