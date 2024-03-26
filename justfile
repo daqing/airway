@@ -30,7 +30,7 @@ bun:
 docker: build build-cli-docker
   docker build -t airway -f Dockerfile --platform linux/amd64 .
 
-dbdocker:
+db-docker:
   docker build -t airway_db -f Dockerfile.db  --platform linux/amd64 .
 
 push:
@@ -43,13 +43,14 @@ push:
 migrate:
   find db/*.sql | xargs -I{} psql -U $POSTGRES_USER -d airway -f {}
 
-createdb:
+create-db:
   psql -U $POSTGRES_USER -d postgres -c "create database airway"
 
-dropdb:
+drop-db:
   psql -U $POSTGRES_USER -d postgres -c "drop database airway"
 
-resetdb: dropdb createdb migrate
+setup-db: create-db migrate
+reset-db: drop-db create-db migrate
 
 db:
   psql -U $POSTGRES_USER -d airway

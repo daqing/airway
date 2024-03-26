@@ -38,3 +38,21 @@ This file defines a few environment variables:
   **the CDN url for serving assets**
 - AIRWAY_PWD
   **the path to current working directory**
+
+### Prepare database
+
+Run `just setup-db` to setup the database.
+
+Run `just cli seed root root airway-root` to create the initial root account.
+
+### Start local development server and login
+
+Run `just` from the project root directory to start the local
+development server.
+
+Then you can login to the admin panel with:
+
+```
+username: root
+password: airway-root
+```
