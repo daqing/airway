@@ -3,7 +3,7 @@ package comment_api
 import (
 	"github.com/daqing/airway/core/api/user_api"
 	"github.com/daqing/airway/lib/api_resp"
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/pg_repo"
 	"github.com/gin-gonic/gin"
 )
 
@@ -33,7 +33,7 @@ func CreateAction(c *gin.Context) {
 		return
 	}
 
-	item := repo.ItemResp[Comment, CommentResp](comment)
+	item := pg_repo.ItemResp[Comment, CommentResp](comment)
 
 	api_resp.OK(c, gin.H{"comment": item})
 }

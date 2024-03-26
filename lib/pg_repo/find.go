@@ -1,4 +1,4 @@
-package repo
+package pg_repo
 
 import (
 	"context"
@@ -63,7 +63,7 @@ func execSQL[T TableNameType](sql string, fields []string, values []any) ([]*T, 
 	var ms []*T
 
 	if err != nil {
-		log.Println("[repo.Find] Conn.Query error:", err)
+		log.Println("[pg_repo.Find] Conn.Query error:", err)
 		return ms, err
 	}
 
@@ -74,7 +74,7 @@ func execSQL[T TableNameType](sql string, fields []string, values []any) ([]*T, 
 
 		err := scanRows(rows, fields, m)
 		if err != nil {
-			log.Println("[repo.FindLimit] scanRows error:", err, "fields:", fields)
+			log.Println("[pg_repo.FindLimit] scanRows error:", err, "fields:", fields)
 			return ms, err
 		}
 

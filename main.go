@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/daqing/airway/config"
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/pg_repo"
 	"github.com/daqing/airway/lib/utils"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/contrib/static"
@@ -33,7 +33,7 @@ func main() {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	repo.Setup()
+	pg_repo.Setup()
 
 	app := NewApp()
 

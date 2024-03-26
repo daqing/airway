@@ -2,7 +2,7 @@ package post_api
 
 import (
 	"github.com/daqing/airway/lib/api_resp"
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/pg_repo"
 	"github.com/gin-gonic/gin"
 )
 
@@ -18,10 +18,10 @@ func ShowAction(c *gin.Context) {
 		return
 	}
 
-	post, err := repo.FindRow[Post]([]string{
+	post, err := pg_repo.FindRow[Post]([]string{
 		"id", "user_id", "node_id", "title", "content",
-	}, []repo.KVPair{
-		repo.KV("id", p.Id),
+	}, []pg_repo.KVPair{
+		pg_repo.KV("id", p.Id),
 	})
 
 	if err != nil {

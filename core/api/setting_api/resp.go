@@ -1,6 +1,6 @@
 package setting_api
 
-import "github.com/daqing/airway/lib/repo"
+import "github.com/daqing/airway/lib/pg_repo"
 
 type SettingResp struct {
 	Id int64
@@ -8,8 +8,8 @@ type SettingResp struct {
 	Key string
 	Val string
 
-	CreatedAt repo.Timestamp
-	UpdatedAt repo.Timestamp
+	CreatedAt pg_repo.Timestamp
+	UpdatedAt pg_repo.Timestamp
 }
 
 func (sr SettingResp) Fields() []string {

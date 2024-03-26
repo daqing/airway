@@ -3,16 +3,16 @@ package admin_menu
 import (
 	"github.com/daqing/airway/core/api/menu_api"
 	"github.com/daqing/airway/lib/page_resp"
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/pg_repo"
 	"github.com/gin-gonic/gin"
 )
 
 func DeleteAction(c *gin.Context) {
 	id := c.Query("id")
 
-	err := repo.Delete[menu_api.Menu](
-		[]repo.KVPair{
-			repo.KV("id", id),
+	err := pg_repo.Delete[menu_api.Menu](
+		[]pg_repo.KVPair{
+			pg_repo.KV("id", id),
 		},
 	)
 

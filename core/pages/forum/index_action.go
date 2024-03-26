@@ -9,7 +9,7 @@ import (
 	"github.com/daqing/airway/core/api/post_api"
 	"github.com/daqing/airway/core/api/user_api"
 	"github.com/daqing/airway/lib/page_resp"
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/pg_repo"
 	"github.com/daqing/airway/lib/utils"
 	"github.com/gin-gonic/gin"
 )
@@ -73,10 +73,10 @@ func IndexAction(c *gin.Context) {
 		)
 	}
 
-	nodes, err := repo.Find[node_api.Node](
+	nodes, err := pg_repo.Find[node_api.Node](
 		[]string{"id", "name", "key"},
-		[]repo.KVPair{
-			repo.KV("place", "forum"),
+		[]pg_repo.KVPair{
+			pg_repo.KV("place", "forum"),
 		},
 	)
 

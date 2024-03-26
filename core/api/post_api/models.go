@@ -6,7 +6,7 @@ import (
 	"github.com/daqing/airway/core/api/comment_api"
 	"github.com/daqing/airway/core/api/node_api"
 	"github.com/daqing/airway/core/api/user_api"
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/pg_repo"
 )
 
 type Post struct {
@@ -32,10 +32,10 @@ func (p *Post) PolyId() int64    { return p.Id }
 func (p *Post) PolyType() string { return polyType }
 
 func (p *Post) User() *user_api.User {
-	user, err := repo.FindRow[user_api.User](
+	user, err := pg_repo.FindRow[user_api.User](
 		[]string{"id", "nickname", "username", "avatar"},
-		[]repo.KVPair{
-			repo.KV("id", p.UserId),
+		[]pg_repo.KVPair{
+			pg_repo.KV("id", p.UserId),
 		},
 	)
 
@@ -50,17 +50,17 @@ func (p *Post) UserAvatar() string {
 	user := p.User()
 
 	if user == nil {
-		return repo.EMPTY_STRING
+		return pg_repo.EMPTY_STRING
 	}
 
 	return user.Avatar
 }
 
 func (p *Post) Node() *node_api.Node {
-	node, err := repo.FindRow[node_api.Node](
+	node, err := pg_repo.FindRow[node_api.Node](
 		[]string{"id", "name", "key"},
-		[]repo.KVPair{
-			repo.KV("id", p.NodeId),
+		[]pg_repo.KVPair{
+			pg_repo.KV("id", p.NodeId),
 		},
 	)
 
@@ -72,11 +72,11 @@ func (p *Post) Node() *node_api.Node {
 }
 
 func (p *Post) Comments() ([]*comment_api.Comment, error) {
-	return repo.Find[comment_api.Comment](
+	return pg_repo.Find[comment_api.Comment](
 		[]string{"id", "user_id", "content"},
-		[]repo.KVPair{
-			repo.KV("target_type", p.PolyType()),
-			repo.KV("target_id", p.PolyId()),
+		[]pg_repo.KVPair{
+			pg_repo.KV("target_type", p.PolyType()),
+			pg_repo.KV("target_id", p.PolyId()),
 		},
 	)
 }

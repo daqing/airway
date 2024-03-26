@@ -4,15 +4,15 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/pg_repo"
 )
 
 func AddMembership(userId int64, membershipType MembershipType, expiredAt time.Time) error {
 	// check if user already has membership
-	exists, err := repo.Exists[Membership](
-		[]repo.KVPair{
-			repo.KV("user_id", userId),
-			repo.KV("name", string(membershipType)),
+	exists, err := pg_repo.Exists[Membership](
+		[]pg_repo.KVPair{
+			pg_repo.KV("user_id", userId),
+			pg_repo.KV("name", string(membershipType)),
 		})
 
 	if err != nil {
@@ -23,20 +23,20 @@ func AddMembership(userId int64, membershipType MembershipType, expiredAt time.T
 		return fmt.Errorf("user already has membership: %v", membershipType)
 	}
 
-	_, err = repo.Insert[Membership]([]repo.KVPair{
-		repo.KV("user_id", userId),
-		repo.KV("name", string(membershipType)),
-		repo.KV("expired_at", expiredAt),
+	_, err = pg_repo.Insert[Membership]([]pg_repo.KVPair{
+		pg_repo.KV("user_id", userId),
+		pg_repo.KV("name", string(membershipType)),
+		pg_repo.KV("expired_at", expiredAt),
 	})
 
 	return err
 }
 
 func MembershipFor(userId int64) (*MembershipResp, error) {
-	row, err := repo.FindRow[Membership](
+	row, err := pg_repo.FindRow[Membership](
 		[]string{"name", "expired_at"},
-		[]repo.KVPair{
-			repo.KV("user_id", userId),
+		[]pg_repo.KVPair{
+			pg_repo.KV("user_id", userId),
 		},
 	)
 
@@ -48,7 +48,7 @@ func MembershipFor(userId int64) (*MembershipResp, error) {
 		return &MembershipResp{}, nil
 	}
 
-	item := repo.ItemResp[Membership, MembershipResp](row)
+	item := pg_repo.ItemResp[Membership, MembershipResp](row)
 
 	return item, nil
 }

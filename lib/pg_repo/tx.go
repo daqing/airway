@@ -1,4 +1,4 @@
-package repo
+package pg_repo
 
 import (
 	"context"

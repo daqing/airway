@@ -1,4 +1,4 @@
-package repo
+package pg_repo
 
 func Exists[T TableNameType](conds []KVPair) (bool, error) {
 	n, err := Count[T](conds)

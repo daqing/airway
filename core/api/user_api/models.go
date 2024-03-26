@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/daqing/airway/core/api/membership_api"
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/pg_repo"
 )
 
 type User struct {
@@ -18,7 +18,7 @@ type User struct {
 	Role              UserRole
 	APIToken          string
 	EncryptedPassword string
-	Balance           repo.PriceCent
+	Balance           pg_repo.PriceCent
 
 	CreatedAt time.Time
 	UpdatedAt time.Time

@@ -5,7 +5,7 @@ import (
 
 	"github.com/daqing/airway/core/api/action_api"
 	"github.com/daqing/airway/core/api/tag_api"
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/pg_repo"
 )
 
 func Posts(fields []string, place, order string, page, limit int) ([]*Post, error) {
@@ -13,13 +13,13 @@ func Posts(fields []string, place, order string, page, limit int) ([]*Post, erro
 		page = 1
 	}
 
-	where := []repo.KVPair{}
+	where := []pg_repo.KVPair{}
 
 	if len(place) > 0 {
-		where = append(where, repo.KV("place", place))
+		where = append(where, pg_repo.KV("place", place))
 	}
 
-	return repo.FindLimit[Post](
+	return pg_repo.FindLimit[Post](
 		fields,
 		where,
 		order,
@@ -49,15 +49,15 @@ func CreatePost(title, customPath, place, content string, user_id, node_id int64
 		return nil, fmt.Errorf("node_id must be greater than zero")
 	}
 
-	post, err := repo.Insert[Post](
-		[]repo.KVPair{
-			repo.KV("user_id", user_id),
-			repo.KV("node_id", node_id),
-			repo.KV("title", title),
-			repo.KV("custom_path", customPath),
-			repo.KV("place", place),
-			repo.KV("content", content),
-			repo.KV("fee", fee),
+	post, err := pg_repo.Insert[Post](
+		[]pg_repo.KVPair{
+			pg_repo.KV("user_id", user_id),
+			pg_repo.KV("node_id", node_id),
+			pg_repo.KV("title", title),
+			pg_repo.KV("custom_path", customPath),
+			pg_repo.KV("place", place),
+			pg_repo.KV("content", content),
+			pg_repo.KV("fee", fee),
 		},
 	)
 
@@ -76,17 +76,17 @@ func CreatePost(title, customPath, place, content string, user_id, node_id int64
 }
 
 func TogglePostAction(userId int64, action string, postId int64) (int64, error) {
-	post, err := repo.FindRow[Post]([]string{"id"}, []repo.KVPair{
-		repo.KV("id", postId),
+	post, err := pg_repo.FindRow[Post]([]string{"id"}, []pg_repo.KVPair{
+		pg_repo.KV("id", postId),
 	})
 
 	if err != nil {
-		return repo.InvalidCount, err
+		return pg_repo.InvalidCount, err
 	}
 
 	if post == nil {
 		// post not found
-		return repo.InvalidCount, nil
+		return pg_repo.InvalidCount, nil
 	}
 
 	return action_api.ToggleAction(userId, action, post)

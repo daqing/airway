@@ -1,6 +1,6 @@
 package comment_api
 
-import "github.com/daqing/airway/lib/repo"
+import "github.com/daqing/airway/lib/pg_repo"
 
 type CommentResp struct {
 	Id int64
@@ -9,8 +9,8 @@ type CommentResp struct {
 	TargetType string
 	Content    string
 
-	CreatedAt repo.Timestamp
-	UpdatedAt repo.Timestamp
+	CreatedAt pg_repo.Timestamp
+	UpdatedAt pg_repo.Timestamp
 }
 
 func (ur CommentResp) Fields() []string {

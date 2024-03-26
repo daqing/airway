@@ -3,7 +3,7 @@ package payment_api
 import (
 	"time"
 
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/pg_repo"
 )
 
 type Payment struct {
@@ -13,7 +13,7 @@ type Payment struct {
 	UUID      string
 	GoodsType string
 	GoodsId   int64
-	Cent      repo.PriceCent
+	Cent      pg_repo.PriceCent
 	Action    string
 	Note      string
 	Status    PaymentStatus

@@ -1,17 +1,15 @@
 package node_api
 
-import (
-	"github.com/daqing/airway/lib/repo"
-)
+import "github.com/daqing/airway/lib/pg_repo"
 
 func CreateNode(name, key, place string, parentId int64, level int) (*Node, error) {
-	return repo.Insert[Node](
-		[]repo.KVPair{
-			repo.KV("name", name),
-			repo.KV("key", key),
-			repo.KV("place", place),
-			repo.KV("parent_id", parentId),
-			repo.KV("level", level),
+	return pg_repo.Insert[Node](
+		[]pg_repo.KVPair{
+			pg_repo.KV("name", name),
+			pg_repo.KV("key", key),
+			pg_repo.KV("place", place),
+			pg_repo.KV("parent_id", parentId),
+			pg_repo.KV("level", level),
 		},
 	)
 }
@@ -21,9 +19,9 @@ func Nodes(fields []string, order string, page, limit int) ([]*Node, error) {
 		page = 1
 	}
 
-	return repo.FindLimit[Node](
+	return pg_repo.FindLimit[Node](
 		fields,
-		[]repo.KVPair{},
+		[]pg_repo.KVPair{},
 		order,
 		(page-1)*limit,
 		limit,
@@ -31,10 +29,10 @@ func Nodes(fields []string, order string, page, limit int) ([]*Node, error) {
 }
 
 func NameMap(place string) (map[int64]string, error) {
-	nodes, err := repo.Find[Node](
+	nodes, err := pg_repo.Find[Node](
 		[]string{"id", "name"},
-		[]repo.KVPair{
-			repo.KV("place", place),
+		[]pg_repo.KVPair{
+			pg_repo.KV("place", place),
 		},
 	)
 
