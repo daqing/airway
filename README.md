@@ -28,16 +28,23 @@ $ cp .env.example .env
 
 This file defines a few environment variables:
 
-- AIRWAY_PG_URL
-  **the URL string for connecting to PostgreSQL**
-- AIRWAY_PORT
-  **the port to listen on**
-- AIRWAY_STORAGE_DIR
-  **the full path to store the uploaded files**
-- AIRWAY_ASSET_HOST
-  **the CDN url for serving assets**
-- AIRWAY_PWD
-  **the path to current working directory**
+**AIRWAY_PG_URL**
+
+The URL string for connecting to PostgreSQL.
+
+Example: `postgres://daqing@localhost:5432/airway`
+    
+**AIRWAY_PORT**
+
+The port to listen on.
+
+Example: `1900`
+
+**AIRWAY_PWD**
+
+The full path to current project directory.
+
+Example: `/Users/daqing/mindzee/open-source/airway`
 
 ### Prepare database
 
