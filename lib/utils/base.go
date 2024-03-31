@@ -27,7 +27,7 @@ func PathPrefix(app string) string {
 }
 
 func FullPath(suffix string) string {
-	pwd := GetEnvMust("AIRWAY_PWD")
+	pwd := GetEnvMust("APP_PWD")
 
 	return fmt.Sprintf("%s/%s", pwd, suffix)
 }

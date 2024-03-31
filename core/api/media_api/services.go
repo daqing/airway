@@ -106,7 +106,7 @@ func AssetStorageDir() string {
 	assetDir, err := utils.GetEnv("AIRWAY_STORAGE_DIR")
 	if err != nil {
 		// env not set
-		return utils.GetEnvMust("AIRWAY_PWD") + "/public/assets"
+		return utils.GetEnvMust("APP_PWD") + "/public/assets"
 	}
 
 	return assetDir

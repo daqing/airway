@@ -33,18 +33,18 @@ This file defines a few environment variables:
 The URL string for connecting to PostgreSQL.
 
 Example: `postgres://daqing@localhost:5432/airway`
-    
+
 **AIRWAY_PORT**
 
 The port to listen on.
 
 Example: `1900`
 
-**AIRWAY_PWD**
+**APP_PWD**
 
 The full path to current project directory.
 
-Example: `/Users/daqing/mindzee/open-source/airway`
+Example: `/Users/daqing/open-source/airway`
 
 ### Prepare database
 
