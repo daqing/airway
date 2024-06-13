@@ -29,7 +29,7 @@ func ShowAction(c *gin.Context) {
 	}
 
 	post, err := repo.FindRow[models.Post](
-		[]string{"id", "title", "content"},
+		[]string{"id", "title", "content", "created_at"},
 		where,
 	)
 
