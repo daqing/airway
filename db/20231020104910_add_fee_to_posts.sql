@@ -1,1 +1,0 @@
-ALTER TABLE posts ADD fee INT DEFAULT 0
