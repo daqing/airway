@@ -25,9 +25,9 @@ block content
             td.px-4 #{$node.ParentId}
             td.px-4 #{$node.Place}
             td.px-4.flex.gap-4
-              a[data-href="/admin/node/edit?id="][data-id=$node.ID].goto-link Edit
-              a[data-href="/admin/node/delete?id="][data-id=$node.ID].goto-link Delete
-              a[data-href="/admin/node/add_sub?id="][data-id=$node.ID].goto-link Add Sub
+              a[href="/admin/node/edit?id="+$node.ID] Edit
+              a[href="/admin/node/delete?id="+$node.ID] Delete
+              a[href="/admin/node/add_sub?id="+$node.ID] Add Sub
 
     div.flex[class="w-1/4"].px-4
       a[href="/admin/node/new"]

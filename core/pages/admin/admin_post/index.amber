@@ -25,8 +25,8 @@ block content
             td.px-4 #{$post.UserId}
             td.px-4 #{$post.NodeId}
             td.px-4.flex.gap-4
-              a[data-href="/admin/post/edit?id="][data-id=$post.ID].goto-link Edit
-              a[data-href="/admin/post/delete?id="][data-id=$post.ID].goto-link Delete
+              a[href="/admin/post/edit?id="+$post.ID] Edit
+              a[href="/admin/post/delete?id="+$post.ID] Delete
 
     div.flex[class="w-1/4"].px-4
       a[href="/admin/post/new"]
