@@ -9,13 +9,14 @@ import (
 	"github.com/daqing/airway/core/api/post_api"
 	"github.com/daqing/airway/core/api/user_api"
 	"github.com/daqing/airway/lib/page_resp"
-	"github.com/daqing/airway/lib/pg_repo"
+	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/utils"
+	"github.com/daqing/airway/models"
 	"github.com/gin-gonic/gin"
 )
 
 type PostItem struct {
-	Id        int64
+	Id        uint
 	Title     string
 	Url       string
 	TimeAgo   string
@@ -25,7 +26,7 @@ type PostItem struct {
 }
 
 type NodeItem struct {
-	Id   int64
+	Id   uint
 	Name string
 	URL  string
 }
@@ -54,7 +55,7 @@ func IndexAction(c *gin.Context) {
 	postsShow := []*PostItem{}
 
 	for _, post := range posts {
-		url := fmt.Sprintf("/forum/post/%d", post.Id)
+		url := fmt.Sprintf("/forum/post/%d", post.ID)
 
 		if len(post.CustomPath) > 0 {
 			url = fmt.Sprintf("/forum/post/%s", post.CustomPath)
@@ -62,7 +63,7 @@ func IndexAction(c *gin.Context) {
 
 		postsShow = append(postsShow,
 			&PostItem{
-				Id:        post.Id,
+				Id:        post.ID,
 				Title:     post.Title,
 				Url:       url,
 				TimeAgo:   utils.TimeAgo(post.CreatedAt),
@@ -73,10 +74,10 @@ func IndexAction(c *gin.Context) {
 		)
 	}
 
-	nodes, err := pg_repo.Find[node_api.Node](
+	nodes, err := repo.Find[models.Node](
 		[]string{"id", "name", "key"},
-		[]pg_repo.KVPair{
-			pg_repo.KV("place", "forum"),
+		[]repo.KVPair{
+			repo.KV("place", "forum"),
 		},
 	)
 

@@ -1,14 +1,14 @@
 package post_api
 
 import (
-	"github.com/daqing/airway/core/api/action_api"
 	"github.com/daqing/airway/core/api/user_api"
 	"github.com/daqing/airway/lib/api_resp"
+	"github.com/daqing/airway/models"
 	"github.com/gin-gonic/gin"
 )
 
 type ToggleLikeParams struct {
-	PostId int64 `form:"id"`
+	PostId uint `form:"id"`
 }
 
 func ToggleLikeAction(c *gin.Context) {
@@ -25,7 +25,7 @@ func ToggleLikeAction(c *gin.Context) {
 		return
 	}
 
-	count, err := TogglePostAction(user.Id, action_api.ActionLike, p.PostId)
+	count, err := TogglePostAction(user.ID, models.ActionLike, p.PostId)
 	if err != nil {
 		api_resp.LogError(c, err)
 		return

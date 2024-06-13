@@ -6,33 +6,34 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/daqing/airway/lib/pg_repo"
+	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/utils"
+	"github.com/daqing/airway/models"
 )
 
 func SaveFile(
-	userId int64,
+	userId uint,
 	filename string,
 	mime string,
 	bytes int64,
-) (*MediaFile, error) {
-	return SaveFileExpiredAt(userId, filename, mime, bytes, pg_repo.NeverExpires)
+) (*models.MediaFile, error) {
+	return SaveFileExpiredAt(userId, filename, mime, bytes, repo.NeverExpires)
 }
 
 func SaveFileExpiredAt(
-	userId int64,
+	userId uint,
 	filename string,
 	mime string,
 	bytes int64,
 	expiredAt time.Time,
-) (*MediaFile, error) {
+) (*models.MediaFile, error) {
 
-	return pg_repo.Insert[MediaFile]([]pg_repo.KVPair{
-		pg_repo.KV("user_id", userId),
-		pg_repo.KV("filename", filename),
-		pg_repo.KV("mime", mime),
-		pg_repo.KV("bytes", bytes),
-		pg_repo.KV("expired_at", expiredAt),
+	return repo.Insert[models.MediaFile]([]repo.KVPair{
+		repo.KV("user_id", userId),
+		repo.KV("filename", filename),
+		repo.KV("mime", mime),
+		repo.KV("bytes", bytes),
+		repo.KV("expired_at", expiredAt),
 	})
 }
 
@@ -62,8 +63,8 @@ func assetFullPath(assetDir string, path string) string {
 }
 
 func AssetHostPath(filename string) string {
-	if filename == pg_repo.EMPTY_STRING {
-		return pg_repo.EMPTY_STRING
+	if filename == repo.EMPTY_STRING {
+		return repo.EMPTY_STRING
 	}
 
 	subPath := "/public/assets" + filename

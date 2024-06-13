@@ -37,7 +37,7 @@ func UploadAction(c *gin.Context) {
 	newFilename := replace(fileHeader.Filename, hash)
 	mime := fileHeader.Header.Get("Content-Type")
 
-	row, err := SaveFile(currentUser.Id, newFilename, mime, fileHeader.Size)
+	row, err := SaveFile(currentUser.ID, newFilename, mime, fileHeader.Size)
 	if err != nil {
 		api_resp.Error(c, err)
 		return

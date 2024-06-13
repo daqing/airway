@@ -1,38 +1,41 @@
 package node_api
 
-import "github.com/daqing/airway/lib/pg_repo"
+import (
+	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/models"
+)
 
-func CreateNode(name, key, place string, parentId int64, level int) (*Node, error) {
-	return pg_repo.Insert[Node](
-		[]pg_repo.KVPair{
-			pg_repo.KV("name", name),
-			pg_repo.KV("key", key),
-			pg_repo.KV("place", place),
-			pg_repo.KV("parent_id", parentId),
-			pg_repo.KV("level", level),
+func CreateNode(name, key, place string, parentId uint, level int) (*models.Node, error) {
+	return repo.Insert[models.Node](
+		[]repo.KVPair{
+			repo.KV("name", name),
+			repo.KV("key", key),
+			repo.KV("place", place),
+			repo.KV("parent_id", parentId),
+			repo.KV("level", level),
 		},
 	)
 }
 
-func Nodes(fields []string, order string, page, limit int) ([]*Node, error) {
+func Nodes(fields []string, order string, page, limit int) ([]*models.Node, error) {
 	if page == 0 {
 		page = 1
 	}
 
-	return pg_repo.FindLimit[Node](
+	return repo.FindLimit[models.Node](
 		fields,
-		[]pg_repo.KVPair{},
+		[]repo.KVPair{},
 		order,
 		(page-1)*limit,
 		limit,
 	)
 }
 
-func NameMap(place string) (map[int64]string, error) {
-	nodes, err := pg_repo.Find[Node](
+func NameMap(place string) (map[uint]string, error) {
+	nodes, err := repo.Find[models.Node](
 		[]string{"id", "name"},
-		[]pg_repo.KVPair{
-			pg_repo.KV("place", place),
+		[]repo.KVPair{
+			repo.KV("place", place),
 		},
 	)
 
@@ -40,10 +43,10 @@ func NameMap(place string) (map[int64]string, error) {
 		return nil, err
 	}
 
-	var result = make(map[int64]string)
+	var result = make(map[uint]string)
 
 	for _, node := range nodes {
-		result[node.Id] = node.Name
+		result[node.ID] = node.Name
 	}
 
 	return result, nil

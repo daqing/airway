@@ -1,14 +1,11 @@
-package user_api
+package models
 
 import (
-	"time"
-
-	"github.com/daqing/airway/core/api/membership_api"
-	"github.com/daqing/airway/lib/pg_repo"
+	"gorm.io/gorm"
 )
 
 type User struct {
-	Id int64
+	gorm.Model
 
 	Nickname          string
 	Username          string
@@ -18,11 +15,10 @@ type User struct {
 	Role              UserRole
 	APIToken          string
 	EncryptedPassword string
-	Balance           pg_repo.PriceCent
-
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	Balance           PriceCent
 }
+
+func (u User) TableName() string { return "users" }
 
 type UserRole int
 
@@ -37,10 +33,10 @@ const polyType = "user"
 
 func (u *User) PolyType() string { return polyType }
 
-func (u *User) PolyId() int64 { return u.Id }
+func (u *User) PolyId() uint { return u.ID }
 
-func (u *User) Membership() (*membership_api.MembershipResp, error) {
-	return membership_api.MembershipFor(u.Id)
+func (u *User) Membership() (*MembershipResp, error) {
+	return MembershipFor(u.ID)
 }
 
 func (u *User) IsAdmin() bool { return u.Role == AdminRole || u.Role == RootRole }

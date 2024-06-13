@@ -4,23 +4,24 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/daqing/airway/lib/pg_repo"
+	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/utils"
+	"github.com/daqing/airway/models"
 )
 
-func CreateRootUser(username string, password string) (*User, error) {
-	return createUser(username, username, RootRole, password)
+func CreateRootUser(username string, password string) (*models.User, error) {
+	return createUser(username, username, models.RootRole, password)
 }
 
-func CreateAdminUser(nickname, username string, password string) (*User, error) {
-	return createUser(nickname, username, AdminRole, password)
+func CreateAdminUser(nickname, username string, password string) (*models.User, error) {
+	return createUser(nickname, username, models.AdminRole, password)
 }
 
-func CreateBasicUser(nickname, username string, password string) (*User, error) {
-	return createUser(nickname, username, BasicRole, password)
+func CreateBasicUser(nickname, username string, password string) (*models.User, error) {
+	return createUser(nickname, username, models.BasicRole, password)
 }
 
-func createUser(nickname, username string, role UserRole, password string) (*User, error) {
+func createUser(nickname, username string, role models.UserRole, password string) (*models.User, error) {
 	if len(nickname) == 0 {
 		return nil, fmt.Errorf("nickname can't be empty")
 	}
@@ -39,16 +40,16 @@ func createUser(nickname, username string, role UserRole, password string) (*Use
 		return nil, err
 	}
 
-	user, err := pg_repo.Insert[User](
-		[]pg_repo.KVPair{
-			pg_repo.KV("nickname", nickname),
-			pg_repo.KV("username", username),
-			pg_repo.KV("phone", ""),
-			pg_repo.KV("email", ""),
-			pg_repo.KV("avatar", ""),
-			pg_repo.KV("role", role),
-			pg_repo.KV("encrypted_password", enc),
-			pg_repo.KV("api_token", utils.RandomHex(20)),
+	user, err := repo.Insert[models.User](
+		[]repo.KVPair{
+			repo.KV("nickname", nickname),
+			repo.KV("username", username),
+			repo.KV("phone", ""),
+			repo.KV("email", ""),
+			repo.KV("avatar", ""),
+			repo.KV("role", role),
+			repo.KV("encrypted_password", enc),
+			repo.KV("api_token", utils.RandomHex(20)),
 		},
 	)
 
@@ -59,7 +60,7 @@ func createUser(nickname, username string, role UserRole, password string) (*Use
 	return user, err
 }
 
-func LoginUser(where []pg_repo.KVPair, password string) (*User, error) {
+func LoginUser(where []repo.KVPair, password string) (*models.User, error) {
 	if len(where) == 0 {
 		return nil, fmt.Errorf("where can't be empty")
 	}
@@ -68,7 +69,7 @@ func LoginUser(where []pg_repo.KVPair, password string) (*User, error) {
 		return nil, fmt.Errorf("password can't be empty")
 	}
 
-	users, err := pg_repo.Find[User](
+	users, err := repo.Find[models.User](
 		[]string{
 			"id", "username", "nickname", "phone", "email", "avatar",
 			"encrypted_password", "api_token",
@@ -94,15 +95,15 @@ func LoginUser(where []pg_repo.KVPair, password string) (*User, error) {
 	return nil, fmt.Errorf("password is not correct")
 }
 
-func UserFromAPIToken(token string) *User {
-	user, err := pg_repo.FindRow[User](
+func UserFromAPIToken(token string) *models.User {
+	user, err := repo.FindRow[models.User](
 		[]string{
 			"id", "username", "nickname",
 			"phone", "email", "avatar",
 			"role", "api_token",
 		},
-		[]pg_repo.KVPair{
-			pg_repo.KV("api_token", token),
+		[]repo.KVPair{
+			repo.KV("api_token", token),
 		},
 	)
 
@@ -113,11 +114,11 @@ func UserFromAPIToken(token string) *User {
 	return user
 }
 
-func CurrentUser(authToken string) *User {
-	return userFromToken(authToken, AllRole)
+func CurrentUser(authToken string) *models.User {
+	return userFromToken(authToken, models.AllRole)
 }
 
-func CurrentAdmin(authToken string) *User {
+func CurrentAdmin(authToken string) *models.User {
 	user := CurrentUser(authToken)
 
 	if user == nil {
@@ -131,38 +132,38 @@ func CurrentAdmin(authToken string) *User {
 	return nil
 }
 
-func userFromToken(apiToken string, role UserRole) *User {
+func userFromToken(apiToken string, role models.UserRole) *models.User {
 	user := UserFromAPIToken(apiToken)
 	if user == nil {
 		return nil
 	}
 
-	if role == AllRole || user.Role == role {
+	if role == models.AllRole || user.Role == role {
 		return user
 	}
 
 	return nil
 }
 
-func Users(fields []string, order string, page, limit int) ([]*User, error) {
+func Users(fields []string, order string, page, limit int) ([]*models.User, error) {
 	if page == 0 {
 		page = 1
 	}
 
-	return pg_repo.FindLimit[User](
+	return repo.FindLimit[models.User](
 		fields,
-		[]pg_repo.KVPair{},
+		[]repo.KVPair{},
 		order,
 		(page-1)*limit,
 		limit,
 	)
 }
 
-func Nickname(id int64) string {
-	user, err := pg_repo.FindRow[User](
+func Nickname(id uint) string {
+	user, err := repo.FindRow[models.User](
 		[]string{"id", "nickname"},
-		[]pg_repo.KVPair{
-			pg_repo.KV("id", id),
+		[]repo.KVPair{
+			repo.KV("id", id),
 		},
 	)
 

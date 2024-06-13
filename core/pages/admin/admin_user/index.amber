@@ -18,7 +18,7 @@ block content
       tbody
         each $item in Users
           tr.text-left
-            td.px-4 #{$item.Id}
+            td.px-4 #{$item.ID}
             td.px-4 #{$item.Nickname}
             td.px-4 #{$item.Username}
             td.px-4 #{$item.RoleName}

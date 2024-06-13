@@ -5,7 +5,7 @@ block title
 
 block content
   form[action="/admin/post/update"][method="post"][class="w-1/4 mx-auto"].mt-5
-    input[type="hidden"][name="id"][value=$.Post.Id]
+    input[type="hidden"][name="id"][value=$.Post.ID]
 
     div.group.flex.flex-col.mb-5
       label Title
@@ -38,7 +38,7 @@ block content
       label Node
       select[name="node_id"].border
         each $node in Nodes
-          option[value=$node.Id] #{$node.Name}
+          option[value=$node.ID] #{$node.Name}
 
     div.group.flex.flex-col
       label Custom Path

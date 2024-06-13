@@ -7,9 +7,9 @@ import (
 )
 
 func IndexAction(c *gin.Context) {
-	list, err := pg_repo.FindLimit[{{.Model}}](
+	list, err := repo.FindLimit[{{.Model}}](
 		{{.Fields}},
-		[]pg_repo.KVPair{},
+		[]repo.KVPair{},
 		"id DESC",
 		0,
 		50,

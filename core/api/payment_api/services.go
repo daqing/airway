@@ -4,8 +4,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/daqing/airway/lib/pg_repo"
+	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/utils"
+	"github.com/daqing/airway/models"
 )
 
 const PREFIX = "PMT"
@@ -17,17 +18,17 @@ func GenerateUUID() string {
 	return strings.Join([]string{PREFIX, ts, "H", rand}, "")
 }
 
-func BuyGoods(userId int64, goods pg_repo.PolyModel, price pg_repo.PriceCent, action, note string) (*Payment, error) {
-	pair := []pg_repo.KVPair{
-		pg_repo.KV("uuid", GenerateUUID()),
-		pg_repo.KV("user_id", userId),
-		pg_repo.KV("goods_type", goods.PolyType()),
-		pg_repo.KV("goods_id", goods.PolyId()),
-		pg_repo.KV("cent", price),
-		pg_repo.KV("action", action),
-		pg_repo.KV("note", note),
-		pg_repo.KV("status", FreshStatus),
+func BuyGoods(userId uint, goods models.PolyModel, price models.PriceCent, action, note string) (*models.Payment, error) {
+	pair := []repo.KVPair{
+		repo.KV("uuid", GenerateUUID()),
+		repo.KV("user_id", userId),
+		repo.KV("goods_type", goods.PolyType()),
+		repo.KV("goods_id", goods.PolyId()),
+		repo.KV("cent", price),
+		repo.KV("action", action),
+		repo.KV("note", note),
+		repo.KV("status", models.FreshStatus),
 	}
 
-	return pg_repo.Insert[Payment](pair)
+	return repo.Insert[models.Payment](pair)
 }

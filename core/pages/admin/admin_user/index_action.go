@@ -3,11 +3,12 @@ package admin_user
 import (
 	"github.com/daqing/airway/core/api/user_api"
 	"github.com/daqing/airway/lib/page_resp"
+	"github.com/daqing/airway/models"
 	"github.com/gin-gonic/gin"
 )
 
 type UserItem struct {
-	Id       int64
+	ID       uint
 	Nickname string
 	Username string
 	RoleName string
@@ -44,10 +45,10 @@ func IndexAction(c *gin.Context) {
 	for _, user := range users {
 		items = append(items,
 			&UserItem{
-				Id:       user.Id,
+				ID:       user.ID,
 				Nickname: user.Nickname,
 				Username: user.Username,
-				RoleName: user_api.RoleName(user.Role),
+				RoleName: models.RoleName(user.Role),
 				APIToken: user.APIToken,
 				Balance:  user.Balance.Yuan(),
 			})

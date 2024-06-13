@@ -18,15 +18,15 @@ block content
       tbody
         each $post in Posts
           tr.text-left
-            td.px-4 #{$post.Id}
+            td.px-4 #{$post.ID}
             td.px-4 #{$post.Title}
             td.px-4 #{$post.CustomPath}
             td.px-4 #{$post.Place}
             td.px-4 #{$post.UserId}
             td.px-4 #{$post.NodeId}
             td.px-4.flex.gap-4
-              a[href="/admin/post/edit?id="+$post.Id] Edit
-              a[href="/admin/post/delete?id="+$post.Id] Delete
+              a[data-href="/admin/post/edit?id="][data-id=$post.ID].goto-link Edit
+              a[data-href="/admin/post/delete?id="][data-id=$post.ID].goto-link Delete
 
     div.flex[class="w-1/4"].px-4
       a[href="/admin/post/new"]

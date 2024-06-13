@@ -14,10 +14,10 @@ func EditAction(c *gin.Context) {
 		page_resp.Redirect(c, "/admin/{{ .Model }}")
 	}
 
-	item, err := pg_repo.FindRow[{{ .Model }}](
+	item, err := repo.FindRow[{{ .Model }}](
     {{ .Fields }},
-    []pg_repo.KVPair{
-      pg_repo.KV("id", id),
+    []repo.KVPair{
+      repo.KV("id", id),
     },
   )
 

@@ -16,13 +16,13 @@ block content
       tbody
         each $menu in Menus
           tr.text-left
-            td.px-4 #{$menu.Id}
+            td.px-4 #{$menu.ID}
             td.px-4 #{$menu.Name}
             td.px-4 #{$menu.URL}
             td.px-4 #{$menu.Place}
             td.px-4.flex.gap-4
-              a[href="/admin/menu/edit?id="+$menu.Id] Edit
-              a[href="/admin/menu/delete?id="+$menu.Id] Delete
+              a[data-href="/admin/menu/edit?id="][data-id=$menu.ID].goto-link Edit
+              a[data-href="/admin/menu/delete?id="][data-id=$menu.ID].goto-link Delete
 
     div.flex[class="w-1/4"].px-4
       a[href="/admin/menu/new"]

@@ -5,22 +5,21 @@ import (
 	"time"
 
 	"github.com/daqing/airway/core/api/media_api"
-	"github.com/daqing/airway/core/api/node_api"
-	"github.com/daqing/airway/core/api/post_api"
 	"github.com/daqing/airway/core/api/user_api"
 	"github.com/daqing/airway/lib/page_resp"
-	"github.com/daqing/airway/lib/pg_repo"
+	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/utils"
+	"github.com/daqing/airway/models"
 	"github.com/gin-gonic/gin"
 )
 
 func NodeAction(c *gin.Context) {
 	nodeKey := c.Param("key")
 
-	node, err := pg_repo.FindRow[node_api.Node](
+	node, err := repo.FindRow[models.Node](
 		[]string{"id", "name"},
-		[]pg_repo.KVPair{
-			pg_repo.KV("key", nodeKey),
+		[]repo.KVPair{
+			repo.KV("key", nodeKey),
 		},
 	)
 
@@ -29,11 +28,11 @@ func NodeAction(c *gin.Context) {
 		return
 	}
 
-	posts, err := pg_repo.Find[post_api.Post](
+	posts, err := repo.Find[models.Post](
 		[]string{"id", "title", "user_id"},
-		[]pg_repo.KVPair{
-			pg_repo.KV("node_id", node.Id),
-			pg_repo.KV("place", "forum"),
+		[]repo.KVPair{
+			repo.KV("node_id", node.ID),
+			repo.KV("place", "forum"),
 		},
 	)
 
@@ -45,7 +44,7 @@ func NodeAction(c *gin.Context) {
 	postsShow := []*PostItem{}
 
 	for _, post := range posts {
-		url := fmt.Sprintf("/forum/post/%d", post.Id)
+		url := fmt.Sprintf("/forum/post/%d", post.ID)
 
 		if len(post.CustomPath) > 0 {
 			url = fmt.Sprintf("/forum/post/%s", post.CustomPath)
@@ -53,7 +52,7 @@ func NodeAction(c *gin.Context) {
 
 		postsShow = append(postsShow,
 			&PostItem{
-				Id:        post.Id,
+				Id:        post.ID,
 				Title:     post.Title,
 				Url:       url,
 				TimeAgo:   utils.TimeAgo(post.CreatedAt),
@@ -65,10 +64,10 @@ func NodeAction(c *gin.Context) {
 
 	rootPath := utils.PathPrefix("forum")
 
-	nodes, err := pg_repo.Find[node_api.Node](
+	nodes, err := repo.Find[models.Node](
 		[]string{"id", "name", "key"},
-		[]pg_repo.KVPair{
-			pg_repo.KV("place", "forum"),
+		[]repo.KVPair{
+			repo.KV("place", "forum"),
 		},
 	)
 

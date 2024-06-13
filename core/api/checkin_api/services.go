@@ -1,21 +1,21 @@
 package checkin_api
 
 import (
-	"github.com/daqing/airway/core/api/user_api"
-	"github.com/daqing/airway/lib/pg_repo"
+	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/utils"
+	"github.com/daqing/airway/models"
 )
 
-func CreateCheckin(user *user_api.User, when utils.Date) (*Checkin, error) {
+func CreateCheckin(user *models.User, when utils.Date) (*models.Checkin, error) {
 	yesterday := when.Yesterday()
 
-	prev, err := pg_repo.FindRow[Checkin](
+	prev, err := repo.FindRow[models.Checkin](
 		[]string{"id", "acc"},
-		[]pg_repo.KVPair{
-			pg_repo.KV("user_id", user.Id),
-			pg_repo.KV("year", yesterday.Year),
-			pg_repo.KV("month", yesterday.Month),
-			pg_repo.KV("day", yesterday.Day),
+		[]repo.KVPair{
+			repo.KV("user_id", user.ID),
+			repo.KV("year", yesterday.Year),
+			repo.KV("month", yesterday.Month),
+			repo.KV("day", yesterday.Day),
 		},
 	)
 
@@ -29,12 +29,12 @@ func CreateCheckin(user *user_api.User, when utils.Date) (*Checkin, error) {
 		acc += prev.Acc
 	}
 
-	return pg_repo.Insert[Checkin]([]pg_repo.KVPair{
-		pg_repo.KV("user_id", user.Id),
-		pg_repo.KV("year", when.Year),
-		pg_repo.KV("month", when.Month),
-		pg_repo.KV("day", when.Day),
-		pg_repo.KV("acc", acc),
+	return repo.Insert[models.Checkin]([]repo.KVPair{
+		repo.KV("user_id", user.ID),
+		repo.KV("year", when.Year),
+		repo.KV("month", when.Month),
+		repo.KV("day", when.Day),
+		repo.KV("acc", acc),
 	})
 
 }

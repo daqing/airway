@@ -10,7 +10,7 @@ import (
 )
 
 type UpdateParams struct {
-	Id    int64  `form:"id"`
+	Id    uint   `form:"id"`
 	Name  string `form:"name"`
 	URL   string `form:"url"`
 	Place string `form:"place"`

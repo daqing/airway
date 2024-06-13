@@ -3,19 +3,19 @@ package forum
 import (
 	"time"
 
-	"github.com/daqing/airway/core/api/node_api"
 	"github.com/daqing/airway/core/api/user_api"
 	"github.com/daqing/airway/lib/page_resp"
-	"github.com/daqing/airway/lib/pg_repo"
+	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/utils"
+	"github.com/daqing/airway/models"
 	"github.com/gin-gonic/gin"
 )
 
 func NewAction(c *gin.Context) {
-	nodes, err := pg_repo.Find[node_api.Node](
+	nodes, err := repo.Find[models.Node](
 		[]string{"id", "name", "key"},
-		[]pg_repo.KVPair{
-			pg_repo.KV("place", "forum"),
+		[]repo.KVPair{
+			repo.KV("place", "forum"),
 		},
 	)
 
@@ -31,7 +31,7 @@ func NewAction(c *gin.Context) {
 	for _, node := range nodes {
 		nodeItems = append(nodeItems,
 			&NodeItem{
-				Id:   node.Id,
+				Id:   node.ID,
 				Name: node.Name,
 				URL:  "/forum/node/" + node.Key,
 			})

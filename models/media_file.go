@@ -1,18 +1,19 @@
-package media_api
+package models
 
 import (
 	"time"
+
+	"gorm.io/gorm"
 )
 
 type MediaFile struct {
-	Id int64
+	gorm.Model
 
 	UserId    int64
 	Filename  string
 	Mime      string
 	Bytes     int64
 	ExpiredAt time.Time
-
-	CreatedAt time.Time
-	UpdatedAt time.Time
 }
+
+func (m MediaFile) TableName() string { return "media_files" }
