@@ -8,7 +8,7 @@ import (
 )
 
 type UserItem struct {
-	Id       uint
+	ID       uint
 	Nickname string
 	Username string
 	RoleName string
@@ -45,7 +45,7 @@ func IndexAction(c *gin.Context) {
 	for _, user := range users {
 		items = append(items,
 			&UserItem{
-				Id:       user.ID,
+				ID:       user.ID,
 				Nickname: user.Nickname,
 				Username: user.Username,
 				RoleName: models.RoleName(user.Role),

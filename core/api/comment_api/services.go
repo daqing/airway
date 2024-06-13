@@ -5,7 +5,7 @@ import (
 	"github.com/daqing/airway/models"
 )
 
-func CreateComment(currentUser *models.User, polyModel repo.PolyModel, content string) (*models.Comment, error) {
+func CreateComment(currentUser *models.User, polyModel models.PolyModel, content string) (*models.Comment, error) {
 	return createComment(currentUser, polyModel.PolyType(), polyModel.PolyId(), content)
 }
 

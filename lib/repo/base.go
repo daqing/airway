@@ -116,14 +116,8 @@ func buildCondQuery(kvpairs []KVPair) map[string]any {
 	return result
 }
 
-type Model struct {
-	ID        IdType `gorm:"primarykey"`
-	CreatedAt time.Time
-	UpdatedAt time.Time
-}
-
-// Polymorphic model
-type PolyModel interface {
-	PolyId() uint
-	PolyType() string
-}
+// type Model struct {
+// 	ID        IdType `gorm:"primarykey"`
+// 	CreatedAt time.Time
+// 	UpdatedAt time.Time
+// }

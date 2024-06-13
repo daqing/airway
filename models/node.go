@@ -7,7 +7,7 @@ import (
 type Node struct {
 	gorm.Model
 
-	ParentId int64
+	ParentId uint
 
 	Name string
 	Key  string

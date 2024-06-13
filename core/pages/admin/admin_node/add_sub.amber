@@ -8,7 +8,7 @@ block content
     div.group.flex.flex-col.mb-5
       label Parent Node
       p #{Node.Name}
-      input[type="hidden"][name="parent_id"][value=Node.Id]
+      input[type="hidden"][name="parent_id"][value=Node.ID]
 
     div.group.flex.flex-col.mb-5
       label Name

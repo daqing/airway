@@ -38,7 +38,7 @@ block content
         div.bg-white.rounded-md.shadow.mt-4
           div.px-4.py-1 Add comment
           form[action="/forum/comment/create"][method="post"]
-            input[type="hidden"][name="target_id"][value=Post.Id]
+            input[type="hidden"][name="target_id"][value=Post.ID]
             div.px-4.pb-2
               textarea[name="content"][rows=5].w-full.px-1.border
               input[type="submit"][value="Submit"].mt-2.btn

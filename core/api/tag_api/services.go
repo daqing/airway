@@ -17,7 +17,7 @@ func CreateTag(name string) (*models.Tag, error) {
 	})
 }
 
-func CreateTagRelation(tagName string, relation repo.PolyModel) error {
+func CreateTagRelation(tagName string, relation models.PolyModel) error {
 	tags, err := repo.Find[models.Tag]([]string{"id", "name"}, []repo.KVPair{
 		repo.KV("name", tagName),
 	})

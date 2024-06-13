@@ -21,7 +21,7 @@ block content
       label Node
       select[name="node_id"].border
         each $node in Nodes
-          option[value=$node.Id] #{$node.Name}
+          option[value=$node.ID] #{$node.Name}
     div.group.flex.flex-col
       label Custom Path
       input[type="text"][name="custom_path"].border

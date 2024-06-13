@@ -5,7 +5,7 @@ block title
 
 block content
   form[action="/admin/node/update"][method="post"][class="w-1/4 mx-auto"].mt-5
-    input[type="hidden"][name="id"][value=$.Node.Id]
+    input[type="hidden"][name="id"][value=$.Node.ID]
 
     div.group.flex.flex-col.mb-5
       label Name

@@ -21,7 +21,7 @@ block content
           label Nodes
           select[name="node_id"].border
             each $node in Nodes
-              option[value=$node.Id] #{$node.Name}
+              option[value=$node.ID] #{$node.Name}
 
         div.group.mt-5
           button.btn-outline[type="submit"] Create Post
