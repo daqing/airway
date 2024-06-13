@@ -1,9 +1,9 @@
 package post_api
 
 import (
-	"github.com/daqing/airway/core/api/action_api"
 	"github.com/daqing/airway/core/api/user_api"
 	"github.com/daqing/airway/lib/api_resp"
+	"github.com/daqing/airway/models"
 	"github.com/gin-gonic/gin"
 )
 
@@ -25,7 +25,7 @@ func ToggleFavoriteAction(c *gin.Context) {
 		return
 	}
 
-	count, err := TogglePostAction(user.Id, action_api.ActionFavorite, p.PostId)
+	count, err := TogglePostAction(user.ID, models.ActionFavorite, p.PostId)
 	if err != nil {
 		api_resp.LogError(c, err)
 		return

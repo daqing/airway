@@ -12,7 +12,7 @@ import (
 )
 
 type PostItemIndex struct {
-	Id    int64
+	Id    uint
 	Title string
 	Url   string
 	Date  string
@@ -35,7 +35,7 @@ func IndexAction(c *gin.Context) {
 	postsShow := []*PostItemIndex{}
 
 	for _, post := range posts {
-		url := fmt.Sprintf("/blog/post/%d", post.Id)
+		url := fmt.Sprintf("/blog/post/%d", post.ID)
 
 		if len(post.CustomPath) > 0 {
 			url = fmt.Sprintf("/blog/post/%s", post.CustomPath)
@@ -43,7 +43,7 @@ func IndexAction(c *gin.Context) {
 
 		postsShow = append(postsShow,
 			&PostItemIndex{
-				Id:    post.Id,
+				Id:    post.ID,
 				Title: post.Title,
 				Url:   url,
 				Date:  post.CreatedAt.Format("2006-01-02"),

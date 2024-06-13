@@ -1,28 +1,25 @@
-package payment_api
+package models
 
 import (
-	"time"
-
-	"github.com/daqing/airway/lib/pg_repo"
+	"gorm.io/gorm"
 )
 
 type Payment struct {
-	Id int64
+	gorm.Model
 
 	UserId    int64
 	UUID      string
 	GoodsType string
 	GoodsId   int64
-	Cent      pg_repo.PriceCent
+	Cent      PriceCent
 	Action    string
 	Note      string
 	Status    PaymentStatus
-
-	CreatedAt time.Time
-	UpdatedAt time.Time
 }
 
 type PaymentStatus string
 
 const FreshStatus PaymentStatus = "fresh"
 const PaidStatus PaymentStatus = "paid"
+
+func (p Payment) TableName() string { return "payments" }

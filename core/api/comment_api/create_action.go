@@ -3,12 +3,13 @@ package comment_api
 import (
 	"github.com/daqing/airway/core/api/user_api"
 	"github.com/daqing/airway/lib/api_resp"
-	"github.com/daqing/airway/lib/pg_repo"
+	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/models"
 	"github.com/gin-gonic/gin"
 )
 
 type CreateParams struct {
-	TargetId   int64  `json:"target_id"`
+	TargetId   uint   `json:"target_id"`
 	TargetType string `json:"target_type"`
 	Content    string `json:"content"`
 }
@@ -33,7 +34,7 @@ func CreateAction(c *gin.Context) {
 		return
 	}
 
-	item := pg_repo.ItemResp[Comment, CommentResp](comment)
+	item := repo.ItemResp[models.Comment, CommentResp](comment)
 
 	api_resp.OK(c, gin.H{"comment": item})
 }

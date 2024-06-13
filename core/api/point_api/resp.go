@@ -1,6 +1,6 @@
 package point_api
 
-import "github.com/daqing/airway/lib/pg_repo"
+import "github.com/daqing/airway/lib/repo"
 
 type PointResp struct {
 	Id int64
@@ -8,8 +8,8 @@ type PointResp struct {
 	UserId int64
 	Count  int
 
-	CreatedAt pg_repo.Timestamp
-	UpdatedAt pg_repo.Timestamp
+	CreatedAt repo.Timestamp
+	UpdatedAt repo.Timestamp
 }
 
 func (r PointResp) Fields() []string {

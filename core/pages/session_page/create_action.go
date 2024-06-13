@@ -4,7 +4,7 @@ import (
 	"github.com/daqing/airway/core/api/user_api"
 	"github.com/daqing/airway/lib/api_resp"
 	"github.com/daqing/airway/lib/page_resp"
-	"github.com/daqing/airway/lib/pg_repo"
+	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/utils"
 	"github.com/gin-gonic/gin"
 )
@@ -32,7 +32,7 @@ func CreateAction(c *gin.Context) {
 	}
 
 	user, err := user_api.LoginUser(
-		[]pg_repo.KVPair{pg_repo.KV("username", username)},
+		[]repo.KVPair{repo.KV("username", username)},
 		password,
 	)
 

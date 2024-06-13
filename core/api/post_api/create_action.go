@@ -5,12 +5,13 @@ import (
 
 	"github.com/daqing/airway/core/api/user_api"
 	"github.com/daqing/airway/lib/api_resp"
-	"github.com/daqing/airway/lib/pg_repo"
+	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/models"
 	"github.com/gin-gonic/gin"
 )
 
 type CreateParams struct {
-	NodeId  int64  `json:"node_id"`
+	NodeId  uint   `json:"node_id"`
 	Title   string `json:"title"`
 	Place   string `json:"place"`
 	Content string `json:"content"`
@@ -36,13 +37,13 @@ func CreateAction(c *gin.Context) {
 	tags := strings.Split(p.Tags, ",")
 
 	// TODO: add custom path parameters
-	post, err := CreatePost(p.Title, "", p.Place, p.Content, user.Id, p.NodeId, p.Fee, tags)
+	post, err := CreatePost(p.Title, "", p.Place, p.Content, user.ID, p.NodeId, p.Fee, tags)
 	if err != nil {
 		api_resp.LogError(c, err)
 		return
 	}
 
-	item := pg_repo.ItemResp[Post, PostResp](post)
+	item := repo.ItemResp[models.Post, PostResp](post)
 
 	api_resp.OK(c, gin.H{"post": item})
 }

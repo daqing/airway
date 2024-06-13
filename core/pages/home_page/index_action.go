@@ -4,11 +4,12 @@ import (
 	"github.com/daqing/airway/core/api/user_api"
 	"github.com/daqing/airway/lib/page_resp"
 	"github.com/daqing/airway/lib/utils"
+	"github.com/daqing/airway/models"
 	"github.com/gin-gonic/gin"
 )
 
 func IndexAction(c *gin.Context) {
-	var currentUser *user_api.User
+	var currentUser *models.User
 
 	var nickname string
 	var signedIn bool

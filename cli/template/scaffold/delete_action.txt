@@ -9,9 +9,9 @@ import (
 func DeleteAction(c *gin.Context) {
 	id := c.Query("id")
 
-	err := pg_repo.Delete[{{ .Model }}](
-		[]pg_repo.KVPair{
-			pg_repo.KV("id", id),
+	err := repo.Delete[{{ .Model }}](
+		[]repo.KVPair{
+			repo.KV("id", id),
 		},
 	)
 

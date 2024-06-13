@@ -1,15 +1,18 @@
 package user_api
 
-import "github.com/daqing/airway/lib/pg_repo"
+import (
+	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/models"
+)
 
 type UserResp struct {
 	Id        int64
 	Nickname  string
 	Username  string
 	ApiToken  string
-	Role      UserRole
-	CreatedAt pg_repo.Timestamp
-	UpdatedAt pg_repo.Timestamp
+	Role      models.UserRole
+	CreatedAt repo.Timestamp
+	UpdatedAt repo.Timestamp
 }
 
 func (ur UserResp) Fields() []string {

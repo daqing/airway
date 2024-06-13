@@ -2,12 +2,13 @@ package post_api
 
 import (
 	"github.com/daqing/airway/lib/api_resp"
-	"github.com/daqing/airway/lib/pg_repo"
+	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/models"
 	"github.com/gin-gonic/gin"
 )
 
 type ShowParams struct {
-	Id int64 `form:"id"`
+	Id uint `form:"id"`
 }
 
 func ShowAction(c *gin.Context) {
@@ -18,10 +19,10 @@ func ShowAction(c *gin.Context) {
 		return
 	}
 
-	post, err := pg_repo.FindRow[Post]([]string{
+	post, err := repo.FindRow[models.Post]([]string{
 		"id", "user_id", "node_id", "title", "content",
-	}, []pg_repo.KVPair{
-		pg_repo.KV("id", p.Id),
+	}, []repo.KVPair{
+		repo.KV("id", p.Id),
 	})
 
 	if err != nil {

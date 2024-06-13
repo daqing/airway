@@ -3,29 +3,30 @@ package tag_api
 import (
 	"fmt"
 
-	"github.com/daqing/airway/lib/pg_repo"
+	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/models"
 )
 
-func CreateTag(name string) (*Tag, error) {
+func CreateTag(name string) (*models.Tag, error) {
 	if len(name) == 0 {
 		return nil, fmt.Errorf("name cannot be empty")
 	}
 
-	return pg_repo.Insert[Tag]([]pg_repo.KVPair{
-		pg_repo.KV("name", name),
+	return repo.Insert[models.Tag]([]repo.KVPair{
+		repo.KV("name", name),
 	})
 }
 
-func CreateTagRelation(tagName string, relation pg_repo.PolyModel) error {
-	tags, err := pg_repo.Find[Tag]([]string{"id", "name"}, []pg_repo.KVPair{
-		pg_repo.KV("name", tagName),
+func CreateTagRelation(tagName string, relation repo.PolyModel) error {
+	tags, err := repo.Find[models.Tag]([]string{"id", "name"}, []repo.KVPair{
+		repo.KV("name", tagName),
 	})
 
 	if err != nil {
 		return err
 	}
 
-	var tag *Tag
+	var tag *models.Tag
 
 	if len(tags) == 0 {
 		// tag not found, create one
@@ -40,10 +41,10 @@ func CreateTagRelation(tagName string, relation pg_repo.PolyModel) error {
 		return fmt.Errorf("number of tags is wrong: %d", len(tags))
 	}
 
-	relations, err := pg_repo.Find[TagRelation]([]string{"id"}, []pg_repo.KVPair{
-		pg_repo.KV("tag_id", tag.Id),
-		pg_repo.KV("relation_id", relation.PolyId()),
-		pg_repo.KV("relation_type", relation.PolyType()),
+	relations, err := repo.Find[models.TagRelation]([]string{"id"}, []repo.KVPair{
+		repo.KV("tag_id", tag.ID),
+		repo.KV("relation_id", relation.PolyId()),
+		repo.KV("relation_type", relation.PolyType()),
 	})
 
 	if err != nil {
@@ -52,10 +53,10 @@ func CreateTagRelation(tagName string, relation pg_repo.PolyModel) error {
 
 	if len(relations) == 0 {
 		// create new relation
-		_, err = pg_repo.Insert[TagRelation]([]pg_repo.KVPair{
-			pg_repo.KV("tag_id", tag.Id),
-			pg_repo.KV("relation_id", relation.PolyId()),
-			pg_repo.KV("relation_type", relation.PolyType()),
+		_, err = repo.Insert[models.TagRelation]([]repo.KVPair{
+			repo.KV("tag_id", tag.ID),
+			repo.KV("relation_id", relation.PolyId()),
+			repo.KV("relation_type", relation.PolyType()),
 		})
 
 		if err != nil {

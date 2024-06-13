@@ -1,56 +1,59 @@
 package menu_api
 
-import "github.com/daqing/airway/lib/pg_repo"
+import (
+	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/models"
+)
 
-func CreateMenu(name, url, place string) (menu *Menu, err error) {
-	return pg_repo.Insert[Menu](
-		[]pg_repo.KVPair{
-			pg_repo.KV("name", name),
-			pg_repo.KV("url", url),
-			pg_repo.KV("place", place),
+func CreateMenu(name, url, place string) (menu *models.Menu, err error) {
+	return repo.Insert[models.Menu](
+		[]repo.KVPair{
+			repo.KV("name", name),
+			repo.KV("url", url),
+			repo.KV("place", place),
 		},
 	)
 }
 
-func UpdateMenu(id int64, name, url, place string) bool {
-	return pg_repo.UpdateFields[Menu](
+func UpdateMenu(id uint, name, url, place string) bool {
+	return repo.UpdateFields[models.Menu](
 		id,
-		[]pg_repo.KVPair{
-			pg_repo.KV("name", name),
-			pg_repo.KV("url", url),
-			pg_repo.KV("place", place),
+		[]repo.KVPair{
+			repo.KV("name", name),
+			repo.KV("url", url),
+			repo.KV("place", place),
 		},
 	)
 }
 
-func Menus(fields []string, order string, page, limit int) ([]*Menu, error) {
+func Menus(fields []string, order string, page, limit int) ([]*models.Menu, error) {
 	if page == 0 {
 		page = 1
 	}
 
-	return pg_repo.FindLimit[Menu](
+	return repo.FindLimit[models.Menu](
 		fields,
-		[]pg_repo.KVPair{},
+		[]repo.KVPair{},
 		order,
 		(page-1)*limit,
 		limit,
 	)
 }
 
-func MenuPlace(fields []string, place string) ([]*Menu, error) {
-	return pg_repo.Find[Menu](
+func MenuPlace(fields []string, place string) ([]*models.Menu, error) {
+	return repo.Find[models.Menu](
 		fields,
-		[]pg_repo.KVPair{
-			pg_repo.KV("place", place),
+		[]repo.KVPair{
+			repo.KV("place", place),
 		},
 	)
 }
 
-func FindBy(field string, value any) (*Menu, error) {
-	return pg_repo.FindRow[Menu](
+func FindBy(field string, value any) (*models.Menu, error) {
+	return repo.FindRow[models.Menu](
 		[]string{"id", "name", "url", "place"},
-		[]pg_repo.KVPair{
-			pg_repo.KV(field, value),
+		[]repo.KVPair{
+			repo.KV(field, value),
 		},
 	)
 }

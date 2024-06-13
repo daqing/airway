@@ -2,8 +2,8 @@ package forum
 
 import (
 	"github.com/daqing/airway/core/api/media_api"
-	"github.com/daqing/airway/core/api/user_api"
 	"github.com/daqing/airway/lib/utils"
+	"github.com/daqing/airway/models"
 )
 
 func ForumTitle() string {
@@ -19,7 +19,7 @@ func ForumTagline() string {
 	return tagline
 }
 
-func SessionData(currentUser *user_api.User) map[string]any {
+func SessionData(currentUser *models.User) map[string]any {
 	var nickname string
 	var signedIn bool
 	var isAdmin bool

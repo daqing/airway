@@ -3,19 +3,19 @@ package forum
 import (
 	"fmt"
 
-	"github.com/daqing/airway/core/api/node_api"
 	"github.com/daqing/airway/core/api/post_api"
 	"github.com/daqing/airway/core/api/user_api"
 	"github.com/daqing/airway/lib/page_resp"
-	"github.com/daqing/airway/lib/pg_repo"
+	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/utils"
+	"github.com/daqing/airway/models"
 	"github.com/gin-gonic/gin"
 )
 
 type CreateParams struct {
 	Title   string `form:"title"`
 	Content string `form:"content"`
-	NodeId  int64  `form:"node_id"`
+	NodeId  uint   `form:"node_id"`
 }
 
 func CreateAction(c *gin.Context) {
@@ -34,7 +34,7 @@ func CreateAction(c *gin.Context) {
 		return
 	}
 
-	ex, err := pg_repo.Exists[node_api.Node]([]pg_repo.KVPair{pg_repo.KV("id", p.NodeId)})
+	ex, err := repo.Exists[models.Node]([]repo.KVPair{repo.KV("id", p.NodeId)})
 	if err != nil {
 		page_resp.Error(c, err)
 		return
@@ -56,7 +56,7 @@ func CreateAction(c *gin.Context) {
 	_, err = post_api.CreatePost(
 		title, "", "forum",
 		content,
-		currentUser.Id, p.NodeId,
+		currentUser.ID, p.NodeId,
 		0,
 		[]string{},
 	)

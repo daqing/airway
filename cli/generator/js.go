@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/daqing/airway/cli/helper"
-	"github.com/daqing/airway/lib/pg_repo"
+	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/utils"
 )
 
@@ -31,7 +31,7 @@ func GeneratePageReactJS(topDir, page, action string) {
 	err := helper.ExecTemplate(
 		"./cli/template/js/react.txt",
 		targetFileName,
-		PageGenerator{Page: utils.NormalizePage(page), Name: action, Action: pg_repo.ToCamel(action)},
+		PageGenerator{Page: utils.NormalizePage(page), Name: action, Action: repo.ToCamel(action)},
 	)
 
 	if err != nil {

@@ -6,8 +6,9 @@ import (
 	"os"
 
 	"github.com/daqing/airway/config"
-	"github.com/daqing/airway/lib/pg_repo"
+	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/utils"
+	"github.com/daqing/airway/models"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/contrib/static"
 	"github.com/gin-gonic/gin"
@@ -33,7 +34,13 @@ func main() {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	pg_repo.Setup()
+	repo.Setup()
+	if db, err := repo.DB(); err != nil {
+		log.Printf("Get database failed: %s\n", err)
+		os.Exit(3)
+	} else {
+		models.AutoMigrate(db)
+	}
 
 	app := NewApp()
 

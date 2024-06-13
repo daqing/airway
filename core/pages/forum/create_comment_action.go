@@ -4,15 +4,15 @@ import (
 	"fmt"
 
 	"github.com/daqing/airway/core/api/comment_api"
-	"github.com/daqing/airway/core/api/post_api"
 	"github.com/daqing/airway/core/api/user_api"
 	"github.com/daqing/airway/lib/page_resp"
 	"github.com/daqing/airway/lib/utils"
+	"github.com/daqing/airway/models"
 	"github.com/gin-gonic/gin"
 )
 
 type CreateCommentParams struct {
-	TargetId int64  `form:"target_id"`
+	TargetId uint   `form:"target_id"`
 	Content  string `form:"content"`
 }
 
@@ -31,7 +31,8 @@ func CreateCommentAction(c *gin.Context) {
 		return
 	}
 
-	polyModel := &post_api.Post{Id: p.TargetId}
+	polyModel := &models.Post{}
+	polyModel.ID = p.TargetId
 
 	_, err := comment_api.CreateComment(currentUser, polyModel, p.Content)
 	if err != nil {

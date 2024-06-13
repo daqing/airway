@@ -8,7 +8,7 @@ import (
 	"github.com/daqing/airway/cli/generator"
 	"github.com/daqing/airway/cli/scaffold"
 	"github.com/daqing/airway/cli/seed"
-	"github.com/daqing/airway/lib/pg_repo"
+	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/utils"
 	"github.com/joho/godotenv"
 )
@@ -59,5 +59,5 @@ func setUpDB() {
 		}
 	}
 
-	pg_repo.Setup()
+	repo.Setup()
 }
