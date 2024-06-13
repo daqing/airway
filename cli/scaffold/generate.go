@@ -80,10 +80,10 @@ func (sf *Scaffold) RedirectURL() string {
 
 func (sf *Scaffold) LayoutName() string {
 	if sf.IsAdmin {
-		return "/views/admin/layout"
+		return "/app/views/admin/layout"
 	}
 
-	return "/views/layout"
+	return "/app/views/layout"
 }
 
 func (f FieldType) NameCamel() string {

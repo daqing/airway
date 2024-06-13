@@ -1,9 +1,9 @@
 package forum
 
 import (
+	"github.com/daqing/airway/app/models"
 	"github.com/daqing/airway/core/api/media_api"
 	"github.com/daqing/airway/lib/utils"
-	"github.com/daqing/airway/models"
 )
 
 func ForumTitle() string {

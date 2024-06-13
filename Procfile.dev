@@ -1,3 +1,3 @@
 web: AIRWAY_ENV=local air
-tailwind: tailwindcss -i ./frontend/stylesheets/application.css -o ./public/css/tailwind.css --watch
-react: bun build --outdir=./public/js ./frontend/javascripts/src/*.jsx --watch
+tailwind: tailwindcss -i ./app/frontend/stylesheets/application.css -o ./public/css/tailwind.css --watch
+react: bun build --outdir=./public/js ./app/frontend/javascripts/src/*.jsx --watch

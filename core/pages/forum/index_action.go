@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/daqing/airway/app/models"
 	"github.com/daqing/airway/core/api/media_api"
 	"github.com/daqing/airway/core/api/node_api"
 	"github.com/daqing/airway/core/api/post_api"
@@ -11,7 +12,6 @@ import (
 	"github.com/daqing/airway/lib/page_resp"
 	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/utils"
-	"github.com/daqing/airway/models"
 	"github.com/gin-gonic/gin"
 )
 
@@ -26,14 +26,14 @@ type PostItem struct {
 }
 
 type NodeItem struct {
-	Id   uint
+	ID   uint
 	Name string
 	URL  string
 }
 
 func IndexAction(c *gin.Context) {
 	posts, err := post_api.Posts(
-		[]string{"id", "title", "custom_path", "user_id", "node_id"},
+		[]string{"id", "title", "custom_path", "user_id", "node_id", "created_at"},
 		"forum", // TODO: define constant
 		"id DESC",
 		0,

@@ -6,11 +6,11 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/daqing/airway/app/models"
 	"github.com/daqing/airway/core/api/menu_api"
 	"github.com/daqing/airway/lib/page_resp"
 	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/utils"
-	"github.com/daqing/airway/models"
 	"github.com/gin-gonic/gin"
 	"github.com/yuin/goldmark"
 )

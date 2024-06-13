@@ -1,9 +1,9 @@
 package checkin_api
 
 import (
+	"github.com/daqing/airway/app/models"
 	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/utils"
-	"github.com/daqing/airway/models"
 )
 
 func CreateCheckin(user *models.User, when utils.Date) (*models.Checkin, error) {

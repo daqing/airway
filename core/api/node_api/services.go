@@ -1,8 +1,8 @@
 package node_api
 
 import (
+	"github.com/daqing/airway/app/models"
 	"github.com/daqing/airway/lib/repo"
-	"github.com/daqing/airway/models"
 )
 
 func CreateNode(name, key, place string, parentId uint, level int) (*models.Node, error) {

@@ -3,8 +3,8 @@ package action_api
 import (
 	"fmt"
 
+	"github.com/daqing/airway/app/models"
 	"github.com/daqing/airway/lib/repo"
-	"github.com/daqing/airway/models"
 )
 
 // relation 被关注/收藏/点赞的对象

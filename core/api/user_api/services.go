@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/daqing/airway/app/models"
 	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/utils"
-	"github.com/daqing/airway/models"
 )
 
 func CreateRootUser(username string, password string) (*models.User, error) {

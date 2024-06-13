@@ -3,8 +3,8 @@ package tag_api
 import (
 	"fmt"
 
+	"github.com/daqing/airway/app/models"
 	"github.com/daqing/airway/lib/repo"
-	"github.com/daqing/airway/models"
 )
 
 func CreateTag(name string) (*models.Tag, error) {

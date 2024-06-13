@@ -3,8 +3,8 @@ package setting_api
 import (
 	"fmt"
 
+	"github.com/daqing/airway/app/models"
 	"github.com/daqing/airway/lib/repo"
-	"github.com/daqing/airway/models"
 )
 
 func CreateSetting(key string, val string) (*models.Setting, error) {

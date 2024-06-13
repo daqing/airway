@@ -22,7 +22,7 @@ func GeneratePageReactJS(topDir, page, action string) {
 
 	targetFileName := strings.Join(
 		[]string{
-			"./frontend/javascripts/src",
+			"./app/frontend/javascripts/src",
 			filename,
 		},
 		"/",
