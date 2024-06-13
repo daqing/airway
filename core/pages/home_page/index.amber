@@ -1,4 +1,4 @@
-extends /views/layout
+extends /app/views/layout
 
 block title
   | Hello, Airway

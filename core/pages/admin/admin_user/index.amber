@@ -1,4 +1,4 @@
-extends /views/admin/layout
+extends /app/views/admin/layout
 
 block title
   | Users

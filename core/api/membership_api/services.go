@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/daqing/airway/app/models"
 	"github.com/daqing/airway/lib/repo"
-	"github.com/daqing/airway/models"
 )
 
 func AddMembership(userId int64, membershipType models.MembershipType, expiredAt time.Time) error {

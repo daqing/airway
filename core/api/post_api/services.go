@@ -3,10 +3,10 @@ package post_api
 import (
 	"fmt"
 
+	"github.com/daqing/airway/app/models"
 	"github.com/daqing/airway/core/api/action_api"
 	"github.com/daqing/airway/core/api/tag_api"
 	"github.com/daqing/airway/lib/repo"
-	"github.com/daqing/airway/models"
 )
 
 func Posts(fields []string, place, order string, page, limit int) ([]*models.Post, error) {

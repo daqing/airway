@@ -66,7 +66,7 @@ func (p *Post) Node() *Node {
 
 func (p *Post) Comments() ([]*Comment, error) {
 	return repo.Find[Comment](
-		[]string{"id", "user_id", "content"},
+		[]string{"id", "user_id", "content", "created_at"},
 		[]repo.KVPair{
 			repo.KV("target_type", p.PolyType()),
 			repo.KV("target_id", p.PolyId()),

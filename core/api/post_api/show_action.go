@@ -1,9 +1,9 @@
 package post_api
 
 import (
+	"github.com/daqing/airway/app/models"
 	"github.com/daqing/airway/lib/api_resp"
 	"github.com/daqing/airway/lib/repo"
-	"github.com/daqing/airway/models"
 	"github.com/gin-gonic/gin"
 )
 

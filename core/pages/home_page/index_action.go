@@ -1,10 +1,10 @@
 package home_page
 
 import (
+	"github.com/daqing/airway/app/models"
 	"github.com/daqing/airway/core/api/user_api"
 	"github.com/daqing/airway/lib/page_resp"
 	"github.com/daqing/airway/lib/utils"
-	"github.com/daqing/airway/models"
 	"github.com/gin-gonic/gin"
 )
 

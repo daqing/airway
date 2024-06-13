@@ -5,12 +5,12 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/daqing/airway/app/models"
 	"github.com/daqing/airway/core/api/media_api"
 	"github.com/daqing/airway/core/api/user_api"
 	"github.com/daqing/airway/lib/page_resp"
 	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/utils"
-	"github.com/daqing/airway/models"
 	"github.com/gin-gonic/gin"
 )
 
@@ -35,7 +35,7 @@ func ShowAction(c *gin.Context) {
 	}
 
 	post, err := repo.FindRow[models.Post](
-		[]string{"id", "title", "content", "user_id", "node_id"},
+		[]string{"id", "title", "content", "user_id", "node_id", "created_at"},
 		where,
 	)
 

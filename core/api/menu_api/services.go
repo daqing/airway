@@ -1,8 +1,8 @@
 package menu_api
 
 import (
+	"github.com/daqing/airway/app/models"
 	"github.com/daqing/airway/lib/repo"
-	"github.com/daqing/airway/models"
 )
 
 func CreateMenu(name, url, place string) (menu *models.Menu, err error) {

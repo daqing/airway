@@ -1,6 +1,7 @@
 package config
 
 import (
+	"github.com/daqing/airway/app/api/app_date_api"
 	"github.com/daqing/airway/core/api/checkin_api"
 	"github.com/daqing/airway/core/api/comment_api"
 	"github.com/daqing/airway/core/api/hello_api"
@@ -18,7 +19,6 @@ import (
 	"github.com/daqing/airway/core/pages/home_page"
 	"github.com/daqing/airway/core/pages/session_page"
 	"github.com/daqing/airway/core/pages/up_page"
-	"github.com/daqing/airway/ext/api/ext_date_api"
 	"github.com/gin-gonic/gin"
 )
 
@@ -26,7 +26,7 @@ func Routes(r *gin.Engine) {
 	r.GET("/", home_page.IndexAction)
 
 	coreRoutes(r)
-	extRoutes(r)
+	appRoutes(r)
 
 	adminRoutes(r)
 }
@@ -65,12 +65,12 @@ func coreAPIRoutes(r *gin.Engine) {
 	user_api.Routes(v1)
 }
 
-func extRoutes(r *gin.Engine) {
-	extAPIRoutes(r)
+func appRoutes(r *gin.Engine) {
+	appAPIRoutes(r)
 }
 
-func extAPIRoutes(r *gin.Engine) {
+func appAPIRoutes(r *gin.Engine) {
 	v1 := r.Group("/api/v1")
 
-	ext_date_api.Routes(v1)
+	app_date_api.Routes(v1)
 }

@@ -3,9 +3,9 @@ package admin_post
 import (
 	"fmt"
 
+	"github.com/daqing/airway/app/models"
 	"github.com/daqing/airway/lib/page_resp"
 	"github.com/daqing/airway/lib/repo"
-	"github.com/daqing/airway/models"
 	"github.com/gin-gonic/gin"
 )
 

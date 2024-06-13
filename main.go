@@ -5,10 +5,10 @@ import (
 	"log"
 	"os"
 
+	"github.com/daqing/airway/app/models"
 	"github.com/daqing/airway/config"
 	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/utils"
-	"github.com/daqing/airway/models"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/contrib/static"
 	"github.com/gin-gonic/gin"

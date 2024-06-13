@@ -4,9 +4,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/daqing/airway/app/models"
 	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/utils"
-	"github.com/daqing/airway/models"
 )
 
 const PREFIX = "PMT"

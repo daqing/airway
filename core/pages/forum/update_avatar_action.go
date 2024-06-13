@@ -3,12 +3,12 @@ package forum
 import (
 	"fmt"
 
+	"github.com/daqing/airway/app/models"
 	"github.com/daqing/airway/core/api/media_api"
 	"github.com/daqing/airway/core/api/user_api"
 	"github.com/daqing/airway/lib/page_resp"
 	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/utils"
-	"github.com/daqing/airway/models"
 	"github.com/gin-gonic/gin"
 )
 

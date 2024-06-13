@@ -1,8 +1,8 @@
 package comment_api
 
 import (
+	"github.com/daqing/airway/app/models"
 	"github.com/daqing/airway/lib/repo"
-	"github.com/daqing/airway/models"
 )
 
 func CreateComment(currentUser *models.User, polyModel models.PolyModel, content string) (*models.Comment, error) {
