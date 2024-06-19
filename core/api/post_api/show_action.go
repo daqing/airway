@@ -19,7 +19,7 @@ func ShowAction(c *gin.Context) {
 		return
 	}
 
-	post, err := repo.FindRow[models.Post]([]string{
+	post, err := repo.FindOne[models.Post]([]string{
 		"id", "user_id", "node_id", "title", "content",
 	}, []repo.KVPair{
 		repo.KV("id", p.Id),

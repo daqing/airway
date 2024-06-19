@@ -16,7 +16,7 @@ type Comment struct {
 }
 
 func (c *Comment) User() *User {
-	user, err := repo.FindRow[User](
+	user, err := repo.FindOne[User](
 		[]string{"id", "nickname", "username", "avatar"},
 		[]repo.KVPair{
 			repo.KV("id", c.UserId),

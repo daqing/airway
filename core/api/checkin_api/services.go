@@ -9,7 +9,7 @@ import (
 func CreateCheckin(user *models.User, when utils.Date) (*models.Checkin, error) {
 	yesterday := when.Yesterday()
 
-	prev, err := repo.FindRow[models.Checkin](
+	prev, err := repo.FindOne[models.Checkin](
 		[]string{"id", "acc"},
 		[]repo.KVPair{
 			repo.KV("user_id", user.ID),

@@ -96,7 +96,7 @@ func LoginUser(where []repo.KVPair, password string) (*models.User, error) {
 }
 
 func UserFromAPIToken(token string) *models.User {
-	user, err := repo.FindRow[models.User](
+	user, err := repo.FindOne[models.User](
 		[]string{
 			"id", "username", "nickname",
 			"phone", "email", "avatar",
@@ -160,7 +160,7 @@ func Users(fields []string, order string, page, limit int) ([]*models.User, erro
 }
 
 func Nickname(id uint) string {
-	user, err := repo.FindRow[models.User](
+	user, err := repo.FindOne[models.User](
 		[]string{"id", "nickname"},
 		[]repo.KVPair{
 			repo.KV("id", id),

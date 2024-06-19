@@ -10,7 +10,7 @@ import (
 func AddSubAction(c *gin.Context) {
 	id := c.Query("id")
 
-	node, err := repo.FindRow[models.Node](
+	node, err := repo.FindOne[models.Node](
 		[]string{"id", "name"},
 		[]repo.KVPair{
 			repo.KV("id", id),

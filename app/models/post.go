@@ -25,7 +25,7 @@ func (p *Post) PolyId() uint     { return p.ID }
 func (p *Post) PolyType() string { return postPolyType }
 
 func (p *Post) User() *User {
-	user, err := repo.FindRow[User](
+	user, err := repo.FindOne[User](
 		[]string{"id", "nickname", "username", "avatar"},
 		[]repo.KVPair{
 			repo.KV("id", p.UserId),
@@ -50,7 +50,7 @@ func (p *Post) UserAvatar() string {
 }
 
 func (p *Post) Node() *Node {
-	node, err := repo.FindRow[Node](
+	node, err := repo.FindOne[Node](
 		[]string{"id", "name", "key"},
 		[]repo.KVPair{
 			repo.KV("id", p.NodeId),

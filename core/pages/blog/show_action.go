@@ -28,7 +28,7 @@ func ShowAction(c *gin.Context) {
 		where = []repo.KVPair{repo.KV("id", id)}
 	}
 
-	post, err := repo.FindRow[models.Post](
+	post, err := repo.FindOne[models.Post](
 		[]string{"id", "title", "content", "created_at"},
 		where,
 	)

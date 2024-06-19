@@ -16,7 +16,7 @@ import (
 func NodeAction(c *gin.Context) {
 	nodeKey := c.Param("key")
 
-	node, err := repo.FindRow[models.Node](
+	node, err := repo.FindOne[models.Node](
 		[]string{"id", "name"},
 		[]repo.KVPair{
 			repo.KV("key", nodeKey),

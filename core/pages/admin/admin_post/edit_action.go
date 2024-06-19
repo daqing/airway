@@ -10,7 +10,7 @@ import (
 func EditAction(c *gin.Context) {
 	id := c.Query("id")
 
-	post, err := repo.FindRow[models.Post](
+	post, err := repo.FindOne[models.Post](
 		[]string{"id", "title", "custom_path", "place", "content"},
 		[]repo.KVPair{
 			repo.KV("id", id),

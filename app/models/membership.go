@@ -31,7 +31,7 @@ func (r MembershipResp) Fields() []string {
 }
 
 func MembershipFor(userId uint) (*MembershipResp, error) {
-	row, err := repo.FindRow[Membership](
+	row, err := repo.FindOne[Membership](
 		[]string{"name", "expired_at"},
 		[]repo.KVPair{
 			repo.KV("user_id", userId),

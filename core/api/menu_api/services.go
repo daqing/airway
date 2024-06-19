@@ -50,7 +50,7 @@ func MenuPlace(fields []string, place string) ([]*models.Menu, error) {
 }
 
 func FindBy(field string, value any) (*models.Menu, error) {
-	return repo.FindRow[models.Menu](
+	return repo.FindOne[models.Menu](
 		[]string{"id", "name", "url", "place"},
 		[]repo.KVPair{
 			repo.KV(field, value),

@@ -1,6 +1,6 @@
 package repo
 
-func FindRow[T TableNameType](fields []string, conds []KVPair) (*T, error) {
+func FindOne[T TableNameType](fields []string, conds []KVPair) (*T, error) {
 	rows, err := Find[T](fields, conds)
 	if err != nil {
 		return nil, err

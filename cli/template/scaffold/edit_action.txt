@@ -14,7 +14,7 @@ func EditAction(c *gin.Context) {
 		page_resp.Redirect(c, "/admin/{{ .Model }}")
 	}
 
-	item, err := repo.FindRow[{{ .Model }}](
+	item, err := repo.FindOne[{{ .Model }}](
     {{ .Fields }},
     []repo.KVPair{
       repo.KV("id", id),

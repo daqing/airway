@@ -18,7 +18,7 @@ func ToggleAction(userId uint, action string, relation services.PolyModel) (int6
 		repo.KV("target_type", relation.PolyType()),
 	}
 
-	row, err := repo.FindRow[models.Action]([]string{"id"}, attrs)
+	row, err := repo.FindOne[models.Action]([]string{"id"}, attrs)
 
 	if err != nil {
 		return repo.InvalidCount, err

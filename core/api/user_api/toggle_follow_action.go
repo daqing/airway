@@ -23,7 +23,7 @@ func ToggleFollowAction(c *gin.Context) {
 		return
 	}
 
-	user, err := repo.FindRow[models.User]([]string{
+	user, err := repo.FindOne[models.User]([]string{
 		"id",
 	}, []repo.KVPair{
 		repo.KV("id", p.UserId),

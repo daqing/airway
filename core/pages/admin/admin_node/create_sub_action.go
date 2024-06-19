@@ -26,7 +26,7 @@ func CreateSubAction(c *gin.Context) {
 		return
 	}
 
-	parentNode, err := repo.FindRow[models.Node](
+	parentNode, err := repo.FindOne[models.Node](
 		[]string{"id", "level"},
 		[]repo.KVPair{repo.KV("id", p.ParentId)},
 	)
