@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/daqing/airway/app/models"
+	"github.com/daqing/airway/app/services"
 	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/utils"
 )
@@ -18,7 +19,7 @@ func GenerateUUID() string {
 	return strings.Join([]string{PREFIX, ts, "H", rand}, "")
 }
 
-func BuyGoods(userId uint, goods models.PolyModel, price models.PriceCent, action, note string) (*models.Payment, error) {
+func BuyGoods(userId uint, goods services.PolyModel, price services.PriceCent, action, note string) (*models.Payment, error) {
 	pair := []repo.KVPair{
 		repo.KV("uuid", GenerateUUID()),
 		repo.KV("user_id", userId),

@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/daqing/airway/app/models"
+	"github.com/daqing/airway/app/services"
 	"github.com/daqing/airway/lib/repo"
 )
 
@@ -17,7 +18,7 @@ func CreateTag(name string) (*models.Tag, error) {
 	})
 }
 
-func CreateTagRelation(tagName string, relation models.PolyModel) error {
+func CreateTagRelation(tagName string, relation services.PolyModel) error {
 	tags, err := repo.Find[models.Tag]([]string{"id", "name"}, []repo.KVPair{
 		repo.KV("name", tagName),
 	})

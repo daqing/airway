@@ -1,6 +1,7 @@
 package models
 
 import (
+	"github.com/daqing/airway/app/services"
 	"gorm.io/gorm"
 )
 
@@ -15,7 +16,7 @@ type User struct {
 	Role              UserRole
 	APIToken          string
 	EncryptedPassword string
-	Balance           PriceCent
+	Balance           services.PriceCent
 }
 
 func (u User) TableName() string { return "users" }

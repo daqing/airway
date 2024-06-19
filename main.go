@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/daqing/airway/app/models"
+	"github.com/daqing/airway/app"
 	"github.com/daqing/airway/config"
 	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/utils"
@@ -39,7 +39,7 @@ func main() {
 		log.Printf("Get database failed: %s\n", err)
 		os.Exit(3)
 	} else {
-		models.AutoMigrate(db)
+		app.AutoMigrate(db)
 	}
 
 	app := NewApp()

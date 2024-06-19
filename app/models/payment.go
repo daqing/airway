@@ -1,6 +1,7 @@
 package models
 
 import (
+	"github.com/daqing/airway/app/services"
 	"gorm.io/gorm"
 )
 
@@ -11,7 +12,7 @@ type Payment struct {
 	UUID      string
 	GoodsType string
 	GoodsId   int64
-	Cent      PriceCent
+	Cent      services.PriceCent
 	Action    string
 	Note      string
 	Status    PaymentStatus
