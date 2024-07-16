@@ -5,7 +5,6 @@ WORKDIR /app
 RUN mkdir /app/bin
 
 COPY ./bin/airway /app/bin
-COPY ./bin/cli_amd /app/bin
 
 ENV AIRWAY_ENV=production
 ENV AIRWAY_PORT=1900

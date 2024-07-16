@@ -1,7 +1,0 @@
-extends /app/views/layout
-
-block title
-  | Hello, {{.Page}}
-
-block body
-  h1 Hello, {{.Page}}#{{.Action}}
