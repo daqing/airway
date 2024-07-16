@@ -1,4 +1,4 @@
-package repo
+package sql_orm
 
 import (
 	"errors"
@@ -21,8 +21,6 @@ const InvalidCount = -1
 type Separator string
 
 const comma_sep Separator = ", "
-
-type IdType uint
 
 type KVPair interface {
 	Key() string

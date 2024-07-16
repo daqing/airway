@@ -1,6 +1,6 @@
 package node_api
 
-import "github.com/daqing/airway/lib/repo"
+import "github.com/daqing/airway/app/models"
 
 type NodeResp struct {
 	Id int64
@@ -10,8 +10,8 @@ type NodeResp struct {
 	ParentKey string
 	Level     int
 
-	CreatedAt repo.Timestamp
-	UpdatedAt repo.Timestamp
+	CreatedAt models.Timestamp
+	UpdatedAt models.Timestamp
 }
 
 func (ur NodeResp) Fields() []string {

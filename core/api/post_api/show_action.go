@@ -3,12 +3,12 @@ package post_api
 import (
 	"github.com/daqing/airway/app/models"
 	"github.com/daqing/airway/lib/api_resp"
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/sql_orm"
 	"github.com/gin-gonic/gin"
 )
 
 type ShowParams struct {
-	Id uint `form:"id"`
+	Id models.IdType `form:"id"`
 }
 
 func ShowAction(c *gin.Context) {
@@ -19,10 +19,10 @@ func ShowAction(c *gin.Context) {
 		return
 	}
 
-	post, err := repo.FindOne[models.Post]([]string{
+	post, err := sql_orm.FindOne[models.Post]([]string{
 		"id", "user_id", "node_id", "title", "content",
-	}, []repo.KVPair{
-		repo.KV("id", p.Id),
+	}, []sql_orm.KVPair{
+		sql_orm.KV("id", p.Id),
 	})
 
 	if err != nil {

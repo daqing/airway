@@ -2,14 +2,12 @@ package models
 
 import (
 	"time"
-
-	"gorm.io/gorm"
 )
 
 type Checkin struct {
-	gorm.Model
+	BaseModel
 
-	UserId uint
+	UserId IdType
 
 	Year  int
 	Month time.Month

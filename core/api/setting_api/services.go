@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/daqing/airway/app/models"
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/sql_orm"
 )
 
 func CreateSetting(key string, val string) (*models.Setting, error) {
@@ -16,17 +16,17 @@ func CreateSetting(key string, val string) (*models.Setting, error) {
 		return nil, fmt.Errorf("val cannot be empty")
 	}
 
-	return repo.Insert[models.Setting](
-		[]repo.KVPair{
-			repo.KV("key", key),
-			repo.KV("val", val),
+	return sql_orm.Insert[models.Setting](
+		[]sql_orm.KVPair{
+			sql_orm.KV("key", key),
+			sql_orm.KV("val", val),
 		},
 	)
 }
 
-func UpdateSetting(id uint, key string, val string) bool {
-	return repo.UpdateFields[models.Setting](id, []repo.KVPair{
-		repo.KV("key", key),
-		repo.KV("val", val),
+func UpdateSetting(id models.IdType, key string, val string) bool {
+	return sql_orm.UpdateFields[models.Setting](id, []sql_orm.KVPair{
+		sql_orm.KV("key", key),
+		sql_orm.KV("val", val),
 	})
 }

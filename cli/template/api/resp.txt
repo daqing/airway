@@ -3,8 +3,8 @@ package {{.APIName}}
 type {{.ModelName}}Resp struct {
 	Id       int64
 
-	CreatedAt repo.Timestamp
-	UpdatedAt repo.Timestamp
+	CreatedAt Timestamp
+	UpdatedAt Timestamp
 }
 
 func (r {{.ModelName}}Resp) Fields() []string {

@@ -1,4 +1,4 @@
-package repo
+package sql_orm
 
 func FindOne[T TableNameType](fields []string, conds []KVPair) (*T, error) {
 	rows, err := Find[T](fields, conds)

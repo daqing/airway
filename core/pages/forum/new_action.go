@@ -6,16 +6,16 @@ import (
 	"github.com/daqing/airway/app/models"
 	"github.com/daqing/airway/core/api/user_api"
 	"github.com/daqing/airway/lib/page_resp"
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/sql_orm"
 	"github.com/daqing/airway/lib/utils"
 	"github.com/gin-gonic/gin"
 )
 
 func NewAction(c *gin.Context) {
-	nodes, err := repo.Find[models.Node](
+	nodes, err := sql_orm.Find[models.Node](
 		[]string{"id", "name", "key"},
-		[]repo.KVPair{
-			repo.KV("place", "forum"),
+		[]sql_orm.KVPair{
+			sql_orm.KV("place", "forum"),
 		},
 	)
 

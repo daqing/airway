@@ -8,7 +8,7 @@ import (
 )
 
 type ToggleLikeParams struct {
-	PostId uint `form:"id"`
+	PostId models.IdType `form:"id"`
 }
 
 func ToggleLikeAction(c *gin.Context) {

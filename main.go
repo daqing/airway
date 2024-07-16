@@ -7,7 +7,7 @@ import (
 
 	"github.com/daqing/airway/app"
 	"github.com/daqing/airway/config"
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/sql_orm"
 	"github.com/daqing/airway/lib/utils"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/contrib/static"
@@ -34,8 +34,8 @@ func main() {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	repo.Setup()
-	if db, err := repo.DB(); err != nil {
+	sql_orm.Setup()
+	if db, err := sql_orm.DB(); err != nil {
 		log.Printf("Get database failed: %s\n", err)
 		os.Exit(3)
 	} else {

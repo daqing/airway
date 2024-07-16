@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/daqing/airway/cli/helper"
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/sql_orm"
 )
 
 func GenAPI(xargs []string) {
@@ -55,7 +55,7 @@ func generateAPIRoutes(topDir, name string) {
 	helper.ExecTemplate(
 		"./cli/template/api/routes.txt",
 		targetPath,
-		APIGenerator{name, repo.ToCamel(name), apiName},
+		APIGenerator{name, sql_orm.ToCamel(name), apiName},
 	)
 }
 
@@ -73,7 +73,7 @@ func generateAPIModels(topDir, name string) {
 	helper.ExecTemplate(
 		"./cli/template/api/models.txt",
 		targetPath,
-		APIGenerator{name, repo.ToCamel(name), apiName},
+		APIGenerator{name, sql_orm.ToCamel(name), apiName},
 	)
 }
 
@@ -91,7 +91,7 @@ func generateAPIServices(topDir, name string) {
 	helper.ExecTemplate(
 		"./cli/template/api/services.txt",
 		targetPath,
-		APIGenerator{name, repo.ToCamel(name), apiName},
+		APIGenerator{name, sql_orm.ToCamel(name), apiName},
 	)
 }
 
@@ -109,7 +109,7 @@ func generateResp(topDir, name string) {
 	helper.ExecTemplate(
 		"./cli/template/api/resp.txt",
 		targetPath,
-		APIGenerator{name, repo.ToCamel(name), apiName},
+		APIGenerator{name, sql_orm.ToCamel(name), apiName},
 	)
 }
 

@@ -3,6 +3,7 @@ package admin_post
 import (
 	"fmt"
 
+	"github.com/daqing/airway/app/models"
 	"github.com/daqing/airway/core/api/post_api"
 	"github.com/daqing/airway/core/api/user_api"
 	"github.com/daqing/airway/lib/page_resp"
@@ -11,11 +12,11 @@ import (
 )
 
 type CreateParams struct {
-	Title      string `form:"title"`
-	CustomPath string `form:"custom_path"`
-	Content    string `form:"content"`
-	Place      string `form:"place"`
-	NodeId     uint   `form:"node_id"`
+	Title      string        `form:"title"`
+	CustomPath string        `form:"custom_path"`
+	Content    string        `form:"content"`
+	Place      string        `form:"place"`
+	NodeId     models.IdType `form:"node_id"`
 }
 
 func CreateAction(c *gin.Context) {

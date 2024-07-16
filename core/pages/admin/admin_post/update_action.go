@@ -5,17 +5,17 @@ import (
 
 	"github.com/daqing/airway/app/models"
 	"github.com/daqing/airway/lib/page_resp"
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/sql_orm"
 	"github.com/gin-gonic/gin"
 )
 
 type UpdateParams struct {
-	Id         uint   `form:"id"`
-	Title      string `form:"title"`
-	Content    string `form:"content"`
-	Place      string `form:"place"`
-	NodeId     string `form:"node_id"`
-	CustomPath string `form:"custom_path"`
+	Id         models.IdType `form:"id"`
+	Title      string        `form:"title"`
+	Content    string        `form:"content"`
+	Place      string        `form:"place"`
+	NodeId     string        `form:"node_id"`
+	CustomPath string        `form:"custom_path"`
 }
 
 func UpdateAction(c *gin.Context) {
@@ -26,14 +26,14 @@ func UpdateAction(c *gin.Context) {
 		return
 	}
 
-	ok := repo.UpdateFields[models.Post](
+	ok := sql_orm.UpdateFields[models.Post](
 		p.Id,
-		[]repo.KVPair{
-			repo.KV("title", p.Title),
-			repo.KV("content", p.Content),
-			repo.KV("place", p.Place),
-			repo.KV("node_id", p.NodeId),
-			repo.KV("custom_path", p.CustomPath),
+		[]sql_orm.KVPair{
+			sql_orm.KV("title", p.Title),
+			sql_orm.KV("content", p.Content),
+			sql_orm.KV("place", p.Place),
+			sql_orm.KV("node_id", p.NodeId),
+			sql_orm.KV("custom_path", p.CustomPath),
 		},
 	)
 

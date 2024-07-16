@@ -4,7 +4,7 @@ import (
 	"github.com/daqing/airway/app/models"
 	"github.com/daqing/airway/core/api/user_api"
 	"github.com/daqing/airway/lib/api_resp"
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/sql_orm"
 	"github.com/daqing/airway/lib/utils"
 	"github.com/gin-gonic/gin"
 )
@@ -23,7 +23,7 @@ func CreateAction(c *gin.Context) {
 		return
 	}
 
-	item := repo.ItemResp[models.Checkin, CheckinResp](checkin)
+	item := sql_orm.ItemResp[models.Checkin, CheckinResp](checkin)
 
 	api_resp.OK(c, gin.H{"checkin": item})
 }

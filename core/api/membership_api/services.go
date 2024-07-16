@@ -5,15 +5,15 @@ import (
 	"time"
 
 	"github.com/daqing/airway/app/models"
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/sql_orm"
 )
 
 func AddMembership(userId int64, membershipType models.MembershipType, expiredAt time.Time) error {
 	// check if user already has membership
-	exists, err := repo.Exists[models.Membership](
-		[]repo.KVPair{
-			repo.KV("user_id", userId),
-			repo.KV("name", string(membershipType)),
+	exists, err := sql_orm.Exists[models.Membership](
+		[]sql_orm.KVPair{
+			sql_orm.KV("user_id", userId),
+			sql_orm.KV("name", string(membershipType)),
 		})
 
 	if err != nil {
@@ -24,10 +24,10 @@ func AddMembership(userId int64, membershipType models.MembershipType, expiredAt
 		return fmt.Errorf("user already has membership: %v", membershipType)
 	}
 
-	_, err = repo.Insert[models.Membership]([]repo.KVPair{
-		repo.KV("user_id", userId),
-		repo.KV("name", string(membershipType)),
-		repo.KV("expired_at", expiredAt),
+	_, err = sql_orm.Insert[models.Membership]([]sql_orm.KVPair{
+		sql_orm.KV("user_id", userId),
+		sql_orm.KV("name", string(membershipType)),
+		sql_orm.KV("expired_at", expiredAt),
 	})
 
 	return err

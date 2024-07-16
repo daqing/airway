@@ -1,9 +1,7 @@
 package models
 
-import "gorm.io/gorm"
-
 type Action struct {
-	gorm.Model
+	BaseModel
 
 	UserId     int64
 	Action     string

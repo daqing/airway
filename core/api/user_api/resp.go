@@ -2,7 +2,6 @@ package user_api
 
 import (
 	"github.com/daqing/airway/app/models"
-	"github.com/daqing/airway/lib/repo"
 )
 
 type UserResp struct {
@@ -11,8 +10,8 @@ type UserResp struct {
 	Username  string
 	ApiToken  string
 	Role      models.UserRole
-	CreatedAt repo.Timestamp
-	UpdatedAt repo.Timestamp
+	CreatedAt models.Timestamp
+	UpdatedAt models.Timestamp
 }
 
 func (ur UserResp) Fields() []string {

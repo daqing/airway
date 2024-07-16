@@ -5,7 +5,7 @@ import (
 	"log"
 
 	"github.com/daqing/airway/app/models"
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/sql_orm"
 	"github.com/daqing/airway/lib/utils"
 )
 
@@ -40,16 +40,16 @@ func createUser(nickname, username string, role models.UserRole, password string
 		return nil, err
 	}
 
-	user, err := repo.Insert[models.User](
-		[]repo.KVPair{
-			repo.KV("nickname", nickname),
-			repo.KV("username", username),
-			repo.KV("phone", ""),
-			repo.KV("email", ""),
-			repo.KV("avatar", ""),
-			repo.KV("role", role),
-			repo.KV("encrypted_password", enc),
-			repo.KV("api_token", utils.RandomHex(20)),
+	user, err := sql_orm.Insert[models.User](
+		[]sql_orm.KVPair{
+			sql_orm.KV("nickname", nickname),
+			sql_orm.KV("username", username),
+			sql_orm.KV("phone", ""),
+			sql_orm.KV("email", ""),
+			sql_orm.KV("avatar", ""),
+			sql_orm.KV("role", role),
+			sql_orm.KV("encrypted_password", enc),
+			sql_orm.KV("api_token", utils.RandomHex(20)),
 		},
 	)
 
@@ -60,7 +60,7 @@ func createUser(nickname, username string, role models.UserRole, password string
 	return user, err
 }
 
-func LoginUser(where []repo.KVPair, password string) (*models.User, error) {
+func LoginUser(where []sql_orm.KVPair, password string) (*models.User, error) {
 	if len(where) == 0 {
 		return nil, fmt.Errorf("where can't be empty")
 	}
@@ -69,7 +69,7 @@ func LoginUser(where []repo.KVPair, password string) (*models.User, error) {
 		return nil, fmt.Errorf("password can't be empty")
 	}
 
-	users, err := repo.Find[models.User](
+	users, err := sql_orm.Find[models.User](
 		[]string{
 			"id", "username", "nickname", "phone", "email", "avatar",
 			"encrypted_password", "api_token",
@@ -96,14 +96,14 @@ func LoginUser(where []repo.KVPair, password string) (*models.User, error) {
 }
 
 func UserFromAPIToken(token string) *models.User {
-	user, err := repo.FindOne[models.User](
+	user, err := sql_orm.FindOne[models.User](
 		[]string{
 			"id", "username", "nickname",
 			"phone", "email", "avatar",
 			"role", "api_token",
 		},
-		[]repo.KVPair{
-			repo.KV("api_token", token),
+		[]sql_orm.KVPair{
+			sql_orm.KV("api_token", token),
 		},
 	)
 
@@ -150,20 +150,20 @@ func Users(fields []string, order string, page, limit int) ([]*models.User, erro
 		page = 1
 	}
 
-	return repo.FindLimit[models.User](
+	return sql_orm.FindLimit[models.User](
 		fields,
-		[]repo.KVPair{},
+		[]sql_orm.KVPair{},
 		order,
 		(page-1)*limit,
 		limit,
 	)
 }
 
-func Nickname(id uint) string {
-	user, err := repo.FindOne[models.User](
+func Nickname(id models.IdType) string {
+	user, err := sql_orm.FindOne[models.User](
 		[]string{"id", "nickname"},
-		[]repo.KVPair{
-			repo.KV("id", id),
+		[]sql_orm.KVPair{
+			sql_orm.KV("id", id),
 		},
 	)
 

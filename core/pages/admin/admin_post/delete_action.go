@@ -3,16 +3,16 @@ package admin_post
 import (
 	"github.com/daqing/airway/app/models"
 	"github.com/daqing/airway/lib/page_resp"
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/sql_orm"
 	"github.com/gin-gonic/gin"
 )
 
 func DeleteAction(c *gin.Context) {
 	id := c.Query("id")
 
-	err := repo.Delete[models.Post](
-		[]repo.KVPair{
-			repo.KV("id", id),
+	err := sql_orm.Delete[models.Post](
+		[]sql_orm.KVPair{
+			sql_orm.KV("id", id),
 		},
 	)
 

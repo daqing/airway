@@ -2,12 +2,10 @@ package models
 
 import (
 	"time"
-
-	"gorm.io/gorm"
 )
 
 type MediaFile struct {
-	gorm.Model
+	BaseModel
 
 	UserId    int64
 	Filename  string

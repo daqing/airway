@@ -6,10 +6,12 @@ import (
 	"time"
 
 	"github.com/daqing/airway/app/models"
+	"github.com/daqing/airway/app/repos/comment_repo"
+	"github.com/daqing/airway/app/repos/post_repo"
 	"github.com/daqing/airway/core/api/media_api"
 	"github.com/daqing/airway/core/api/user_api"
 	"github.com/daqing/airway/lib/page_resp"
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/sql_orm"
 	"github.com/daqing/airway/lib/utils"
 	"github.com/gin-gonic/gin"
 )
@@ -24,17 +26,17 @@ type CommentItem struct {
 func ShowAction(c *gin.Context) {
 	segment := c.Param("id")
 
-	var where []repo.KVPair
+	var where []sql_orm.KVPair
 
 	id, err := strconv.Atoi(segment)
 	if err != nil {
 		// segment is not numeric id
-		where = []repo.KVPair{repo.KV("custom_path", segment)}
+		where = []sql_orm.KVPair{sql_orm.KV("custom_path", segment)}
 	} else {
-		where = []repo.KVPair{repo.KV("id", id)}
+		where = []sql_orm.KVPair{sql_orm.KV("id", id)}
 	}
 
-	post, err := repo.FindOne[models.Post](
+	post, err := sql_orm.FindOne[models.Post](
 		[]string{"id", "title", "content", "user_id", "node_id", "created_at"},
 		where,
 	)
@@ -44,10 +46,10 @@ func ShowAction(c *gin.Context) {
 		return
 	}
 
-	nodes, err := repo.Find[models.Node](
+	nodes, err := sql_orm.Find[models.Node](
 		[]string{"id", "name", "key"},
-		[]repo.KVPair{
-			repo.KV("place", "forum"),
+		[]sql_orm.KVPair{
+			sql_orm.KV("place", "forum"),
 		},
 	)
 
@@ -71,19 +73,19 @@ func ShowAction(c *gin.Context) {
 	token, _ := utils.CookieToken(c)
 	currentUser := user_api.CurrentUser(token)
 
-	postUser := post.User()
+	postUser := post_repo.PostUser(post)
 	if postUser == nil {
 		// user not found
 		page_resp.Redirect(c, "/forum")
 		return
 	}
 
-	postNode := post.Node()
+	postNode := post_repo.PostNode(post)
 	if postNode == nil {
 		postNode = &models.Node{}
 	}
 
-	comments, err := post.Comments()
+	comments, err := post_repo.PostComments(post)
 	if err != nil {
 		page_resp.Error(c, err)
 		return
@@ -92,7 +94,7 @@ func ShowAction(c *gin.Context) {
 	commentItems := []*CommentItem{}
 
 	for _, comment := range comments {
-		user := comment.User()
+		user := comment_repo.CommentUser(comment)
 		if user == nil {
 			continue
 		}
@@ -117,7 +119,7 @@ func ShowAction(c *gin.Context) {
 		"PostUser":    postUser,
 		"PostNode":    postNode,
 		"Session":     SessionData(currentUser),
-		"AvatarURL":   media_api.AssetHostPath(post.UserAvatar()),
+		"AvatarURL":   media_api.AssetHostPath(post_repo.PostUserAvatar(post)),
 		"Comments":    commentItems,
 		"HasComments": len(commentItems) > 0,
 	}

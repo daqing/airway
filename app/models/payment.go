@@ -2,11 +2,10 @@ package models
 
 import (
 	"github.com/daqing/airway/app/services"
-	"gorm.io/gorm"
 )
 
 type Payment struct {
-	gorm.Model
+	BaseModel
 
 	UserId    int64
 	UUID      string

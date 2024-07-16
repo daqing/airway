@@ -1,4 +1,4 @@
-package repo
+package sql_orm
 
 import "testing"
 

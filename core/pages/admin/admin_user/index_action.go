@@ -8,7 +8,7 @@ import (
 )
 
 type UserItem struct {
-	ID       uint
+	ID       models.IdType
 	Nickname string
 	Username string
 	RoleName string

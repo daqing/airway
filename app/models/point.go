@@ -1,12 +1,10 @@
 package models
 
-import "gorm.io/gorm"
-
 // 用户积分
 type Point struct {
-	gorm.Model
+	BaseModel
 
-	UserId uint
+	UserId IdType
 	Count  int
 }
 

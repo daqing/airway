@@ -1,6 +1,6 @@
 package post_api
 
-import "github.com/daqing/airway/lib/repo"
+import "github.com/daqing/airway/app/models"
 
 type PostResp struct {
 	Id         int64
@@ -11,8 +11,8 @@ type PostResp struct {
 	Place      string
 	Content    string
 	Fee        int
-	CreatedAt  repo.Timestamp
-	UpdatedAt  repo.Timestamp
+	CreatedAt  models.Timestamp
+	UpdatedAt  models.Timestamp
 }
 
 func (pr PostResp) Fields() []string {

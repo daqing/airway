@@ -3,17 +3,17 @@ package admin_node
 import (
 	"github.com/daqing/airway/app/models"
 	"github.com/daqing/airway/lib/page_resp"
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/sql_orm"
 	"github.com/gin-gonic/gin"
 )
 
 func EditAction(c *gin.Context) {
 	id := c.Query("id")
 
-	node, err := repo.FindOne[models.Node](
+	node, err := sql_orm.FindOne[models.Node](
 		[]string{"id", "name", "key"},
-		[]repo.KVPair{
-			repo.KV("id", id),
+		[]sql_orm.KVPair{
+			sql_orm.KV("id", id),
 		},
 	)
 

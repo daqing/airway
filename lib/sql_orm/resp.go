@@ -1,8 +1,10 @@
-package repo
+package sql_orm
 
 import (
 	"reflect"
 	"time"
+
+	"github.com/daqing/airway/app/models"
 )
 
 type ModelResp interface {
@@ -34,7 +36,8 @@ func ItemResp[M TableNameType, MR ModelResp](m *M) *MR {
 
 // 把 m 的字段值，赋值给 mr
 // 同时，把 created_at 和 updated_at 字段，自动转换为
-// repo.Timestamp 类型
+// Timestamp 类型
+// TODO: remove this method
 func m2mr[MR any](m any, fields []string) *MR {
 	fields = append(fields, "CreatedAt", "UpdatedAt")
 
@@ -54,7 +57,7 @@ func m2mr[MR any](m any, fields []string) *MR {
 
 			// try test if the field is time.Time type
 			if t, ok := val.Interface().(time.Time); ok {
-				val2 := Timestamp(t)
+				val2 := models.Timestamp(t)
 				mrf.Set(reflect.ValueOf(val2))
 			} else {
 				mrf.Set(val)

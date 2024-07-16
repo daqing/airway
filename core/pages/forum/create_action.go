@@ -7,15 +7,15 @@ import (
 	"github.com/daqing/airway/core/api/post_api"
 	"github.com/daqing/airway/core/api/user_api"
 	"github.com/daqing/airway/lib/page_resp"
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/sql_orm"
 	"github.com/daqing/airway/lib/utils"
 	"github.com/gin-gonic/gin"
 )
 
 type CreateParams struct {
-	Title   string `form:"title"`
-	Content string `form:"content"`
-	NodeId  uint   `form:"node_id"`
+	Title   string        `form:"title"`
+	Content string        `form:"content"`
+	NodeId  models.IdType `form:"node_id"`
 }
 
 func CreateAction(c *gin.Context) {
@@ -34,7 +34,7 @@ func CreateAction(c *gin.Context) {
 		return
 	}
 
-	ex, err := repo.Exists[models.Node]([]repo.KVPair{repo.KV("id", p.NodeId)})
+	ex, err := sql_orm.Exists[models.Node]([]sql_orm.KVPair{sql_orm.KV("id", p.NodeId)})
 	if err != nil {
 		page_resp.Error(c, err)
 		return

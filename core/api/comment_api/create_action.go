@@ -4,14 +4,14 @@ import (
 	"github.com/daqing/airway/app/models"
 	"github.com/daqing/airway/core/api/user_api"
 	"github.com/daqing/airway/lib/api_resp"
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/sql_orm"
 	"github.com/gin-gonic/gin"
 )
 
 type CreateParams struct {
-	TargetId   uint   `json:"target_id"`
-	TargetType string `json:"target_type"`
-	Content    string `json:"content"`
+	TargetId   models.IdType `json:"target_id"`
+	TargetType string        `json:"target_type"`
+	Content    string        `json:"content"`
 }
 
 func CreateAction(c *gin.Context) {
@@ -34,7 +34,7 @@ func CreateAction(c *gin.Context) {
 		return
 	}
 
-	item := repo.ItemResp[models.Comment, CommentResp](comment)
+	item := sql_orm.ItemResp[models.Comment, CommentResp](comment)
 
 	api_resp.OK(c, gin.H{"comment": item})
 }

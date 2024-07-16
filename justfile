@@ -1,4 +1,5 @@
 dev:
+  rm .overmind.sock
   overmind start -f Procfile.dev
 
 install-deps:

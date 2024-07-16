@@ -3,14 +3,14 @@ package admin_post
 import (
 	"github.com/daqing/airway/app/models"
 	"github.com/daqing/airway/lib/page_resp"
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/sql_orm"
 	"github.com/gin-gonic/gin"
 )
 
 func NewAction(c *gin.Context) {
-	nodes, err := repo.Find[models.Node](
+	nodes, err := sql_orm.Find[models.Node](
 		[]string{"id", "name"},
-		[]repo.KVPair{},
+		[]sql_orm.KVPair{},
 	)
 
 	if err != nil {

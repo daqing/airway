@@ -5,18 +5,19 @@ import (
 	"time"
 
 	"github.com/daqing/airway/app/models"
+	"github.com/daqing/airway/app/repos/post_repo"
 	"github.com/daqing/airway/core/api/media_api"
 	"github.com/daqing/airway/core/api/node_api"
 	"github.com/daqing/airway/core/api/post_api"
 	"github.com/daqing/airway/core/api/user_api"
 	"github.com/daqing/airway/lib/page_resp"
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/sql_orm"
 	"github.com/daqing/airway/lib/utils"
 	"github.com/gin-gonic/gin"
 )
 
 type PostItem struct {
-	Id        uint
+	Id        models.IdType
 	Title     string
 	Url       string
 	TimeAgo   string
@@ -26,7 +27,7 @@ type PostItem struct {
 }
 
 type NodeItem struct {
-	ID   uint
+	ID   models.IdType
 	Name string
 	URL  string
 }
@@ -69,15 +70,15 @@ func IndexAction(c *gin.Context) {
 				TimeAgo:   utils.TimeAgo(post.CreatedAt),
 				NodeName:  nameMap[post.NodeId],
 				UserName:  user_api.Nickname(post.UserId),
-				AvatarURL: media_api.AssetHostPath(post.UserAvatar()),
+				AvatarURL: media_api.AssetHostPath(post_repo.PostUserAvatar(post)),
 			},
 		)
 	}
 
-	nodes, err := repo.Find[models.Node](
+	nodes, err := sql_orm.Find[models.Node](
 		[]string{"id", "name", "key"},
-		[]repo.KVPair{
-			repo.KV("place", "forum"),
+		[]sql_orm.KVPair{
+			sql_orm.KV("place", "forum"),
 		},
 	)
 

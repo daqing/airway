@@ -14,10 +14,10 @@ func EditAction(c *gin.Context) {
 		page_resp.Redirect(c, "/admin/{{ .Model }}")
 	}
 
-	item, err := repo.FindOne[{{ .Model }}](
+	item, err := sql_orm.FindOne[{{ .Model }}](
     {{ .Fields }},
-    []repo.KVPair{
-      repo.KV("id", id),
+    []sql_orm.KVPair{
+      sql_orm.KV("id", id),
     },
   )
 

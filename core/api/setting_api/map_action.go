@@ -3,14 +3,14 @@ package setting_api
 import (
 	"github.com/daqing/airway/app/models"
 	"github.com/daqing/airway/lib/api_resp"
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/sql_orm"
 	"github.com/gin-gonic/gin"
 )
 
 func MapAction(c *gin.Context) {
-	settings, err := repo.Find[models.Setting]([]string{
+	settings, err := sql_orm.Find[models.Setting]([]string{
 		"id", "key", "val",
-	}, []repo.KVPair{})
+	}, []sql_orm.KVPair{})
 
 	if err != nil {
 		api_resp.LogError(c, err)

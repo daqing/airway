@@ -3,6 +3,7 @@ package admin_menu
 import (
 	"fmt"
 
+	"github.com/daqing/airway/app/models"
 	"github.com/daqing/airway/core/api/menu_api"
 	"github.com/daqing/airway/lib/page_resp"
 	"github.com/daqing/airway/lib/utils"
@@ -10,10 +11,10 @@ import (
 )
 
 type UpdateParams struct {
-	Id    uint   `form:"id"`
-	Name  string `form:"name"`
-	URL   string `form:"url"`
-	Place string `form:"place"`
+	Id    models.IdType `form:"id"`
+	Name  string        `form:"name"`
+	URL   string        `form:"url"`
+	Place string        `form:"place"`
 }
 
 func UpdateAction(c *gin.Context) {

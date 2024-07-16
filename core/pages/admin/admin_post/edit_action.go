@@ -3,17 +3,17 @@ package admin_post
 import (
 	"github.com/daqing/airway/app/models"
 	"github.com/daqing/airway/lib/page_resp"
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/sql_orm"
 	"github.com/gin-gonic/gin"
 )
 
 func EditAction(c *gin.Context) {
 	id := c.Query("id")
 
-	post, err := repo.FindOne[models.Post](
+	post, err := sql_orm.FindOne[models.Post](
 		[]string{"id", "title", "custom_path", "place", "content"},
-		[]repo.KVPair{
-			repo.KV("id", id),
+		[]sql_orm.KVPair{
+			sql_orm.KV("id", id),
 		},
 	)
 
@@ -22,9 +22,9 @@ func EditAction(c *gin.Context) {
 		return
 	}
 
-	nodes, err := repo.Find[models.Node](
+	nodes, err := sql_orm.Find[models.Node](
 		[]string{"id", "name"},
-		[]repo.KVPair{},
+		[]sql_orm.KVPair{},
 	)
 
 	if err != nil {

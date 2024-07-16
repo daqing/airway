@@ -3,7 +3,7 @@ package user_api
 import (
 	"github.com/daqing/airway/app/models"
 	"github.com/daqing/airway/lib/api_resp"
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/sql_orm"
 	"github.com/gin-gonic/gin"
 )
 
@@ -21,7 +21,7 @@ func LoginAction(c *gin.Context) {
 	}
 
 	user, err := LoginUser(
-		[]repo.KVPair{repo.KV("username", p.Username)},
+		[]sql_orm.KVPair{sql_orm.KV("username", p.Username)},
 		p.Password,
 	)
 
@@ -30,6 +30,6 @@ func LoginAction(c *gin.Context) {
 		return
 	}
 
-	item := repo.ItemResp[models.User, UserResp](user)
+	item := sql_orm.ItemResp[models.User, UserResp](user)
 	api_resp.OK(c, gin.H{"user": item})
 }

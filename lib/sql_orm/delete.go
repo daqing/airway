@@ -1,4 +1,4 @@
-package repo
+package sql_orm
 
 func Delete[T TableNameType](conds []KVPair) error {
 	var t T

@@ -4,8 +4,7 @@ import (
 	"fmt"
 
 	"github.com/daqing/airway/app/models"
-	"github.com/daqing/airway/app/services"
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/sql_orm"
 )
 
 func CreateTag(name string) (*models.Tag, error) {
@@ -13,14 +12,14 @@ func CreateTag(name string) (*models.Tag, error) {
 		return nil, fmt.Errorf("name cannot be empty")
 	}
 
-	return repo.Insert[models.Tag]([]repo.KVPair{
-		repo.KV("name", name),
+	return sql_orm.Insert[models.Tag]([]sql_orm.KVPair{
+		sql_orm.KV("name", name),
 	})
 }
 
-func CreateTagRelation(tagName string, relation services.PolyModel) error {
-	tags, err := repo.Find[models.Tag]([]string{"id", "name"}, []repo.KVPair{
-		repo.KV("name", tagName),
+func CreateTagRelation(tagName string, relation models.PolyModel) error {
+	tags, err := sql_orm.Find[models.Tag]([]string{"id", "name"}, []sql_orm.KVPair{
+		sql_orm.KV("name", tagName),
 	})
 
 	if err != nil {
@@ -42,10 +41,10 @@ func CreateTagRelation(tagName string, relation services.PolyModel) error {
 		return fmt.Errorf("number of tags is wrong: %d", len(tags))
 	}
 
-	relations, err := repo.Find[models.TagRelation]([]string{"id"}, []repo.KVPair{
-		repo.KV("tag_id", tag.ID),
-		repo.KV("relation_id", relation.PolyId()),
-		repo.KV("relation_type", relation.PolyType()),
+	relations, err := sql_orm.Find[models.TagRelation]([]string{"id"}, []sql_orm.KVPair{
+		sql_orm.KV("tag_id", tag.ID),
+		sql_orm.KV("relation_id", relation.PolyId()),
+		sql_orm.KV("relation_type", relation.PolyType()),
 	})
 
 	if err != nil {
@@ -54,10 +53,10 @@ func CreateTagRelation(tagName string, relation services.PolyModel) error {
 
 	if len(relations) == 0 {
 		// create new relation
-		_, err = repo.Insert[models.TagRelation]([]repo.KVPair{
-			repo.KV("tag_id", tag.ID),
-			repo.KV("relation_id", relation.PolyId()),
-			repo.KV("relation_type", relation.PolyType()),
+		_, err = sql_orm.Insert[models.TagRelation]([]sql_orm.KVPair{
+			sql_orm.KV("tag_id", tag.ID),
+			sql_orm.KV("relation_id", relation.PolyId()),
+			sql_orm.KV("relation_type", relation.PolyType()),
 		})
 
 		if err != nil {

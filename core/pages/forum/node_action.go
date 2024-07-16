@@ -5,10 +5,11 @@ import (
 	"time"
 
 	"github.com/daqing/airway/app/models"
+	"github.com/daqing/airway/app/repos/post_repo"
 	"github.com/daqing/airway/core/api/media_api"
 	"github.com/daqing/airway/core/api/user_api"
 	"github.com/daqing/airway/lib/page_resp"
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/sql_orm"
 	"github.com/daqing/airway/lib/utils"
 	"github.com/gin-gonic/gin"
 )
@@ -16,10 +17,10 @@ import (
 func NodeAction(c *gin.Context) {
 	nodeKey := c.Param("key")
 
-	node, err := repo.FindOne[models.Node](
+	node, err := sql_orm.FindOne[models.Node](
 		[]string{"id", "name"},
-		[]repo.KVPair{
-			repo.KV("key", nodeKey),
+		[]sql_orm.KVPair{
+			sql_orm.KV("key", nodeKey),
 		},
 	)
 
@@ -28,11 +29,11 @@ func NodeAction(c *gin.Context) {
 		return
 	}
 
-	posts, err := repo.Find[models.Post](
+	posts, err := sql_orm.Find[models.Post](
 		[]string{"id", "title", "user_id", "created_at"},
-		[]repo.KVPair{
-			repo.KV("node_id", node.ID),
-			repo.KV("place", "forum"),
+		[]sql_orm.KVPair{
+			sql_orm.KV("node_id", node.ID),
+			sql_orm.KV("place", "forum"),
 		},
 	)
 
@@ -57,17 +58,17 @@ func NodeAction(c *gin.Context) {
 				Url:       url,
 				TimeAgo:   utils.TimeAgo(post.CreatedAt),
 				UserName:  user_api.Nickname(post.UserId),
-				AvatarURL: media_api.AssetHostPath(post.UserAvatar()),
+				AvatarURL: media_api.AssetHostPath(post_repo.PostUserAvatar(post)),
 			},
 		)
 	}
 
 	rootPath := utils.PathPrefix("forum")
 
-	nodes, err := repo.Find[models.Node](
+	nodes, err := sql_orm.Find[models.Node](
 		[]string{"id", "name", "key"},
-		[]repo.KVPair{
-			repo.KV("place", "forum"),
+		[]sql_orm.KVPair{
+			sql_orm.KV("place", "forum"),
 		},
 	)
 

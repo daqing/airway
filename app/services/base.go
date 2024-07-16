@@ -15,7 +15,3 @@ func (c PriceCent) Yuan() string {
 }
 
 // Polymorphic model
-type PolyModel interface {
-	PolyId() uint
-	PolyType() string
-}

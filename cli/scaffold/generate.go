@@ -8,7 +8,7 @@ import (
 
 	"github.com/daqing/airway/cli/generator"
 	"github.com/daqing/airway/cli/helper"
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/sql_orm"
 	"github.com/daqing/airway/lib/utils"
 )
 
@@ -87,7 +87,7 @@ func (sf *Scaffold) LayoutName() string {
 }
 
 func (f FieldType) NameCamel() string {
-	return repo.ToCamel(f.Name)
+	return sql_orm.ToCamel(f.Name)
 }
 
 func Generate(xargs []string) {
@@ -104,11 +104,11 @@ func Generate(xargs []string) {
 	if strings.Contains(sf.Page, ".") {
 		parts := strings.Split(sf.Page, ".")
 		sf.IsAdmin = parts[0] == "admin"
-		sf.Model = repo.ToCamel(parts[1])
+		sf.Model = sql_orm.ToCamel(parts[1])
 		sf.Lower = parts[1]
 	} else {
 		sf.IsAdmin = false
-		sf.Model = repo.ToCamel(sf.Page)
+		sf.Model = sql_orm.ToCamel(sf.Page)
 		sf.Lower = sf.Page
 	}
 

@@ -1,4 +1,4 @@
-package repo
+package sql_orm
 
 func Count[T TableNameType](conds []KVPair) (n int64, err error) {
 	var t T

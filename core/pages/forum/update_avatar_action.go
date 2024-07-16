@@ -7,7 +7,7 @@ import (
 	"github.com/daqing/airway/core/api/media_api"
 	"github.com/daqing/airway/core/api/user_api"
 	"github.com/daqing/airway/lib/page_resp"
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/sql_orm"
 	"github.com/daqing/airway/lib/utils"
 	"github.com/gin-gonic/gin"
 )
@@ -37,10 +37,10 @@ func UpdateAvatarAction(c *gin.Context) {
 
 	c.SaveUploadedFile(fileHeader, destPath)
 
-	ok := repo.UpdateFields[models.User](
+	ok := sql_orm.UpdateFields[models.User](
 		currentUser.ID,
-		[]repo.KVPair{
-			repo.KV("avatar", filePath),
+		[]sql_orm.KVPair{
+			sql_orm.KV("avatar", filePath),
 		},
 	)
 

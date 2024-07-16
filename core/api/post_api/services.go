@@ -6,7 +6,7 @@ import (
 	"github.com/daqing/airway/app/models"
 	"github.com/daqing/airway/core/api/action_api"
 	"github.com/daqing/airway/core/api/tag_api"
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/sql_orm"
 )
 
 func Posts(fields []string, place, order string, page, limit int) ([]*models.Post, error) {
@@ -14,13 +14,13 @@ func Posts(fields []string, place, order string, page, limit int) ([]*models.Pos
 		page = 1
 	}
 
-	where := []repo.KVPair{}
+	where := []sql_orm.KVPair{}
 
 	if len(place) > 0 {
-		where = append(where, repo.KV("place", place))
+		where = append(where, sql_orm.KV("place", place))
 	}
 
-	return repo.FindLimit[models.Post](
+	return sql_orm.FindLimit[models.Post](
 		fields,
 		where,
 		order,
@@ -29,7 +29,7 @@ func Posts(fields []string, place, order string, page, limit int) ([]*models.Pos
 	)
 }
 
-func CreatePost(title, customPath, place, content string, user_id, node_id uint, fee int, tags []string) (*models.Post, error) {
+func CreatePost(title, customPath, place, content string, user_id, node_id models.IdType, fee int, tags []string) (*models.Post, error) {
 	if len(title) == 0 {
 		return nil, fmt.Errorf("title can't be empty")
 	}
@@ -50,15 +50,15 @@ func CreatePost(title, customPath, place, content string, user_id, node_id uint,
 		return nil, fmt.Errorf("node_id must be greater than zero")
 	}
 
-	post, err := repo.Insert[models.Post](
-		[]repo.KVPair{
-			repo.KV("user_id", user_id),
-			repo.KV("node_id", node_id),
-			repo.KV("title", title),
-			repo.KV("custom_path", customPath),
-			repo.KV("place", place),
-			repo.KV("content", content),
-			repo.KV("fee", fee),
+	post, err := sql_orm.Insert[models.Post](
+		[]sql_orm.KVPair{
+			sql_orm.KV("user_id", user_id),
+			sql_orm.KV("node_id", node_id),
+			sql_orm.KV("title", title),
+			sql_orm.KV("custom_path", customPath),
+			sql_orm.KV("place", place),
+			sql_orm.KV("content", content),
+			sql_orm.KV("fee", fee),
 		},
 	)
 
@@ -76,18 +76,18 @@ func CreatePost(title, customPath, place, content string, user_id, node_id uint,
 	return post, nil
 }
 
-func TogglePostAction(userId uint, action string, postId uint) (int64, error) {
-	post, err := repo.FindOne[models.Post]([]string{"id"}, []repo.KVPair{
-		repo.KV("id", postId),
+func TogglePostAction(userId models.IdType, action string, postId models.IdType) (int64, error) {
+	post, err := sql_orm.FindOne[models.Post]([]string{"id"}, []sql_orm.KVPair{
+		sql_orm.KV("id", postId),
 	})
 
 	if err != nil {
-		return repo.InvalidCount, err
+		return sql_orm.InvalidCount, err
 	}
 
 	if post == nil {
 		// post not found
-		return repo.InvalidCount, nil
+		return sql_orm.InvalidCount, nil
 	}
 
 	return action_api.ToggleAction(userId, action, post)

@@ -2,11 +2,10 @@ package models
 
 import (
 	"github.com/daqing/airway/app/services"
-	"gorm.io/gorm"
 )
 
 type User struct {
-	gorm.Model
+	BaseModel
 
 	Nickname          string
 	Username          string
@@ -34,11 +33,11 @@ const polyType = "user"
 
 func (u *User) PolyType() string { return polyType }
 
-func (u *User) PolyId() uint { return u.ID }
+func (u *User) PolyId() IdType { return u.ID }
 
-func (u *User) Membership() (*MembershipResp, error) {
-	return MembershipFor(u.ID)
-}
+// func (u *User) Membership() (*MembershipResp, error) {
+// 	return MembershipFor(u.ID)
+// }
 
 func (u *User) IsAdmin() bool { return u.Role == AdminRole || u.Role == RootRole }
 

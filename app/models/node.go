@@ -1,13 +1,9 @@
 package models
 
-import (
-	"gorm.io/gorm"
-)
-
 type Node struct {
-	gorm.Model
+	BaseModel
 
-	ParentId uint
+	ParentId IdType
 
 	Name string
 	Key  string

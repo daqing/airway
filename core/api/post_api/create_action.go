@@ -6,17 +6,17 @@ import (
 	"github.com/daqing/airway/app/models"
 	"github.com/daqing/airway/core/api/user_api"
 	"github.com/daqing/airway/lib/api_resp"
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/sql_orm"
 	"github.com/gin-gonic/gin"
 )
 
 type CreateParams struct {
-	NodeId  uint   `json:"node_id"`
-	Title   string `json:"title"`
-	Place   string `json:"place"`
-	Content string `json:"content"`
-	Fee     int    `json:"fee"`
-	Tags    string `json:"tags"` // 使用英文逗号分隔
+	NodeId  models.IdType `json:"node_id"`
+	Title   string        `json:"title"`
+	Place   string        `json:"place"`
+	Content string        `json:"content"`
+	Fee     int           `json:"fee"`
+	Tags    string        `json:"tags"` // 使用英文逗号分隔
 }
 
 func CreateAction(c *gin.Context) {
@@ -43,7 +43,7 @@ func CreateAction(c *gin.Context) {
 		return
 	}
 
-	item := repo.ItemResp[models.Post, PostResp](post)
+	item := sql_orm.ItemResp[models.Post, PostResp](post)
 
 	api_resp.OK(c, gin.H{"post": item})
 }

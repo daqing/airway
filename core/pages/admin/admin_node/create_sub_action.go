@@ -6,16 +6,16 @@ import (
 	"github.com/daqing/airway/app/models"
 	"github.com/daqing/airway/core/api/node_api"
 	"github.com/daqing/airway/lib/page_resp"
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/sql_orm"
 	"github.com/daqing/airway/lib/utils"
 	"github.com/gin-gonic/gin"
 )
 
 type CreateSubParams struct {
-	ParentId uint   `form:"parent_id"`
-	Name     string `form:"name"`
-	Key      string `form:"key"`
-	Place    string `form:"place"`
+	ParentId models.IdType `form:"parent_id"`
+	Name     string        `form:"name"`
+	Key      string        `form:"key"`
+	Place    string        `form:"place"`
 }
 
 func CreateSubAction(c *gin.Context) {
@@ -26,9 +26,9 @@ func CreateSubAction(c *gin.Context) {
 		return
 	}
 
-	parentNode, err := repo.FindOne[models.Node](
+	parentNode, err := sql_orm.FindOne[models.Node](
 		[]string{"id", "level"},
-		[]repo.KVPair{repo.KV("id", p.ParentId)},
+		[]sql_orm.KVPair{sql_orm.KV("id", p.ParentId)},
 	)
 
 	if err != nil {

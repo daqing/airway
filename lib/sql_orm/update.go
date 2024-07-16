@@ -1,8 +1,12 @@
-package repo
+package sql_orm
 
-import "time"
+import (
+	"time"
 
-func UpdateFields[T TableNameType](id uint, fields []KVPair) bool {
+	"github.com/daqing/airway/app/models"
+)
+
+func UpdateFields[T TableNameType](id models.IdType, fields []KVPair) bool {
 	var t T
 
 	db, err := DB()

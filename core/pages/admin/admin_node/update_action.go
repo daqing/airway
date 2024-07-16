@@ -5,15 +5,15 @@ import (
 
 	"github.com/daqing/airway/app/models"
 	"github.com/daqing/airway/lib/page_resp"
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/sql_orm"
 	"github.com/gin-gonic/gin"
 )
 
 type UpdateParams struct {
-	Id    uint   `form:"id"`
-	Name  string `form:"name"`
-	Key   string `form:"key"`
-	Place string `form:"place"`
+	Id    models.IdType `form:"id"`
+	Name  string        `form:"name"`
+	Key   string        `form:"key"`
+	Place string        `form:"place"`
 }
 
 func UpdateAction(c *gin.Context) {
@@ -24,11 +24,11 @@ func UpdateAction(c *gin.Context) {
 		return
 	}
 
-	ok := repo.UpdateFields[models.Node](p.Id,
-		[]repo.KVPair{
-			repo.KV("name", p.Name),
-			repo.KV("key", p.Key),
-			repo.KV("place", p.Place),
+	ok := sql_orm.UpdateFields[models.Node](p.Id,
+		[]sql_orm.KVPair{
+			sql_orm.KV("name", p.Name),
+			sql_orm.KV("key", p.Key),
+			sql_orm.KV("place", p.Place),
 		},
 	)
 

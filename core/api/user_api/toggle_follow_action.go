@@ -6,7 +6,7 @@ import (
 	"github.com/daqing/airway/app/models"
 	"github.com/daqing/airway/core/api/action_api"
 	"github.com/daqing/airway/lib/api_resp"
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/sql_orm"
 
 	"github.com/gin-gonic/gin"
 )
@@ -23,10 +23,10 @@ func ToggleFollowAction(c *gin.Context) {
 		return
 	}
 
-	user, err := repo.FindOne[models.User]([]string{
+	user, err := sql_orm.FindOne[models.User]([]string{
 		"id",
-	}, []repo.KVPair{
-		repo.KV("id", p.UserId),
+	}, []sql_orm.KVPair{
+		sql_orm.KV("id", p.UserId),
 	})
 
 	if err != nil {

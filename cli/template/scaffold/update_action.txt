@@ -42,10 +42,10 @@ func UpdateAction(c *gin.Context) {
 	{{ end }}
   {{- end }}
 
-	ok := repo.UpdateFields[{{ .Model }}](id,
-    []repo.KVPair{
+	ok := sql_orm.UpdateFields[{{ .Model }}](id,
+    []sql_orm.KVPair{
 			{{- range $k, $v := .FieldTypes }}
-			repo.KV("{{ $v.Name }}", p.{{ $v.NameCamel }}),
+			sql_orm.KV("{{ $v.Name }}", p.{{ $v.NameCamel }}),
 			{{- end }}
     },
   )

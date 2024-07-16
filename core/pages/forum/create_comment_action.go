@@ -12,8 +12,8 @@ import (
 )
 
 type CreateCommentParams struct {
-	TargetId uint   `form:"target_id"`
-	Content  string `form:"content"`
+	TargetId models.IdType `form:"target_id"`
+	Content  string        `form:"content"`
 }
 
 func CreateCommentAction(c *gin.Context) {

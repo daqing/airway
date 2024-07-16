@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/daqing/airway/app/models"
 	"github.com/daqing/airway/core/api/menu_api"
 	"github.com/daqing/airway/core/api/post_api"
 	"github.com/daqing/airway/lib/page_resp"
@@ -12,7 +13,7 @@ import (
 )
 
 type PostItemIndex struct {
-	Id    uint
+	Id    models.IdType
 	Title string
 	Url   string
 	Date  string

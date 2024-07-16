@@ -2,20 +2,20 @@ package checkin_api
 
 import (
 	"github.com/daqing/airway/app/models"
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/sql_orm"
 	"github.com/daqing/airway/lib/utils"
 )
 
 func CreateCheckin(user *models.User, when utils.Date) (*models.Checkin, error) {
 	yesterday := when.Yesterday()
 
-	prev, err := repo.FindOne[models.Checkin](
+	prev, err := sql_orm.FindOne[models.Checkin](
 		[]string{"id", "acc"},
-		[]repo.KVPair{
-			repo.KV("user_id", user.ID),
-			repo.KV("year", yesterday.Year),
-			repo.KV("month", yesterday.Month),
-			repo.KV("day", yesterday.Day),
+		[]sql_orm.KVPair{
+			sql_orm.KV("user_id", user.ID),
+			sql_orm.KV("year", yesterday.Year),
+			sql_orm.KV("month", yesterday.Month),
+			sql_orm.KV("day", yesterday.Day),
 		},
 	)
 
@@ -29,12 +29,12 @@ func CreateCheckin(user *models.User, when utils.Date) (*models.Checkin, error) 
 		acc += prev.Acc
 	}
 
-	return repo.Insert[models.Checkin]([]repo.KVPair{
-		repo.KV("user_id", user.ID),
-		repo.KV("year", when.Year),
-		repo.KV("month", when.Month),
-		repo.KV("day", when.Day),
-		repo.KV("acc", acc),
+	return sql_orm.Insert[models.Checkin]([]sql_orm.KVPair{
+		sql_orm.KV("user_id", user.ID),
+		sql_orm.KV("year", when.Year),
+		sql_orm.KV("month", when.Month),
+		sql_orm.KV("day", when.Day),
+		sql_orm.KV("acc", acc),
 	})
 
 }

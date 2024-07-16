@@ -9,7 +9,7 @@ import (
 	"github.com/daqing/airway/app/models"
 	"github.com/daqing/airway/core/api/menu_api"
 	"github.com/daqing/airway/lib/page_resp"
-	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/sql_orm"
 	"github.com/daqing/airway/lib/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/yuin/goldmark"
@@ -18,17 +18,17 @@ import (
 func ShowAction(c *gin.Context) {
 	segment := c.Param("id")
 
-	var where []repo.KVPair
+	var where []sql_orm.KVPair
 
 	id, err := strconv.Atoi(segment)
 	if err != nil {
 		// segment is not numeric id
-		where = []repo.KVPair{repo.KV("custom_path", segment)}
+		where = []sql_orm.KVPair{sql_orm.KV("custom_path", segment)}
 	} else {
-		where = []repo.KVPair{repo.KV("id", id)}
+		where = []sql_orm.KVPair{sql_orm.KV("id", id)}
 	}
 
-	post, err := repo.FindOne[models.Post](
+	post, err := sql_orm.FindOne[models.Post](
 		[]string{"id", "title", "content", "created_at"},
 		where,
 	)

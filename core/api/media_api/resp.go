@@ -1,12 +1,12 @@
 package media_api
 
-import "github.com/daqing/airway/lib/repo"
+import "github.com/daqing/airway/app/models"
 
 type MediaResp struct {
 	Id int64
 
-	CreatedAt repo.Timestamp
-	UpdatedAt repo.Timestamp
+	CreatedAt models.Timestamp
+	UpdatedAt models.Timestamp
 }
 
 func (r MediaResp) Fields() []string {
