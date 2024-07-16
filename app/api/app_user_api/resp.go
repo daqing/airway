@@ -1,4 +1,4 @@
-package user_api
+package app_user_api
 
 import (
 	"github.com/daqing/airway/app/models"

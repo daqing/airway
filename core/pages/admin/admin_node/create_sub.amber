@@ -1,7 +1,0 @@
-extends /app/views/admin/layout
-
-block title
-  | Hello, admin_node
-
-block body
-  h1 Hello, admin_node#CreateSub

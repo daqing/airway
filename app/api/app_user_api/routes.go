@@ -1,12 +1,12 @@
-package hello_api
+package app_user_api
 
 import (
 	"github.com/gin-gonic/gin"
 )
 
 func Routes(r *gin.RouterGroup) {
-	g := r.Group("/hello")
+	g := r.Group("/admin")
 	{
-		g.GET("/ping", PingAction)
+		g.POST("/login", LoginAction)
 	}
 }

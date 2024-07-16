@@ -1,7 +1,8 @@
-package user_api
+package app_user_api
 
 import (
 	"github.com/daqing/airway/app/models"
+	"github.com/daqing/airway/app/repos/user_repo"
 	"github.com/daqing/airway/lib/api_resp"
 	"github.com/daqing/airway/lib/sql_orm"
 	"github.com/gin-gonic/gin"
@@ -20,7 +21,7 @@ func LoginAction(c *gin.Context) {
 		return
 	}
 
-	user, err := LoginUser(
+	user, err := user_repo.LoginUser(
 		[]sql_orm.KVPair{sql_orm.KV("username", p.Username)},
 		p.Password,
 	)

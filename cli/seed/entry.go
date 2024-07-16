@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/daqing/airway/core/api/user_api"
+	"github.com/daqing/airway/app/repos/user_repo"
 )
 
 func Generate(args []string) {
@@ -39,7 +39,7 @@ func Generate(args []string) {
 }
 
 func SeedRoot(username, password string) {
-	_, err := user_api.CreateRootUser(username, password)
+	_, err := user_repo.CreateRootUser(username, password)
 	if err != nil {
 		panic(err)
 	}
@@ -48,7 +48,7 @@ func SeedRoot(username, password string) {
 }
 
 func SeedUser(nickname, username string, password string) {
-	_, err := user_api.CreateBasicUser(nickname, username, password)
+	_, err := user_repo.CreateBasicUser(nickname, username, password)
 	if err != nil {
 		panic(err)
 	}
