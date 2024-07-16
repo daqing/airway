@@ -1,4 +1,4 @@
-package app_user_api
+package user_api
 
 import (
 	"github.com/gin-gonic/gin"

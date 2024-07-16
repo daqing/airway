@@ -1,10 +1,10 @@
 package config
 
 import (
-	"github.com/daqing/airway/app/api/app_date_api"
-	"github.com/daqing/airway/app/api/app_user_api"
-
 	"github.com/gin-gonic/gin"
+
+	"github.com/daqing/airway/app/api/date_api"
+	"github.com/daqing/airway/app/api/user_api"
 )
 
 func Routes(r *gin.Engine) {
@@ -14,7 +14,7 @@ func Routes(r *gin.Engine) {
 func appRoutes(r *gin.Engine) {
 	v1 := r.Group("/api/v1")
 
-	app_user_api.Routes(v1)
+	user_api.Routes(v1)
 
-	app_date_api.Routes(v1)
+	date_api.Routes(v1)
 }

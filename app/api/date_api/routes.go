@@ -1,4 +1,4 @@
-package app_date_api
+package date_api
 
 import (
 	"github.com/gin-gonic/gin"
