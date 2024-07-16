@@ -5,7 +5,6 @@ install-deps:
   go install github.com/cosmtrek/air@latest
   brew install tmux
   brew install overmind
-  curl -fsSL https://bun.sh/install | bash
 
 build-cli:
   cd ./cli && go build && cd ..
@@ -22,4 +21,3 @@ build:
 
 docker: build build-cli-docker
   docker build -t airway -f Dockerfile --platform linux/amd64 .
-

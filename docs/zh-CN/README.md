@@ -46,9 +46,6 @@ $ gonew github.com/daqing/airway example.com/foo/bar
 
 - overmind: [github.com/DarthSim/overmind](https://github.com/DarthSim/overmind) Process manager for Procfile-based applications and tmux
 
-- bun: [https://bun.sh](https://bun.sh) Bun is a fast JavaScript
-all-in-one toolkit
-
 对于 macOS 系统，只需要执行:
 
 ```bash
@@ -86,32 +83,9 @@ $ cp .env.example .env
 
   * 例如: `/Users/joe/projects/airway`
 
-#### 2.3
-
-替换掉 `justfile` 中硬编码的 `airway` 字符。
-
-例如，`justfile` 里面有这样的文字：
-
-```
-createdb:
-  psql -U $POSTGRES_USER -d postgres -c "create database airway"
-```
-
-需要把 airway，替换成当前项目所用的数据库名字。
-
-
-#### 2.4
-
-创建数据库和表结构。
-
-执行以下命令：
-
-```
-$ just createdb
-```
-
-这样，数据库和表结构，就准备好了。
-
+* TZ
+  * 当前服务器的时区
+  * 默认值为: `Asia/Shanghai`
 
 #### 2.6
 
@@ -140,9 +114,9 @@ EXPOSE 1900
 CMD ["/app/bin/airway"]
 ```
 
-假设你的项目目录是 `foobar-site`，那么，当执行 go build 时，所生成的二进制名称就是 `foobar-site`。
+假设你的项目目录是 `foo_site`，那么，当执行 go build 时，所生成的二进制名称就是 `foo_site`。
 
-那么，你需要把上面内容中的 `airway`，替换为 `foobar-site`
+那么，你需要把上面内容中的 `airway`，替换为 `foo_site`
 
 
 ## 3. 启动本地开发服务器

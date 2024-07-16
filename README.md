@@ -46,6 +46,12 @@ The full path to current project directory.
 
 Example: `/Users/daqing/open-source/airway`
 
+**TZ**
+
+The timezone of the server
+
+Example: `Asia/Shanghai`
+
 ### Start local development server and login
 
 Run `just` from the project root directory to start the local
