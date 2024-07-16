@@ -23,8 +23,6 @@ services:
     restart: "always"
     environment:
       AIRWAY_PG_URL: "postgres://postgres:abc123456@airway_db:5432/airway"
-      AW_BLOG_TITLE: ""
-      AIRWAY_MULTI_APP: "1"
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.airway.rule=Host(`airway.example.com`)"

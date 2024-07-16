@@ -1,7 +1,7 @@
 About
 =====
 
-Airway is a full-stack web framework written in Go, inspired by Ruby on Rails.
+Airway is a full-stack API framework written in Go, inspired by Ruby on Rails.
 
 **[查看中文文档](https://github.com/daqing/airway/blob/main/docs/zh-CN/README.md)**
 
@@ -40,7 +40,7 @@ The port to listen on.
 
 Example: `1900`
 
-**APP_PWD**
+**AIRWAY_ROOT**
 
 The full path to current project directory.
 

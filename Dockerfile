@@ -18,9 +18,7 @@ COPY ./public /app/public
 ENV AIRWAY_ENV=production
 ENV AIRWAY_PORT=1900
 
-ENV APP_PWD=/app
-
-ENV AW_ASSET_VERSION=1
+ENV AIRWAY_ROOT=/app
 ENV TZ="Asia/Shanghai"
 
 EXPOSE 1900

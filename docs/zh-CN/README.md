@@ -80,19 +80,7 @@ $ cp .env.example .env
 
   * 服务器监听的端口，默认为 `"1900"`
 
-* AIRWAY_STORAGE_DIR
-
-  * 存储用户上传文件的绝对路径
-
-  * 例如: `/var/www/storage`（不要以'/'结尾）
-
-* AIRWAY_ASSET_HOST
-
-  * 静态资源的托管域名（可用于配置CDN）
-
-  * 例如: `https://assets.example.com"`
-
-* APP_PWD
+* AIRWAY_ROOT
 
   * 项目所在的绝对路径（不要以'/'结尾）
 
@@ -160,9 +148,8 @@ COPY ./public /app/public
 ENV AIRWAY_ENV=production
 ENV AIRWAY_PORT=1900
 
-ENV APP_PWD=/app
+ENV AIRWAY_ROOT=/app
 
-ENV AW_ASSET_VERSION=1
 ENV TZ="Asia/Shanghai"
 
 EXPOSE 1900
