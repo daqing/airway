@@ -6,8 +6,5 @@ install-deps:
   brew install tmux
   brew install overmind
 
-build:
-  GOOS=linux GOARCH=amd64 go build -o ./bin .
-
-docker: build
-  docker build -t airway -f Dockerfile --platform linux/amd64 .
+docker:
+  docker build -t airway .
