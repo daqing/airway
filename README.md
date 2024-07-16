@@ -46,20 +46,7 @@ The full path to current project directory.
 
 Example: `/Users/daqing/open-source/airway`
 
-### Prepare database
-
-Run `just setup-db` to setup the database.
-
-Run `just cli seed root root airway-root` to create the initial root account.
-
 ### Start local development server and login
 
 Run `just` from the project root directory to start the local
 development server.
-
-Then you can login to the admin panel with:
-
-```
-username: root
-password: airway-root
-```

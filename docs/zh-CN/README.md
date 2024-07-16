@@ -108,24 +108,10 @@ createdb:
 
 ```
 $ just createdb
-$ just migrate
 ```
 
 这样，数据库和表结构，就准备好了。
 
-#### 2.5
-
-初始化 JavaScript 环境。
-
-`Airway` 通过集成 `bun` 工具，支持在页面中使用 React 代码库。
-
-执行以下命令：
-
-```
-$ just bun
-```
-
-就可以准备好 React 环境。
 
 #### 2.6
 
@@ -137,13 +123,10 @@ FROM alpine
 WORKDIR /app
 
 RUN mkdir /app/bin
-RUN mkdir /app/core
-RUN mkdir /app/public
 
 COPY ./bin/airway /app/bin
 COPY ./bin/cli_amd /app/bin
-COPY ./core /app/core
-COPY ./public /app/public
+
 
 ENV AIRWAY_ENV=production
 ENV AIRWAY_PORT=1900
@@ -175,13 +158,3 @@ $ just
 根据你的 `.env` 中配置的端口，就可以访问对应的网址。
 
 假设你配置的端口是 **2023**, 那么，访问 [http://localhost:2023](http://localhost:2023) 即可。
-
-## 4. 创建初始账户
-
-执行以下命令：
-
-```
-$ just cli seed root airway airway-root
-```
-
-这样可以创建一个root权限的账户，用户名是 `airway`，登录密码是: `airway-root`

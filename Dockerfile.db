@@ -1,7 +1,0 @@
-FROM postgres:16
-
-RUN mkdir /sql
-COPY db/* /sql
-
-RUN mkdir /scripts
-COPY scripts/*.sh /scripts
