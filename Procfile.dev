@@ -1,1 +1,2 @@
 web: AIRWAY_ENV=local air
+css: npx tailwindcss -i ./app/assets/stylesheets/application.css -o ./public/assets/application.css --watch
