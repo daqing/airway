@@ -45,6 +45,8 @@ func main() {
 
 	r := app.Router()
 
+	r.LoadHTMLGlob("app/views/**/*")
+
 	r.Use(cors.Default())
 
 	config.Routes(r)

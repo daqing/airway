@@ -5,13 +5,16 @@ import (
 
 	"github.com/daqing/airway/app/api/date_api"
 	"github.com/daqing/airway/app/api/user_api"
+	"github.com/daqing/airway/app/pages/home_page"
 )
 
 func Routes(r *gin.Engine) {
-	appRoutes(r)
+	r.GET("/", home_page.IndexAction)
+
+	apiRoutes(r)
 }
 
-func appRoutes(r *gin.Engine) {
+func apiRoutes(r *gin.Engine) {
 	v1 := r.Group("/api/v1")
 
 	user_api.Routes(v1)
