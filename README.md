@@ -18,7 +18,7 @@ $ gonew github.com/daqing/airway example.com/foo/bar
 
 Replace `example.com/foo/bar` with your real module name.
 
-## 2. Setup local development environment
+## 2. Configure local development environment
 
 ### Create `.env` file
 
@@ -52,7 +52,7 @@ The timezone of the server
 
 Example: `Asia/Shanghai`
 
-### Start local development server and login
+## 3. Start local development server
 
 Run `just` from the project root directory to start the local
 development server.
