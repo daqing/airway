@@ -32,12 +32,7 @@ const (
 const polyType = "user"
 
 func (u *User) PolyType() string { return polyType }
-
-func (u *User) PolyId() IdType { return u.ID }
-
-// func (u *User) Membership() (*MembershipResp, error) {
-// 	return MembershipFor(u.ID)
-// }
+func (u *User) PolyId() IdType   { return u.ID }
 
 func (u *User) IsAdmin() bool { return u.Role == AdminRole || u.Role == RootRole }
 
