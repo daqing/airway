@@ -3,8 +3,6 @@ package models
 import (
 	"fmt"
 	"time"
-
-	"gorm.io/gorm"
 )
 
 type IdType int64
@@ -15,7 +13,8 @@ type BaseModel struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
+	// Disable `DeletedAt` by default
+	// DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 type PolyModel interface {
