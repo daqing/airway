@@ -9,31 +9,20 @@ import (
 	"github.com/daqing/airway/lib/utils"
 )
 
-func CreateRootUser(username string, password string) (*models.User, error) {
-	return createUser(username, username, models.RootRole, password)
+func CreateRootUser(username, password string) (*models.User, error) {
+	return createUser(username, username, password, models.RootRole)
 }
 
-func CreateAdminUser(nickname, username string, password string) (*models.User, error) {
-	return createUser(nickname, username, models.AdminRole, password)
+func CreateAdminUser(nickname, username, password string) (*models.User, error) {
+	return createUser(nickname, username, password, models.AdminRole)
 }
 
-func CreateBasicUser(nickname, username string, password string) (*models.User, error) {
-	return createUser(nickname, username, models.BasicRole, password)
+func CreateBasicUser(nickname, username, password string) (*models.User, error) {
+	return createUser(nickname, username, password, models.BasicRole)
 }
 
-func createUser(nickname, username string, role models.UserRole, password string) (*models.User, error) {
-	if len(nickname) == 0 {
-		return nil, fmt.Errorf("nickname can't be empty")
-	}
-
-	if len(username) == 0 {
-		return nil, fmt.Errorf("username can't be empty")
-	}
-
-	if len(password) == 0 {
-		return nil, fmt.Errorf("password can't be empty")
-	}
-
+// repo function will skip validations
+func createUser(nickname, username, password string, role models.UserRole) (*models.User, error) {
 	enc, err := utils.EncryptPassword(password)
 	if err != nil {
 		log.Println(err)
@@ -61,14 +50,6 @@ func createUser(nickname, username string, role models.UserRole, password string
 }
 
 func LoginUser(where []sql_orm.KVPair, password string) (*models.User, error) {
-	if len(where) == 0 {
-		return nil, fmt.Errorf("where can't be empty")
-	}
-
-	if len(password) == 0 {
-		return nil, fmt.Errorf("password can't be empty")
-	}
-
 	users, err := sql_orm.Find[models.User](
 		[]string{
 			"id", "username", "nickname", "phone", "email", "avatar",
