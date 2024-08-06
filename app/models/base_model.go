@@ -10,8 +10,8 @@ type IdType int64
 type BaseModel struct {
 	ID IdType `gorm:"primarykey" json:"id"`
 
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	CreatedAt Timestamp `json:"created_at"`
+	UpdatedAt Timestamp `json:"updated_at"`
 
 	// Disable `DeletedAt` by default
 	// DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`

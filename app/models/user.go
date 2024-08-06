@@ -7,15 +7,15 @@ import (
 type User struct {
 	BaseModel
 
-	Nickname          string
-	Username          string
-	Phone             string
-	Email             string
-	Avatar            string
-	Role              UserRole
-	APIToken          string
-	EncryptedPassword string
-	Balance           services.PriceCent
+	Nickname          string             `json:"nickname"`
+	Username          string             `json:"username"`
+	Phone             string             `json:"phone"`
+	Email             string             `json:"email"`
+	Avatar            string             `json:"avatar"`
+	Role              UserRole           `json:"role"`
+	APIToken          string             `json:"api_token"`
+	EncryptedPassword string             `json:"-"`
+	Balance           services.PriceCent `json:"balance"`
 }
 
 func (u User) TableName() string { return "users" }
