@@ -5,7 +5,7 @@ import (
 )
 
 type User struct {
-	BaseModel
+	ID IdType `gorm:"primarykey" json:"id"`
 
 	Nickname          string             `json:"nickname"`
 	Username          string             `json:"username"`
@@ -16,6 +16,9 @@ type User struct {
 	APIToken          string             `json:"api_token"`
 	EncryptedPassword string             `json:"-"`
 	Balance           services.PriceCent `json:"balance"`
+
+	CreatedAt Timestamp `json:"created_at"`
+	UpdatedAt Timestamp `json:"updated_at"`
 }
 
 func (u User) TableName() string { return "users" }

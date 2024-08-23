@@ -7,15 +7,15 @@ import (
 
 type IdType int64
 
-type BaseModel struct {
-	ID IdType `gorm:"primarykey" json:"id"`
+// type BaseModel struct {
+// 	ID IdType `gorm:"primarykey" json:"id"`
 
-	CreatedAt Timestamp `json:"created_at"`
-	UpdatedAt Timestamp `json:"updated_at"`
+// 	CreatedAt Timestamp `json:"created_at"`
+// 	UpdatedAt Timestamp `json:"updated_at"`
 
-	// Disable `DeletedAt` by default
-	// DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
-}
+// 	// Disable `DeletedAt` by default
+// 	// DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
+// }
 
 type PolyModel interface {
 	PolyId() IdType
