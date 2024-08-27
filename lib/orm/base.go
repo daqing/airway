@@ -2,8 +2,6 @@ package orm
 
 import (
 	"errors"
-	"fmt"
-	"strings"
 	"time"
 )
 
@@ -23,7 +21,7 @@ type Separator string
 const comma_sep Separator = ", "
 
 type CondBuilder interface {
-	Cond() string
+	Cond() map[string]any
 }
 
 type kv struct {
@@ -31,8 +29,8 @@ type kv struct {
 	ValueField any
 }
 
-func (kv *kv) Cond() string {
-	return fmt.Sprintf("%s = %v", kv.KeyField, kv.ValueField)
+func (kv *kv) Cond() map[string]any {
+	return map[string]any{kv.KeyField: kv.ValueField}
 }
 
 func Eq(key string, value any) *kv {
@@ -40,26 +38,25 @@ func Eq(key string, value any) *kv {
 }
 
 const EMPTY_STRING = ""
-const DEFAULT_COND = "1=1"
 
 type EmptyCond struct{}
 
-func (EmptyCond) Cond() string {
-	return DEFAULT_COND
+func (EmptyCond) Cond() map[string]any {
+	return map[string]any{}
 }
 
 type Fields struct {
 	Fields []*kv
 }
 
-func (f *Fields) Cond() string {
-	conditions := make([]string, len(f.Fields))
+func (f *Fields) Cond() map[string]any {
+	result := make(map[string]any)
 
-	for i, kv := range f.Fields {
-		conditions[i] = kv.Cond()
+	for _, kv := range f.Fields {
+		result[kv.KeyField] = kv.ValueField
 	}
 
-	return strings.Join(conditions, ", ")
+	return result
 }
 
 func MultiFields(fields ...*kv) *Fields {
@@ -67,11 +64,5 @@ func MultiFields(fields ...*kv) *Fields {
 }
 
 func (f *Fields) ToMap() map[string]any {
-	row := make(map[string]any)
-
-	for _, kv := range f.Fields {
-		row[kv.KeyField] = kv.ValueField
-	}
-
-	return row
+	return f.Cond()
 }
