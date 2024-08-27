@@ -30,16 +30,16 @@ func createUser(nickname, username, password string, role models.UserRole) (*mod
 	}
 
 	user, err := sql_orm.Insert[models.User](
-		[]sql_orm.KVPair{
-			sql_orm.KV("nickname", nickname),
-			sql_orm.KV("username", username),
-			sql_orm.KV("phone", ""),
-			sql_orm.KV("email", ""),
-			sql_orm.KV("avatar", ""),
-			sql_orm.KV("role", role),
-			sql_orm.KV("encrypted_password", enc),
-			sql_orm.KV("api_token", utils.RandomHex(20)),
-		},
+		sql_orm.MultiFields(
+			sql_orm.Eq("nickname", nickname),
+			sql_orm.Eq("username", username),
+			sql_orm.Eq("phone", ""),
+			sql_orm.Eq("email", ""),
+			sql_orm.Eq("avatar", ""),
+			sql_orm.Eq("role", role),
+			sql_orm.Eq("encrypted_password", enc),
+			sql_orm.Eq("api_token", utils.RandomHex(20)),
+		),
 	)
 
 	if user != nil {
@@ -49,13 +49,13 @@ func createUser(nickname, username, password string, role models.UserRole) (*mod
 	return user, err
 }
 
-func LoginUser(where []sql_orm.KVPair, password string) (*models.User, error) {
+func LoginUser(cond sql_orm.CondBuilder, password string) (*models.User, error) {
 	users, err := sql_orm.Find[models.User](
 		[]string{
 			"id", "username", "nickname", "phone", "email", "avatar",
 			"encrypted_password", "api_token",
 		},
-		where,
+		cond,
 	)
 
 	if err != nil {
@@ -83,9 +83,8 @@ func UserFromAPIToken(token string) *models.User {
 			"phone", "email", "avatar",
 			"role", "api_token",
 		},
-		[]sql_orm.KVPair{
-			sql_orm.KV("api_token", token),
-		},
+
+		sql_orm.Eq("api_token", token),
 	)
 
 	if err != nil {
@@ -133,7 +132,7 @@ func Users(fields []string, order string, page, limit int) ([]*models.User, erro
 
 	return sql_orm.FindLimit[models.User](
 		fields,
-		[]sql_orm.KVPair{},
+		sql_orm.EmptyCond{},
 		order,
 		(page-1)*limit,
 		limit,
@@ -143,9 +142,8 @@ func Users(fields []string, order string, page, limit int) ([]*models.User, erro
 func Nickname(id models.IdType) string {
 	user, err := sql_orm.FindOne[models.User](
 		[]string{"id", "nickname"},
-		[]sql_orm.KVPair{
-			sql_orm.KV("id", id),
-		},
+
+		sql_orm.Eq("id", id),
 	)
 
 	if err != nil {

@@ -6,7 +6,7 @@ import (
 	"github.com/daqing/airway/app/models"
 )
 
-func UpdateFields[T TableNameType](id models.IdType, fields []KVPair) bool {
+func UpdateFields[T TableNameType](id models.IdType, fields *Fields) bool {
 	var t T
 
 	db, err := DB()
@@ -16,7 +16,7 @@ func UpdateFields[T TableNameType](id models.IdType, fields []KVPair) bool {
 
 	now := time.Now().UTC()
 
-	row := buildCondQuery(fields)
+	row := fields.ToMap()
 	row["updated_at"] = now
 
 	tx := db.Table(t.TableName()).Where("id = ?", id).Updates(row)
@@ -24,7 +24,7 @@ func UpdateFields[T TableNameType](id models.IdType, fields []KVPair) bool {
 	return tx.RowsAffected == 1
 }
 
-func UpdateColumn[T TableNameType](cond []KVPair, field string, value any) bool {
+func UpdateColumn[T TableNameType](cond CondBuilder, field string, value any) bool {
 	var t T
 
 	db, err := DB()
@@ -32,7 +32,7 @@ func UpdateColumn[T TableNameType](cond []KVPair, field string, value any) bool 
 		return false
 	}
 
-	tx := db.Table(t.TableName()).Where(buildCondQuery(cond)).Update(field, value)
+	tx := db.Table(t.TableName()).Where(cond.Cond()).Update(field, value)
 
 	return tx.RowsAffected == 1
 }

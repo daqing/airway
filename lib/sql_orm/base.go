@@ -22,100 +22,56 @@ type Separator string
 
 const comma_sep Separator = ", "
 
-type KVPair interface {
-	Key() string
-	Value() any
-	Operator() string
+type CondBuilder interface {
+	Cond() string
 }
 
-type Attribute struct {
+type kv struct {
 	KeyField   string
 	ValueField any
 }
 
-func KV(key string, value any) *Attribute {
-	return &Attribute{key, value}
+func (kv *kv) Cond() string {
+	return fmt.Sprintf("%s = %v", kv.KeyField, kv.ValueField)
 }
 
-func (attr *Attribute) Key() string {
-	return attr.KeyField
-}
-
-func (attr *Attribute) Value() any {
-	return attr.ValueField
-}
-
-func (attr *Attribute) Operator() string {
-	return op_eq
+func Eq(key string, value any) *kv {
+	return &kv{key, value}
 }
 
 const EMPTY_STRING = ""
+const DEFAULT_COND = "1=1"
 
-type OrQuery struct {
-	Pairs []KVPair
+type EmptyCond struct{}
+
+func (EmptyCond) Cond() string {
+	return DEFAULT_COND
 }
 
-func (or *OrQuery) Key() string {
-	return EMPTY_STRING
+type Fields struct {
+	Fields []*kv
 }
 
-func (or *OrQuery) Value() any {
-	var result []any
+func (f *Fields) Cond() string {
+	conditions := make([]string, len(f.Fields))
 
-	for _, pair := range or.Pairs {
-		result = append(result, pair.Value())
+	for i, kv := range f.Fields {
+		conditions[i] = kv.Cond()
 	}
 
-	return result
+	return strings.Join(conditions, ", ")
 }
 
-func (or *OrQuery) Operator() string {
-	return op_or
+func MultiFields(fields ...*kv) *Fields {
+	return &Fields{fields}
 }
 
-func OR(pairs ...KVPair) *OrQuery {
-	return &OrQuery{Pairs: pairs}
-}
+func (f *Fields) ToMap() map[string]any {
+	row := make(map[string]any)
 
-type InQuery[T any] struct {
-	Field  string
-	Values []T
-}
-
-func In[T any](field string, values []T) *InQuery[T] {
-	return &InQuery[T]{field, values}
-}
-
-func (in *InQuery[T]) Key() string {
-	return in.Field
-}
-
-func (in *InQuery[T]) Value() any {
-	var result []string
-
-	for _, v := range in.Values {
-		result = append(result, fmt.Sprintf("%v", v))
+	for _, kv := range f.Fields {
+		row[kv.KeyField] = kv.ValueField
 	}
 
-	return strings.Join(result, string(comma_sep))
+	return row
 }
-
-func (in *InQuery[T]) Operator() string { return op_in }
-
-func buildCondQuery(kvpairs []KVPair) map[string]any {
-	result := make(map[string]any)
-
-	for _, kv := range kvpairs {
-		if kv.Operator() == op_eq {
-			result[kv.Key()] = kv.Value()
-		}
-	}
-
-	return result
-}
-
-// type Model struct {
-// 	ID        IdType `gorm:"primarykey"`
-// 	CreatedAt time.Time
-// 	UpdatedAt time.Time
-// }

@@ -5,7 +5,7 @@ func Page[T TableNameType](fields []string, order string, page, limit int) (all 
 		page = 1
 	}
 
-	cond := []KVPair{}
+	cond := EmptyCond{}
 
 	all, err = FindLimit[T](
 		fields,
