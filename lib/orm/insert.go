@@ -1,14 +1,18 @@
-package sql_orm
+package orm
 
-import "time"
+import (
+	"time"
 
-func Insert[T TableNameType](attributes *Fields) (*T, error) {
-	return InsertSkipExists[T](attributes, false)
+	"gorm.io/gorm"
+)
+
+func Insert[T TableNameType](db *gorm.DB, attributes *Fields) (*T, error) {
+	return InsertSkipExists[T](db, attributes, false)
 }
 
-func InsertSkipExists[T TableNameType](attributes *Fields, skipExists bool) (*T, error) {
+func InsertSkipExists[T TableNameType](db *gorm.DB, attributes *Fields, skipExists bool) (*T, error) {
 	if skipExists {
-		ex, err := Exists[T](attributes)
+		ex, err := Exists[T](db, attributes)
 		if err != nil {
 			return nil, err
 		}
@@ -19,11 +23,6 @@ func InsertSkipExists[T TableNameType](attributes *Fields, skipExists bool) (*T,
 	}
 
 	var t T
-
-	db, err := DB()
-	if err != nil {
-		return nil, err
-	}
 
 	row := attributes.ToMap()
 
@@ -38,12 +37,7 @@ func InsertSkipExists[T TableNameType](attributes *Fields, skipExists bool) (*T,
 	return &t, nil
 }
 
-func InsertRecord(dst any) error {
-	db, err := DB()
-	if err != nil {
-		return err
-	}
-
+func InsertRecord(db *gorm.DB, dst any) error {
 	if err := db.Create(dst).Error; err != nil {
 		return err
 	}

@@ -1,4 +1,4 @@
-package sql_orm
+package orm
 
 import (
 	"strings"

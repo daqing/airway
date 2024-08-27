@@ -1,18 +1,14 @@
-package sql_orm
+package orm
 
 import (
 	"time"
 
 	"github.com/daqing/airway/app/models"
+	"gorm.io/gorm"
 )
 
-func UpdateFields[T TableNameType](id models.IdType, fields *Fields) bool {
+func UpdateFields[T TableNameType](db *gorm.DB, id models.IdType, fields *Fields) bool {
 	var t T
-
-	db, err := DB()
-	if err != nil {
-		return false
-	}
 
 	now := time.Now().UTC()
 
@@ -24,13 +20,8 @@ func UpdateFields[T TableNameType](id models.IdType, fields *Fields) bool {
 	return tx.RowsAffected == 1
 }
 
-func UpdateColumn[T TableNameType](cond CondBuilder, field string, value any) bool {
+func UpdateColumn[T TableNameType](db *gorm.DB, cond CondBuilder, field string, value any) bool {
 	var t T
-
-	db, err := DB()
-	if err != nil {
-		return false
-	}
 
 	tx := db.Table(t.TableName()).Where(cond.Cond()).Update(field, value)
 

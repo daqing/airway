@@ -3,7 +3,7 @@ package user_api
 import (
 	"github.com/daqing/airway/app/repos/user_repo"
 	"github.com/daqing/airway/lib/api_resp"
-	"github.com/daqing/airway/lib/sql_orm"
+	"github.com/daqing/airway/lib/orm"
 	"github.com/gin-gonic/gin"
 )
 
@@ -21,7 +21,7 @@ func LoginAction(c *gin.Context) {
 	}
 
 	user, err := user_repo.LoginUser(
-		sql_orm.Eq("username", p.Username),
+		orm.Eq("username", p.Username),
 		p.Password,
 	)
 

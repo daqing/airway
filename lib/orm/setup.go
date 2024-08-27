@@ -1,4 +1,4 @@
-package sql_orm
+package orm
 
 import (
 	"errors"
@@ -26,10 +26,10 @@ func Setup() error {
 	return nil
 }
 
-func DB() (*gorm.DB, error) {
+func DB() *gorm.DB {
 	if __gormDB__ == nil {
-		return nil, ErrNotSetup
+		panic(ErrNotSetup)
 	}
 
-	return __gormDB__, nil
+	return __gormDB__
 }
