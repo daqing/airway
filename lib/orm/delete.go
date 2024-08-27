@@ -1,12 +1,9 @@
 package orm
 
-func Delete[T TableNameType](cond CondBuilder) error {
-	var t T
+import "gorm.io/gorm"
 
-	db, err := DB()
-	if err != nil {
-		return err
-	}
+func Delete[T TableNameType](db *gorm.DB, cond CondBuilder) error {
+	var t T
 
 	db.Table(t.TableName()).Where(cond.Cond()).Delete(&t)
 
@@ -14,5 +11,5 @@ func Delete[T TableNameType](cond CondBuilder) error {
 }
 
 func DeleteByID[T TableNameType](id any) error {
-	return Delete[T](Eq("id", id))
+	return Delete[T](DB(), Eq("id", id))
 }

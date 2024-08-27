@@ -1,6 +1,8 @@
 package orm
 
-func Page[T TableNameType](fields []string, order string, page, limit int) (all []*T, total int64, err error) {
+import "gorm.io/gorm"
+
+func Page[T TableNameType](db *gorm.DB, fields []string, order string, page, limit int) (all []*T, total int64, err error) {
 	if page == 0 {
 		page = 1
 	}
@@ -8,6 +10,7 @@ func Page[T TableNameType](fields []string, order string, page, limit int) (all 
 	cond := EmptyCond{}
 
 	all, err = FindLimit[T](
+		db,
 		fields,
 		cond,
 		order,
@@ -19,7 +22,7 @@ func Page[T TableNameType](fields []string, order string, page, limit int) (all 
 		return nil, 0, err
 	}
 
-	total, err = Count[T](cond)
+	total, err = Count[T](db, cond)
 
 	return
 }

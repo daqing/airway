@@ -30,6 +30,7 @@ func createUser(nickname, username, password string, role models.UserRole) (*mod
 	}
 
 	user, err := orm.Insert[models.User](
+		orm.DB(),
 		orm.MultiFields(
 			orm.Eq("nickname", nickname),
 			orm.Eq("username", username),
@@ -51,6 +52,7 @@ func createUser(nickname, username, password string, role models.UserRole) (*mod
 
 func LoginUser(cond orm.CondBuilder, password string) (*models.User, error) {
 	users, err := orm.Find[models.User](
+		orm.DB(),
 		[]string{
 			"id", "username", "nickname", "phone", "email", "avatar",
 			"encrypted_password", "api_token",
@@ -78,6 +80,7 @@ func LoginUser(cond orm.CondBuilder, password string) (*models.User, error) {
 
 func UserFromAPIToken(token string) *models.User {
 	user, err := orm.FindOne[models.User](
+		orm.DB(),
 		[]string{
 			"id", "username", "nickname",
 			"phone", "email", "avatar",
@@ -131,6 +134,7 @@ func Users(fields []string, order string, page, limit int) ([]*models.User, erro
 	}
 
 	return orm.FindLimit[models.User](
+		orm.DB(),
 		fields,
 		orm.EmptyCond{},
 		order,
@@ -141,6 +145,7 @@ func Users(fields []string, order string, page, limit int) ([]*models.User, erro
 
 func Nickname(id models.IdType) string {
 	user, err := orm.FindOne[models.User](
+		orm.DB(),
 		[]string{"id", "nickname"},
 
 		orm.Eq("id", id),

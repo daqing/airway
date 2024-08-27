@@ -1,7 +1,9 @@
 package orm
 
-func FindOne[T TableNameType](fields []string, cond CondBuilder) (*T, error) {
-	rows, err := Find[T](fields, cond)
+import "gorm.io/gorm"
+
+func FindOne[T TableNameType](db *gorm.DB, fields []string, cond CondBuilder) (*T, error) {
+	rows, err := Find[T](db, fields, cond)
 	if err != nil {
 		return nil, err
 	}
@@ -17,22 +19,17 @@ func FindOne[T TableNameType](fields []string, cond CondBuilder) (*T, error) {
 	return rows[0], nil
 }
 
-func FindAll[T TableNameType](fields []string) ([]*T, error) {
-	return Find[T](fields, EmptyCond{})
+func FindAll[T TableNameType](db *gorm.DB, fields []string) ([]*T, error) {
+	return Find[T](db, fields, EmptyCond{})
 }
 
-func Find[T TableNameType](fields []string, cond CondBuilder) ([]*T, error) {
-	return FindLimit[T](fields, cond, "", 0, 0)
+func Find[T TableNameType](db *gorm.DB, fields []string, cond CondBuilder) ([]*T, error) {
+	return FindLimit[T](db, fields, cond, "", 0, 0)
 }
 
 // limit = 0 means no limit
-func FindLimit[T TableNameType](fields []string, cond CondBuilder, orderBy string, offset int, limit int) ([]*T, error) {
+func FindLimit[T TableNameType](db *gorm.DB, fields []string, cond CondBuilder, orderBy string, offset int, limit int) ([]*T, error) {
 	var t T
-
-	db, err := DB()
-	if err != nil {
-		return nil, err
-	}
 
 	tx := db.Table(t.TableName()).Select(fields).Where(cond.Cond())
 

@@ -1,12 +1,9 @@
 package orm
 
-func Count[T TableNameType](cond CondBuilder) (n int64, err error) {
-	var t T
+import "gorm.io/gorm"
 
-	db, err := DB()
-	if err != nil {
-		return 0, err
-	}
+func Count[T TableNameType](db *gorm.DB, cond CondBuilder) (n int64, err error) {
+	var t T
 
 	db.Table(t.TableName()).Where(cond.Cond()).Count(&n)
 

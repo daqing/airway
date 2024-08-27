@@ -34,12 +34,7 @@ func main() {
 	}
 
 	orm.Setup()
-	if db, err := orm.DB(); err != nil {
-		log.Printf("Get database failed: %s\n", err)
-		os.Exit(3)
-	} else {
-		app.AutoMigrate(db)
-	}
+	app.AutoMigrate(orm.DB())
 
 	app := NewApp()
 
