@@ -1,4 +1,4 @@
-package sql_orm
+package orm
 
 func FindOne[T TableNameType](fields []string, cond CondBuilder) (*T, error) {
 	rows, err := Find[T](fields, cond)

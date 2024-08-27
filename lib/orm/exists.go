@@ -1,4 +1,4 @@
-package sql_orm
+package orm
 
 func Exists[T TableNameType](cond CondBuilder) (bool, error) {
 	n, err := Count[T](cond)

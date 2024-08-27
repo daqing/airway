@@ -1,4 +1,4 @@
-package sql_orm
+package orm
 
 func Count[T TableNameType](cond CondBuilder) (n int64, err error) {
 	var t T

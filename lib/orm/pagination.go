@@ -1,4 +1,4 @@
-package sql_orm
+package orm
 
 func Page[T TableNameType](fields []string, order string, page, limit int) (all []*T, total int64, err error) {
 	if page == 0 {

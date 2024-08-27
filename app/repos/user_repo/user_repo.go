@@ -5,7 +5,7 @@ import (
 	"log"
 
 	"github.com/daqing/airway/app/models"
-	"github.com/daqing/airway/lib/sql_orm"
+	"github.com/daqing/airway/lib/orm"
 	"github.com/daqing/airway/lib/utils"
 )
 
@@ -29,16 +29,16 @@ func createUser(nickname, username, password string, role models.UserRole) (*mod
 		return nil, err
 	}
 
-	user, err := sql_orm.Insert[models.User](
-		sql_orm.MultiFields(
-			sql_orm.Eq("nickname", nickname),
-			sql_orm.Eq("username", username),
-			sql_orm.Eq("phone", ""),
-			sql_orm.Eq("email", ""),
-			sql_orm.Eq("avatar", ""),
-			sql_orm.Eq("role", role),
-			sql_orm.Eq("encrypted_password", enc),
-			sql_orm.Eq("api_token", utils.RandomHex(20)),
+	user, err := orm.Insert[models.User](
+		orm.MultiFields(
+			orm.Eq("nickname", nickname),
+			orm.Eq("username", username),
+			orm.Eq("phone", ""),
+			orm.Eq("email", ""),
+			orm.Eq("avatar", ""),
+			orm.Eq("role", role),
+			orm.Eq("encrypted_password", enc),
+			orm.Eq("api_token", utils.RandomHex(20)),
 		),
 	)
 
@@ -49,8 +49,8 @@ func createUser(nickname, username, password string, role models.UserRole) (*mod
 	return user, err
 }
 
-func LoginUser(cond sql_orm.CondBuilder, password string) (*models.User, error) {
-	users, err := sql_orm.Find[models.User](
+func LoginUser(cond orm.CondBuilder, password string) (*models.User, error) {
+	users, err := orm.Find[models.User](
 		[]string{
 			"id", "username", "nickname", "phone", "email", "avatar",
 			"encrypted_password", "api_token",
@@ -77,14 +77,14 @@ func LoginUser(cond sql_orm.CondBuilder, password string) (*models.User, error) 
 }
 
 func UserFromAPIToken(token string) *models.User {
-	user, err := sql_orm.FindOne[models.User](
+	user, err := orm.FindOne[models.User](
 		[]string{
 			"id", "username", "nickname",
 			"phone", "email", "avatar",
 			"role", "api_token",
 		},
 
-		sql_orm.Eq("api_token", token),
+		orm.Eq("api_token", token),
 	)
 
 	if err != nil {
@@ -130,9 +130,9 @@ func Users(fields []string, order string, page, limit int) ([]*models.User, erro
 		page = 1
 	}
 
-	return sql_orm.FindLimit[models.User](
+	return orm.FindLimit[models.User](
 		fields,
-		sql_orm.EmptyCond{},
+		orm.EmptyCond{},
 		order,
 		(page-1)*limit,
 		limit,
@@ -140,10 +140,10 @@ func Users(fields []string, order string, page, limit int) ([]*models.User, erro
 }
 
 func Nickname(id models.IdType) string {
-	user, err := sql_orm.FindOne[models.User](
+	user, err := orm.FindOne[models.User](
 		[]string{"id", "nickname"},
 
-		sql_orm.Eq("id", id),
+		orm.Eq("id", id),
 	)
 
 	if err != nil {

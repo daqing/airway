@@ -1,4 +1,4 @@
-package sql_orm
+package orm
 
 func Delete[T TableNameType](cond CondBuilder) error {
 	var t T
