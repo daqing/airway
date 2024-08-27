@@ -12,3 +12,7 @@ func Delete[T TableNameType](conds []KVPair) error {
 
 	return nil
 }
+
+func DeleteByID[T TableNameType](id any) error {
+	return Delete[T]([]KVPair{KV("id", id)})
+}
