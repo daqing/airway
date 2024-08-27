@@ -1,6 +1,6 @@
 package sql_orm
 
-func Delete[T TableNameType](conds []KVPair) error {
+func Delete[T TableNameType](cond CondBuilder) error {
 	var t T
 
 	db, err := DB()
@@ -8,11 +8,11 @@ func Delete[T TableNameType](conds []KVPair) error {
 		return err
 	}
 
-	db.Table(t.TableName()).Where(buildCondQuery(conds)).Delete(&t)
+	db.Table(t.TableName()).Where(cond.Cond()).Delete(&t)
 
 	return nil
 }
 
 func DeleteByID[T TableNameType](id any) error {
-	return Delete[T]([]KVPair{KV("id", id)})
+	return Delete[T](Eq("id", id))
 }

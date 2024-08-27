@@ -1,6 +1,6 @@
 package sql_orm
 
-func Count[T TableNameType](conds []KVPair) (n int64, err error) {
+func Count[T TableNameType](cond CondBuilder) (n int64, err error) {
 	var t T
 
 	db, err := DB()
@@ -8,7 +8,7 @@ func Count[T TableNameType](conds []KVPair) (n int64, err error) {
 		return 0, err
 	}
 
-	db.Table(t.TableName()).Where(buildCondQuery(conds)).Count(&n)
+	db.Table(t.TableName()).Where(cond.Cond()).Count(&n)
 
 	return n, nil
 }

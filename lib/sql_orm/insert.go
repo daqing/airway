@@ -2,11 +2,11 @@ package sql_orm
 
 import "time"
 
-func Insert[T TableNameType](attributes []KVPair) (*T, error) {
+func Insert[T TableNameType](attributes *Fields) (*T, error) {
 	return InsertSkipExists[T](attributes, false)
 }
 
-func InsertSkipExists[T TableNameType](attributes []KVPair, skipExists bool) (*T, error) {
+func InsertSkipExists[T TableNameType](attributes *Fields, skipExists bool) (*T, error) {
 	if skipExists {
 		ex, err := Exists[T](attributes)
 		if err != nil {
@@ -25,7 +25,7 @@ func InsertSkipExists[T TableNameType](attributes []KVPair, skipExists bool) (*T
 		return nil, err
 	}
 
-	row := buildCondQuery(attributes)
+	row := attributes.ToMap()
 
 	now := time.Now().UTC()
 	row["created_at"] = now
