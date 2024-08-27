@@ -5,10 +5,6 @@ import (
 	"time"
 )
 
-const op_eq = "="
-const op_in = "IN"
-const op_or = "OR"
-
 var ErrorNotFound = errors.New("record_not_found")
 var ErrorCountNotMatch = errors.New("count_not_match")
 
@@ -17,8 +13,6 @@ var NeverExpires = time.Now().AddDate(100, 0, 0)
 const InvalidCount = -1
 
 type Separator string
-
-const comma_sep Separator = ", "
 
 type CondBuilder interface {
 	Cond() map[string]any
