@@ -5,12 +5,9 @@ import (
 
 	"github.com/daqing/airway/app/api/up_api"
 	"github.com/daqing/airway/app/api/user_api"
-	"github.com/daqing/airway/app/pages/home_page"
 )
 
 func Routes(r *gin.Engine) {
-	r.GET("/", home_page.IndexAction)
-
 	apiRoutes(r)
 }
 
