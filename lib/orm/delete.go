@@ -1,6 +1,8 @@
 package orm
 
-import "gorm.io/gorm"
+import (
+	"gorm.io/gorm"
+)
 
 func Delete[T TableNameType](db *gorm.DB, cond CondBuilder) error {
 	var t T

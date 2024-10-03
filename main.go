@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 
-	"github.com/daqing/airway/app"
 	"github.com/daqing/airway/config"
 	"github.com/daqing/airway/lib/orm"
 	"github.com/daqing/airway/lib/utils"
@@ -34,7 +33,6 @@ func main() {
 	}
 
 	orm.Setup()
-	app.AutoMigrate(orm.DB())
 
 	app := NewApp()
 
