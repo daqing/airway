@@ -11,7 +11,7 @@ type ErrCode int
 const ErrGeneral ErrCode = 10000
 
 func ErrorCodeMsg(c *gin.Context, code ErrCode, message string) {
-	c.JSON(200, gin.H{"code": code, "data": gin.H{}, "message": message})
+	c.JSON(200, gin.H{"code": code, "data": nil, "message": message})
 	c.Abort()
 }
 
