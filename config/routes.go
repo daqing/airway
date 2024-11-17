@@ -5,9 +5,12 @@ import (
 
 	"github.com/daqing/airway/app/api/up_api"
 	"github.com/daqing/airway/app/api/user_api"
+	"github.com/daqing/airway/app/websocket"
 )
 
 func Routes(r *gin.Engine) {
+	websocketRoutes(r)
+
 	apiRoutes(r)
 }
 
@@ -17,4 +20,8 @@ func apiRoutes(r *gin.Engine) {
 	up_api.Routes(v1)
 
 	user_api.Routes(v1)
+}
+
+func websocketRoutes(r *gin.Engine) {
+	r.GET("/ws", websocket.Conn)
 }
