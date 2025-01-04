@@ -4,7 +4,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func Delete[T TableNameType](db *gorm.DB, cond CondBuilder) error {
+func Delete[T Table](db *gorm.DB, cond CondBuilder) error {
 	var t T
 
 	db.Table(t.TableName()).Where(cond.Cond()).Delete(&t)
@@ -12,6 +12,6 @@ func Delete[T TableNameType](db *gorm.DB, cond CondBuilder) error {
 	return nil
 }
 
-func DeleteByID[T TableNameType](id any) error {
+func DeleteByID[T Table](id any) error {
 	return Delete[T](DB(), Eq("id", id))
 }

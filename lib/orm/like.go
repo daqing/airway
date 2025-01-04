@@ -6,7 +6,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func FindLike[T TableNameType](db *gorm.DB, fields []string, key string, value string) ([]*T, error) {
+func FindLike[T Table](db *gorm.DB, fields []string, key string, value string) ([]*T, error) {
 	var t T
 
 	likeKey := fmt.Sprintf("%s LIKE ?", key)

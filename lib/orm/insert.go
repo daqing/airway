@@ -6,11 +6,11 @@ import (
 	"gorm.io/gorm"
 )
 
-func Insert[T TableNameType](db *gorm.DB, attributes *Fields) (*T, error) {
+func Insert[T Table](db *gorm.DB, attributes *Fields) (*T, error) {
 	return InsertSkipExists[T](db, attributes, false)
 }
 
-func InsertSkipExists[T TableNameType](db *gorm.DB, attributes *Fields, skipExists bool) (*T, error) {
+func InsertSkipExists[T Table](db *gorm.DB, attributes *Fields, skipExists bool) (*T, error) {
 	if skipExists {
 		ex, err := Exists[T](db, attributes)
 		if err != nil {

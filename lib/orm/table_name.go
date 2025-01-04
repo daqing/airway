@@ -1,5 +1,5 @@
 package orm
 
-type TableNameType interface {
+type Table interface {
 	TableName() string
 }

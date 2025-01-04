@@ -7,7 +7,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func UpdateFields[T TableNameType](db *gorm.DB, id models.IdType, fields *Fields) bool {
+func UpdateFields[T Table](db *gorm.DB, id models.IdType, fields *Fields) bool {
 	var t T
 
 	now := time.Now().UTC()
@@ -20,7 +20,7 @@ func UpdateFields[T TableNameType](db *gorm.DB, id models.IdType, fields *Fields
 	return tx.RowsAffected == 1
 }
 
-func UpdateColumn[T TableNameType](db *gorm.DB, cond CondBuilder, field string, value any) bool {
+func UpdateColumn[T Table](db *gorm.DB, cond CondBuilder, field string, value any) bool {
 	var t T
 
 	tx := db.Table(t.TableName()).Where(cond.Cond()).Update(field, value)
