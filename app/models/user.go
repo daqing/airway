@@ -1,21 +1,17 @@
 package models
 
-import (
-	"github.com/daqing/airway/app/services"
-)
-
 type User struct {
 	ID IdType `gorm:"primarykey" json:"id"`
 
-	Nickname          string             `json:"nickname"`
-	Username          string             `json:"username"`
-	Phone             string             `json:"phone"`
-	Email             string             `json:"email"`
-	Avatar            string             `json:"avatar"`
-	Role              UserRole           `json:"role"`
-	APIToken          string             `json:"api_token"`
-	EncryptedPassword string             `json:"-"`
-	Balance           services.PriceCent `json:"balance"`
+	Nickname          string    `json:"nickname"`
+	Username          string    `json:"username"`
+	Phone             string    `json:"phone"`
+	Email             string    `json:"email"`
+	Avatar            string    `json:"avatar"`
+	Role              UserRole  `json:"role"`
+	APIToken          string    `json:"api_token"`
+	EncryptedPassword string    `json:"-"`
+	Balance           PriceCent `json:"balance"`
 
 	CreatedAt Timestamp `json:"created_at"`
 	UpdatedAt Timestamp `json:"updated_at"`
