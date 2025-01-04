@@ -11,8 +11,3 @@
 !/data/storage/.keep
 
 *.sock
-
-/public/assets
-!/public/assets/.keep
-
-node_modules
