@@ -24,4 +24,5 @@ func apiRoutes(r *gin.Engine) {
 
 func websocketRoutes(r *gin.Engine) {
 	r.GET("/ws", websocket.Conn)
+	r.POST("/ws/publish", websocket.Publish)
 }

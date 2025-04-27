@@ -97,3 +97,14 @@ func Conn(c *gin.Context) {
 
 	go hub.HandleMessages(conn)
 }
+
+func Publish(c *gin.Context) {
+	message := c.PostForm("message")
+	if message == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Message cannot be empty"})
+		return
+	}
+
+	hub.ch <- message
+	c.JSON(http.StatusOK, gin.H{"status": "Message sent"})
+}
