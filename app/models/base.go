@@ -11,15 +11,6 @@ type PolyModel interface {
 	PolyType() string
 }
 
-// type Timestamp time.Time
-
-// func (ts Timestamp) MarshalJSON() ([]byte, error) {
-// 	t := time.Time(ts)
-// 	str := fmt.Sprintf("%d", t.Unix())
-
-// 	return []byte(str), nil
-// }
-
 type PriceCent int64
 
 func ToCent(price float64) PriceCent {
