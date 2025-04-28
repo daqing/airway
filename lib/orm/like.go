@@ -1,22 +1,34 @@
 package orm
 
 import (
+	"context"
 	"fmt"
-
-	"gorm.io/gorm"
+	"strings"
 )
 
-func FindLike[T Table](db *gorm.DB, fields []string, key string, value string) ([]*T, error) {
+func FindLike[T Table](db *DB, fields []string, key string, value string) ([]*T, error) {
 	var t T
 
 	likeKey := fmt.Sprintf("%s LIKE ?", key)
 	likeValue := fmt.Sprintf("%%%s%%", value)
 
-	tx := db.Table(t.TableName()).Select(fields).Where(likeKey, likeValue)
+	sql := "SELECT " + strings.Join(fields, ",") + " FROM " + t.TableName() + " WHERE " + likeKey
 
 	var records []*T
+	rows, err := db.pool.Query(context.Background(), sql, likeValue)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
 
-	tx.Find(&records)
+	for rows.Next() {
+		var record T
+		err := rows.Scan(&record)
+		if err != nil {
+			return nil, err
+		}
+		records = append(records, &record)
+	}
 
 	return records, nil
 }

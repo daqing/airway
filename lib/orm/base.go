@@ -43,6 +43,22 @@ type Fields struct {
 	Fields []*kv
 }
 
+func (f *Fields) Keys() []string {
+	var keys []string
+	for _, kv := range f.Fields {
+		keys = append(keys, kv.KeyField)
+	}
+	return keys
+}
+
+func (f *Fields) Values() []any {
+	var values []any
+	for _, kv := range f.Fields {
+		values = append(values, kv.ValueField)
+	}
+	return values
+}
+
 func (f *Fields) Cond() map[string]any {
 	result := make(map[string]any)
 

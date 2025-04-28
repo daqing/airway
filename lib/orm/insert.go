@@ -1,16 +1,16 @@
 package orm
 
 import (
-	"time"
-
-	"gorm.io/gorm"
+	"context"
+	"fmt"
+	"strings"
 )
 
-func Insert[T Table](db *gorm.DB, attributes *Fields) (*T, error) {
+func Insert[T Table](db *DB, attributes *Fields) (*T, error) {
 	return InsertSkipExists[T](db, attributes, false)
 }
 
-func InsertSkipExists[T Table](db *gorm.DB, attributes *Fields, skipExists bool) (*T, error) {
+func InsertSkipExists[T Table](db *DB, attributes *Fields, skipExists bool) (*T, error) {
 	if skipExists {
 		ex, err := Exists[T](db, attributes)
 		if err != nil {
@@ -24,23 +24,26 @@ func InsertSkipExists[T Table](db *gorm.DB, attributes *Fields, skipExists bool)
 
 	var t T
 
-	row := attributes.ToMap()
+	keys := attributes.Keys()
+	var valuePlaceholder []string
+	for i, _ := range keys {
+		valuePlaceholder = append(valuePlaceholder, fmt.Sprintf("$%d", i))
+	}
 
-	now := time.Now().UTC()
-	row["created_at"] = now
-	row["updated_at"] = now
+	sql := "INSERT INTO " + t.TableName() + " (" + strings.Join(keys, ",") + ") VALUES (" + strings.Join(valuePlaceholder, ",") + ") RETURNING *"
 
-	if err := db.Table(t.TableName()).Create(row).Scan(&t).Error; err != nil {
+	err := db.pool.QueryRow(context.Background(), sql, attributes.Values()...).Scan(&t)
+	if err != nil {
 		return nil, err
 	}
 
 	return &t, nil
 }
 
-func InsertRecord(db *gorm.DB, dst any) error {
-	if err := db.Create(dst).Error; err != nil {
-		return err
-	}
+// func InsertRecord(db *DB, dst any) error {
+// 	if err := db.Create(dst).Error; err != nil {
+// 		return err
+// 	}
 
-	return nil
-}
+// 	return nil
+// }

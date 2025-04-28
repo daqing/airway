@@ -1,49 +1,58 @@
 package orm
 
 import (
+	"context"
 	"errors"
-	"log"
+	"time"
 
-	"github.com/daqing/airway/app/models"
 	"github.com/daqing/airway/lib/utils"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var __gormDB__ *gorm.DB
+type DB struct {
+	pool *pgxpool.Pool
+}
+
+var __DB__ *DB
 
 var ErrNotSetup = errors.New("database is not setup yet")
 
 func Setup() error {
 	// don't setup if no AIRWAY_PG_URL is set
-	if _, err := utils.GetEnv("AIRWAY_PG_URL"); err != nil {
+	connString, err := utils.GetEnv("AIRWAY_PG_URL")
+	if err != nil {
 		return nil
 	}
 
-	var err error
-
-	__gormDB__, err = gorm.Open(postgres.Open(utils.GetEnvMust("AIRWAY_PG_URL")), &gorm.Config{})
-
+	// Create configuration
+	config, err := pgxpool.ParseConfig(connString)
 	if err != nil {
-		log.Printf("Failed to open database from gorm: %v", err)
 		return err
 	}
 
-	autoMigrate()
+	// Configure pool settings
+	config.MaxConns = 20                      // Maximum number of connections
+	config.MinConns = 5                       // Minimum number of connections
+	config.MaxConnLifetime = time.Hour        // Maximum connection lifetime
+	config.MaxConnIdleTime = time.Minute * 30 // Maximum idle time
+
+	// Create connection pool
+	pool, err := pgxpool.NewWithConfig(context.Background(), config)
+	if err != nil {
+		return err
+	}
+
+	__DB__ = &DB{
+		pool: pool,
+	}
 
 	return nil
 }
 
-func DB() *gorm.DB {
-	if __gormDB__ == nil {
+func Database() *DB {
+	if __DB__ == nil {
 		panic(ErrNotSetup)
 	}
 
-	return __gormDB__
-}
-
-func autoMigrate() {
-	db := __gormDB__
-
-	db.AutoMigrate(&models.User{})
+	return __DB__
 }

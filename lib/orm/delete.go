@@ -1,17 +1,17 @@
 package orm
 
-import (
-	"gorm.io/gorm"
-)
+import "context"
 
-func Delete[T Table](db *gorm.DB, cond CondBuilder) error {
+func Delete[T Table](db *DB, cond CondBuilder) error {
 	var t T
 
-	db.Table(t.TableName()).Where(cond.Cond()).Delete(&t)
+	where, vals := whereQuery(cond)
+	sql := "DELETE FROM " + t.TableName() + " WHERE " + where
+	_, err := db.pool.Exec(context.Background(), sql, vals...)
 
-	return nil
+	return err
 }
 
 func DeleteByID[T Table](id any) error {
-	return Delete[T](DB(), Eq("id", id))
+	return Delete[T](Database(), Eq("id", id))
 }

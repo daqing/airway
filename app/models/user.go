@@ -1,7 +1,9 @@
 package models
 
+import "time"
+
 type User struct {
-	ID IdType `gorm:"primarykey" json:"id"`
+	ID IdType `json:"id"`
 
 	Nickname          string    `json:"nickname"`
 	Username          string    `json:"username"`
@@ -13,8 +15,8 @@ type User struct {
 	EncryptedPassword string    `json:"-"`
 	Balance           PriceCent `json:"balance"`
 
-	CreatedAt Timestamp `json:"created_at"`
-	UpdatedAt Timestamp `json:"updated_at"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 func (u User) TableName() string { return "users" }

@@ -1,8 +1,6 @@
 package orm
 
-import "gorm.io/gorm"
-
-func Page[T Table](db *gorm.DB, fields []string, order string, page, limit int) (all []*T, total int64, err error) {
+func Page[T Table](db *DB, fields []string, order string, page, limit int) (all []*T, total int64, err error) {
 	if page == 0 {
 		page = 1
 	}

@@ -1,7 +1,24 @@
 package orm
 
-import "gorm.io/gorm"
+import (
+	"context"
 
-func Tx(db *gorm.DB, fn func(tx *gorm.DB) error) error {
-	return db.Transaction(fn)
+	"github.com/jackc/pgx/v5"
+)
+
+func Tx(db *DB, fn func(tx pgx.Tx) error) error {
+	ctx := context.Background()
+
+	tx, err := db.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	err = fn(tx)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
 }
