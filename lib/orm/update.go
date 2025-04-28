@@ -2,6 +2,7 @@ package orm
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/daqing/airway/app/models"
@@ -15,11 +16,11 @@ func UpdateFields[T Table](db *DB, id models.IdType, fields *Fields) bool {
 	var keys []string
 	i := 0
 	for _, key := range fields.Keys() {
-		keys = append(keys, key+" = $"+string(i))
 		i++
+		keys = append(keys, fmt.Sprintf("%s = $%d", key, i))
 	}
 
-	sql += strings.Join(keys, ",") + " WHERE id = $" + string(i)
+	sql += strings.Join(keys, ",") + fmt.Sprintf(" WHERE id = $%d", i+1)
 
 	var args []any = fields.Values()
 	args = append(args, id)

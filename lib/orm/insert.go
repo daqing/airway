@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"strings"
+
+	"github.com/jackc/pgx/v5"
 )
 
 func Insert[T Table](db *DB, attributes *Fields) (*T, error) {
@@ -26,15 +28,23 @@ func InsertSkipExists[T Table](db *DB, attributes *Fields, skipExists bool) (*T,
 
 	keys := attributes.Keys()
 	var valuePlaceholder []string
-	for i, _ := range keys {
-		valuePlaceholder = append(valuePlaceholder, fmt.Sprintf("$%d", i))
+	for i := range len(keys) {
+		valuePlaceholder = append(valuePlaceholder, fmt.Sprintf("$%d", i+1))
 	}
 
 	sql := "INSERT INTO " + t.TableName() + " (" + strings.Join(keys, ",") + ") VALUES (" + strings.Join(valuePlaceholder, ",") + ") RETURNING *"
 
-	err := db.pool.QueryRow(context.Background(), sql, attributes.Values()...).Scan(&t)
+	rows, err := db.pool.Query(context.Background(), sql, attributes.Values()...)
 	if err != nil {
 		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		t, err = pgx.RowToStructByName[T](rows)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &t, nil

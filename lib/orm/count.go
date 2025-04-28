@@ -2,6 +2,7 @@ package orm
 
 import (
 	"context"
+	"fmt"
 	"strings"
 )
 
@@ -19,8 +20,11 @@ func Count[T Table](db *DB, cond CondBuilder) (n int64, err error) {
 func whereQuery(cond CondBuilder) (string, []any) {
 	var condStr []string
 	var result []any
+
+	i := 0
 	for k, v := range cond.Cond() {
-		condStr = append(condStr, k+" = ?")
+		i++
+		condStr = append(condStr, fmt.Sprintf("%s = $%d", k, i))
 		result = append(result, v)
 	}
 
