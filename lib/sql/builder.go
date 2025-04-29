@@ -5,9 +5,12 @@ import (
 	"strings"
 )
 
+type H map[string]any
+
 type Builder struct {
 	kind      string
 	tableName string
+	fields    []string
 	cond      CondBuilder
 	vals      map[string]any
 	orderBy   string
@@ -15,37 +18,16 @@ type Builder struct {
 	limit     int
 }
 
-func Table(tableName string) *Builder {
+func baseBuilder(kind string) *Builder {
 	return &Builder{
-		kind:      "",
-		tableName: tableName,
+		kind:      kind,
+		tableName: "",
+		fields:    []string{},
 		cond:      EmptyCond{},
 		vals:      make(map[string]any),
 		offset:    -1,
 		limit:     -1,
 	}
-}
-
-func (b *Builder) Select() *Builder {
-	b.kind = "SELECT"
-	return b
-}
-
-func (b *Builder) Insert(vals map[string]any) *Builder {
-	b.kind = "INSERT"
-	b.vals = vals
-	return b
-}
-
-func (b *Builder) Update(vals map[string]any) *Builder {
-	b.kind = "UPDATE"
-	b.vals = vals
-	return b
-}
-
-func (b *Builder) Delete() *Builder {
-	b.kind = "DELETE"
-	return b
 }
 
 func (b *Builder) Where(cond CondBuilder) *Builder {

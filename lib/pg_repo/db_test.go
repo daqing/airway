@@ -24,7 +24,7 @@ func TestInsert(t *testing.T) {
 	}
 
 	var todo *Todo
-	b := sql.Table("todos").Insert(map[string]any{"title": "test233", "completed": true})
+	b := sql.Insert(sql.H{"title": "test233", "completed": true}).Into("todos")
 	todo, err = Insert[Todo](db, b)
 	if err != nil {
 		t.Fatal(err)
@@ -42,7 +42,7 @@ func TestSelect(t *testing.T) {
 	}
 
 	var todos []*Todo
-	b := sql.Table("todos").Select()
+	b := sql.Select("*").From("todos")
 	todos, err = Find[Todo](db, b)
 	if err != nil {
 		t.Fatal(err)
@@ -59,7 +59,7 @@ func TestUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	b := sql.Table("todos").Update(map[string]any{"title": "test updated", "completed": false})
+	b := sql.Update("todos").Set(sql.H{"title": "test updated", "completed": false})
 	ok := db.Update(b)
 	if !ok {
 		t.Fatalf("failed to update todo")
@@ -72,7 +72,7 @@ func TestDelete(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	b := sql.Table("todos").Delete().OrderBy("id ASC").Limit(1)
+	b := sql.Delete().From("todos").OrderBy("id ASC").Limit(1)
 	err = db.Delete(b)
 	if err != nil {
 		t.Fatal(err)
