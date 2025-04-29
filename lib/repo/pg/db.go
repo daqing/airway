@@ -4,8 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/daqing/airway/lib/sql"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -33,50 +31,4 @@ func NewDB(dsn string) (*DB, error) {
 	}
 
 	return &DB{pool: pool}, nil
-}
-
-func (db *DB) Count(b *sql.Builder) (n int64, err error) {
-	sql, vals := b.ToSQL()
-
-	db.pool.QueryRow(context.Background(), sql, pgx.NamedArgs(vals)).Scan(&n)
-
-	return n, nil
-}
-
-func (db *DB) Delete(b *sql.Builder) error {
-	sql, vals := b.ToSQL()
-	_, err := db.pool.Exec(context.Background(), sql, pgx.NamedArgs(vals))
-
-	return err
-}
-
-func (db *DB) Exists(b *sql.Builder) (bool, error) {
-	n, err := db.Count(b)
-
-	return n > 0, err
-}
-
-func (db *DB) Update(b *sql.Builder) error {
-	sql, vals := b.ToSQL()
-
-	_, err := db.pool.Exec(context.Background(), sql, pgx.NamedArgs(vals))
-
-	return err
-}
-
-func (db *DB) Tx(fn func(tx pgx.Tx) error) error {
-	ctx := context.Background()
-
-	tx, err := db.pool.Begin(ctx)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback(ctx)
-
-	err = fn(tx)
-	if err != nil {
-		return err
-	}
-
-	return tx.Commit(ctx)
 }

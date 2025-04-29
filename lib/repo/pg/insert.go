@@ -13,7 +13,7 @@ func Insert[T any](db *DB, b *sql.Builder) (*T, error) {
 
 func insertSkipExists[T any](db *DB, b *sql.Builder, skipExists bool) (*T, error) {
 	if skipExists {
-		ex, err := db.Exists(b)
+		ex, err := Exists(db, b)
 		if err != nil {
 			return nil, err
 		}

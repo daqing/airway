@@ -60,7 +60,7 @@ func TestUpdate(t *testing.T) {
 	}
 
 	b := sql.Update("todos").Set(sql.H{"title": "test updated", "completed": false})
-	err = db.Update(b)
+	err = Update(db, b)
 	if err != nil {
 		t.Fatalf("failed to update todo")
 	}
@@ -73,7 +73,7 @@ func TestDelete(t *testing.T) {
 	}
 
 	b := sql.Delete().From("todos").OrderBy("id ASC").Limit(1)
-	err = db.Delete(b)
+	err = Delete(db, b)
 	if err != nil {
 		t.Fatal(err)
 	}
