@@ -1,4 +1,4 @@
-package api_resp
+package resp
 
 import (
 	"github.com/gin-gonic/gin"
