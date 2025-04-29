@@ -77,12 +77,6 @@ $ cp .env.example .env
 
   * 服务器监听的端口，默认为 `"1900"`
 
-* AIRWAY_ROOT
-
-  * 项目所在的绝对路径（不要以'/'结尾）
-
-  * 例如: `/Users/joe/projects/airway`
-
 * TZ
   * 当前服务器的时区
   * 默认值为: `Asia/Shanghai`
@@ -102,9 +96,6 @@ COPY ./bin/airway /app/bin
 
 ENV AIRWAY_ENV=production
 ENV AIRWAY_PORT=1900
-
-ENV AIRWAY_ROOT=/app
-
 ENV TZ="Asia/Shanghai"
 
 EXPOSE 1900

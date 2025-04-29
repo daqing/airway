@@ -40,12 +40,6 @@ The port to listen on.
 
 Example: `1900`
 
-**AIRWAY_ROOT**
-
-The full path to current project directory.
-
-Example: `/Users/daqing/open-source/airway`
-
 **TZ**
 
 The timezone of the server
