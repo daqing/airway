@@ -28,7 +28,7 @@ $ cp .env.example .env
 
 This file defines a few environment variables:
 
-**AIRWAY_PG_URL**
+**AIRWAY_DSN**
 
 The URL string for connecting to PostgreSQL.
 

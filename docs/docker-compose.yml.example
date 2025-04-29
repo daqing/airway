@@ -21,7 +21,7 @@ services:
     image: "airway"
     restart: "always"
     environment:
-      AIRWAY_PG_URL: "postgres://postgres:abc123456@postgres:5432/airway"
+      AIRWAY_DSN: "postgres://postgres:abc123456@postgres:5432/airway"
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.airway.rule=Host(`airway.example.com`)"
