@@ -112,7 +112,7 @@ func (b *Builder) buildInsert() (string, NamedArgs) {
 	}
 
 	sql += " (" + strings.Join(columns, ", ") + ")"
-	sql += " VALUES (" + strings.Join(atColumns, ", ") + ")"
+	sql += " VALUES (" + strings.Join(atColumns, ", ") + ") RETURNING *"
 
 	return sql, NamedArgs(b.vals)
 }
