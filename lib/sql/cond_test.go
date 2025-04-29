@@ -54,7 +54,7 @@ func TestAndCond(t *testing.T) {
 	}
 
 	if len(vals) != 2 || vals["name"] != "John" || vals["age"] != 30 {
-		t.Errorf("Expected values: [John, 30], got: %v", vals)
+		t.Errorf("Expected values: map[name:John, age:30], got: %v", vals)
 	}
 }
 
@@ -79,7 +79,7 @@ func TestOrCond(t *testing.T) {
 	}
 
 	if len(vals) != 2 || vals["name"] != "John" || vals["age"] != 30 {
-		t.Errorf("Expected values: [John, 30], got: %v", vals)
+		t.Errorf("Expected values: map[name:John, age:30], got: %v", vals)
 	}
 }
 
@@ -108,6 +108,6 @@ func TestConditionGroup(t *testing.T) {
 	}
 
 	if len(vals) != 2 || vals["name"] != "John" || vals["age"] != 30 {
-		t.Errorf("Expected values: [John, 30], got: %v", vals)
+		t.Errorf("Expected values: map[name:John, age:30], got: %v", vals)
 	}
 }
