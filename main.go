@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/daqing/airway/config"
-	"github.com/daqing/airway/lib/pg_repo"
+	"github.com/daqing/airway/lib/repo/pg"
 	"github.com/daqing/airway/lib/utils"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -34,7 +34,7 @@ func main() {
 
 	dsn, err := utils.GetEnv("AIRWAY_PG_URL")
 	if err == nil {
-		pg_repo.Setup(dsn)
+		pg.Setup(dsn)
 	}
 
 	app := NewApp()
