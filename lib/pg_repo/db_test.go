@@ -60,8 +60,8 @@ func TestUpdate(t *testing.T) {
 	}
 
 	b := sql.Update("todos").Set(sql.H{"title": "test updated", "completed": false})
-	ok := db.Update(b)
-	if !ok {
+	err = db.Update(b)
+	if err != nil {
 		t.Fatalf("failed to update todo")
 	}
 }

@@ -2,7 +2,6 @@ package pg_repo
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/daqing/airway/lib/sql"
@@ -57,16 +56,12 @@ func (db *DB) Exists(b *sql.Builder) (bool, error) {
 	return n > 0, err
 }
 
-func (db *DB) Update(b *sql.Builder) bool {
+func (db *DB) Update(b *sql.Builder) error {
 	sql, vals := b.ToSQL()
 
 	_, err := db.pool.Exec(context.Background(), sql, pgx.NamedArgs(vals))
-	if err != nil {
-		fmt.Println(err)
-		return false
-	}
 
-	return true
+	return err
 }
 
 func (db *DB) Tx(fn func(tx pgx.Tx) error) error {
