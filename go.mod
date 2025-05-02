@@ -1,6 +1,6 @@
 module github.com/daqing/airway
 
-go 1.22.4
+go 1.24.2
 
 require (
 	github.com/gin-contrib/cors v1.4.0
