@@ -1,0 +1,26 @@
+package redis_client
+
+import "github.com/redis/go-redis/v9"
+
+var __RDB__ *redis.Client
+
+func Setup(dsn string) {
+	if __RDB__ != nil {
+		return
+	}
+
+	opts, err := redis.ParseURL(dsn)
+	if err != nil {
+		panic(err)
+	}
+
+	__RDB__ = redis.NewClient(opts)
+}
+
+func RDB() *redis.Client {
+	if __RDB__ == nil {
+		panic("redis client not initialized")
+	}
+
+	return __RDB__
+}
