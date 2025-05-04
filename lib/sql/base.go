@@ -1,16 +1,23 @@
-package models
+package sql
 
 import (
 	"fmt"
-)
 
-type IdType int64
+	"github.com/fatih/structs"
+)
 
 type PolyModel interface {
 	PolyId() IdType
 	PolyType() string
 }
 
+type H map[string]any
+
+func ToH(obj any) H {
+	return structs.Map(obj)
+}
+
+type IdType int64
 type PriceCent int64
 
 func ToCent(price float64) PriceCent {

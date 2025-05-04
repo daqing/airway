@@ -3,6 +3,7 @@ module github.com/daqing/airway
 go 1.24.2
 
 require (
+	github.com/fatih/structs v1.1.0
 	github.com/gin-contrib/cors v1.4.0
 	github.com/gin-gonic/gin v1.9.1
 	github.com/gorilla/websocket v1.5.3

@@ -5,8 +5,6 @@ import (
 	"strings"
 )
 
-type H map[string]any
-
 type Builder struct {
 	kind      string
 	tableName string
