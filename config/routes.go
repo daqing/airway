@@ -3,20 +3,23 @@ package config
 import (
 	"github.com/gin-gonic/gin"
 
+	"github.com/daqing/airway/app/api/page_api"
 	"github.com/daqing/airway/app/api/up_api"
 	"github.com/daqing/airway/app/websocket"
 )
 
 func Routes(r *gin.Engine) {
-	websocketRoutes(r)
+	up_api.Routes(r)
 
-	apiRoutes(r)
+	websocketRoutes(r)
+	apiGroupRoutes(r)
 }
 
-func apiRoutes(r *gin.Engine) {
+func apiGroupRoutes(r *gin.Engine) {
 	v1 := r.Group("/api/v1")
-
-	up_api.Routes(v1)
+	{
+		page_api.Routes(v1)
+	}
 }
 
 func websocketRoutes(r *gin.Engine) {

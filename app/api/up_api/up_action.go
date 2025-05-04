@@ -6,6 +6,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func IndexAction(c *gin.Context) {
+func UpAction(c *gin.Context) {
 	fmt.Fprintf(c.Writer, "UP\n")
 }
