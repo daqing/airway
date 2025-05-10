@@ -7,6 +7,10 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+func Create[T any](db *DB, b *sql.Builder) (*T, error) {
+	return Insert[T](db, b)
+}
+
 func Insert[T any](db *DB, b *sql.Builder) (*T, error) {
 	return insertSkipExists[T](db, b, false)
 }

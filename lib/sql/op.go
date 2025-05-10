@@ -63,3 +63,9 @@ func NotLike(key string, val any) *Condition {
 		Val: val,
 	}
 }
+
+func HCond(cond H) *MapCond {
+	return &MapCond{
+		Cond: cond,
+	}
+}

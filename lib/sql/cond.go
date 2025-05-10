@@ -58,7 +58,7 @@ func (c EmptyCond) ToSQL() (string, NamedArgs) {
 }
 
 type AndCond struct {
-	Conds []Condition
+	Conds []*Condition
 }
 
 func (c *AndCond) ToSQL() (string, NamedArgs) {
@@ -66,14 +66,14 @@ func (c *AndCond) ToSQL() (string, NamedArgs) {
 }
 
 type OrCond struct {
-	Conds []Condition
+	Conds []*Condition
 }
 
 func (c *OrCond) ToSQL() (string, NamedArgs) {
 	return joinConds(c.Conds, " OR ")
 }
 
-func joinConds(conds []Condition, sep string) (string, NamedArgs) {
+func joinConds(conds []*Condition, sep string) (string, NamedArgs) {
 	if len(conds) == 0 {
 		return "", nil
 	}
@@ -103,4 +103,18 @@ func mergeMap(m1, m2 NamedArgs) NamedArgs {
 	}
 
 	return merged
+}
+
+type MapCond struct {
+	Cond H
+}
+
+func (c *MapCond) ToSQL() (string, NamedArgs) {
+	var and AndCond
+
+	for k, v := range c.Cond {
+		and.Conds = append(and.Conds, Eq(k, v))
+	}
+
+	return and.ToSQL()
 }

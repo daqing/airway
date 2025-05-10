@@ -34,18 +34,18 @@ func TestCondition(t *testing.T) {
 }
 
 func TestAndCond(t *testing.T) {
-	c1 := Condition{
+	c1 := &Condition{
 		Key: "name",
 		Op:  "=",
 		Val: "John",
 	}
-	c2 := Condition{
+	c2 := &Condition{
 		Key: "age",
 		Op:  ">",
 		Val: 30,
 	}
 
-	andCond := AndCond{Conds: []Condition{c1, c2}}
+	andCond := AndCond{Conds: []*Condition{c1, c2}}
 	sql, vals := andCond.ToSQL()
 
 	expectedSQL := "name = @name AND age > @age"
@@ -59,18 +59,18 @@ func TestAndCond(t *testing.T) {
 }
 
 func TestOrCond(t *testing.T) {
-	c1 := Condition{
+	c1 := &Condition{
 		Key: "name",
 		Op:  "=",
 		Val: "John",
 	}
-	c2 := Condition{
+	c2 := &Condition{
 		Key: "age",
 		Op:  ">",
 		Val: 30,
 	}
 
-	orCond := OrCond{Conds: []Condition{c1, c2}}
+	orCond := OrCond{Conds: []*Condition{c1, c2}}
 	sql, vals := orCond.ToSQL()
 
 	expectedSQL := "name = @name OR age > @age"

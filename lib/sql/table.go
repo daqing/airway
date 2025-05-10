@@ -19,3 +19,7 @@ func UpdateAll(t Table, vals H) *Builder {
 func DeleteById(t Table, id IdType) *Builder {
 	return Delete().From(t.TableName()).Where(Eq("id", id))
 }
+
+func Exists(t Table, vals H) *Builder {
+	return Select("count(*)").From(t.TableName()).Where(HCond(vals)).Limit(1)
+}

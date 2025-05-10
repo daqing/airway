@@ -74,7 +74,10 @@ func (b *Builder) ToSQL() (string, NamedArgs) {
 }
 
 func (b *Builder) buildSelect() (string, NamedArgs) {
-	sql := fmt.Sprintf("SELECT * FROM %s", b.tableName)
+	if len(b.fields) == 0 {
+		b.fields = []string{"*"}
+	}
+	sql := fmt.Sprintf("SELECT %s FROM %s", strings.Join(b.fields, ","), b.tableName)
 	where, args := b.cond.ToSQL()
 	if where != "" {
 		sql += " WHERE " + where
