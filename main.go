@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/daqing/airway/config"
 	"github.com/daqing/airway/lib/repo/pg"
@@ -37,17 +38,10 @@ func main() {
 		pg.Setup(dsn)
 	}
 
-	app := NewApp()
-
-	r := app.Router()
-
-	r.Use(cors.Default())
-
-	config.Routes(r)
-
 	port := utils.GetEnvMust("AIRWAY_PORT")
-
 	fmt.Printf("Airway running at: http://127.0.0.1:%s\n", port)
+
+	app := NewApp()
 	app.Run(":" + port)
 }
 
@@ -60,6 +54,9 @@ func NewApp() *App {
 
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
+	router.Use(CORS())
+
+	config.Routes(router)
 
 	return &App{
 		r: router,
@@ -72,4 +69,16 @@ func (a *App) Router() *gin.Engine {
 
 func (a *App) Run(addr string) {
 	a.r.Run(addr)
+}
+
+// Default CORS middleware
+func CORS() gin.HandlerFunc {
+	return cors.New(cors.Config{
+		AllowOrigins:     []string{"*"},
+		AllowMethods:     []string{"GET", "POST", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		MaxAge:           12 * time.Hour,
+		AllowCredentials: true,
+	})
 }
