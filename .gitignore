@@ -12,3 +12,4 @@
 !/data/storage/.keep
 
 *.sock
+*.sh
