@@ -8,6 +8,10 @@ func All(t Table) *Builder {
 	return Select("*").From(t.TableName())
 }
 
+func FindBy(t Table, vals H) *Builder {
+	return Select("*").From(t.TableName()).Where(HCond(vals))
+}
+
 func Create(t Table, vals H) *Builder {
 	return Insert(vals).Into(t.TableName())
 }
