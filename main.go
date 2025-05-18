@@ -29,7 +29,7 @@ func main() {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	dsn, err := utils.GetEnv("AIRWAY_DSN")
+	dsn, err := utils.GetEnv("AIRWAY_PG")
 	if err == nil {
 		pg.Setup(dsn)
 	}

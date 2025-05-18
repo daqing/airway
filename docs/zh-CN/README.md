@@ -67,7 +67,7 @@ $ cp .env.example .env
 
 这个文件，定义了几个环境变量，说明如下：
 
-* AIRWAY_DSN
+* AIRWAY_PG
 
   * 连接PostgreSQL字符串，类似这样的形式:
 
