@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/daqing/airway/lib/redis_client"
 	"github.com/daqing/airway/lib/repo/pg"
 	"github.com/daqing/airway/lib/utils"
 	"github.com/gin-gonic/gin"
@@ -32,6 +33,11 @@ func main() {
 	dsn, err := utils.GetEnv("AIRWAY_PG")
 	if err == nil {
 		pg.Setup(dsn)
+	}
+
+	redisURL, err := utils.GetEnv("AIRWAY_REDIS")
+	if err == nil {
+		redis_client.Setup(redisURL)
 	}
 
 	app := NewApp("Airway", utils.GetEnvMust("AIRWAY_PORT"))
