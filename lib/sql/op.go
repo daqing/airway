@@ -69,3 +69,10 @@ func HCond(cond H) *MapCond {
 		Cond: cond,
 	}
 }
+
+func In[T any](column string, vals []T) *InCond[T] {
+	return &InCond[T]{
+		Column: column,
+		Values: vals,
+	}
+}

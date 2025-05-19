@@ -118,3 +118,27 @@ func (c *MapCond) ToSQL() (string, NamedArgs) {
 
 	return and.ToSQL()
 }
+
+type InCond[T any] struct {
+	Column string
+	Values []T
+}
+
+func (c *InCond[T]) ToSQL() (string, NamedArgs) {
+	if len(c.Values) == 0 {
+		return "", nil
+	}
+
+	var args NamedArgs = make(map[string]any)
+	var placeholders []string
+
+	for i, v := range c.Values {
+		key := fmt.Sprintf("%s_%d", c.Column, i)
+		args[key] = v
+		placeholders = append(placeholders, fmt.Sprintf("@%s", key))
+	}
+
+	sql := fmt.Sprintf("%s IN (%s)", c.Column, strings.Join(placeholders, ", "))
+
+	return sql, args
+}

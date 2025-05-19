@@ -9,7 +9,11 @@ func All(t Table) *Builder {
 }
 
 func FindBy(t Table, vals H) *Builder {
-	return Select("*").From(t.TableName()).Where(HCond(vals))
+	return FindByCond(t, HCond(vals))
+}
+
+func FindByCond(t Table, cond CondBuilder) *Builder {
+	return Select("*").From(t.TableName()).Where(cond)
 }
 
 func Create(t Table, vals H) *Builder {
