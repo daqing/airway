@@ -1,2 +1,0 @@
-- Move user model to a plugin
--
