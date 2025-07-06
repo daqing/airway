@@ -4,7 +4,7 @@ import (
 	"log"
 )
 
-// args 最少会有一个参数
+// len(args) >= 1
 func Run(args []string) {
 	if len(args) == 0 {
 		log.Fatal("No args")
