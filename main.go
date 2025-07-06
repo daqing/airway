@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/daqing/airway/cmd"
 	"github.com/daqing/airway/lib/redis_client"
 	"github.com/daqing/airway/lib/repo/pg"
 	"github.com/daqing/airway/lib/utils"
@@ -40,6 +41,14 @@ func main() {
 		redis_client.Setup(redisURL)
 	}
 
+	if len(os.Args) > 1 {
+		cmd.Run(os.Args[1:])
+	} else {
+		runApp()
+	}
+}
+
+func runApp() {
 	app := NewApp("Airway", utils.GetEnvMust("AIRWAY_PORT"))
 	app.Run()
 }
