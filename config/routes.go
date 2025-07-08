@@ -3,6 +3,7 @@ package config
 import (
 	"github.com/gin-gonic/gin"
 
+	"github.com/daqing/airway/app/api/asset_api"
 	"github.com/daqing/airway/app/api/page_api"
 	"github.com/daqing/airway/app/api/storage_api"
 	"github.com/daqing/airway/app/api/up_api"
@@ -11,6 +12,7 @@ import (
 
 func Routes(r *gin.Engine) {
 	up_api.Routes(r)
+	asset_api.Routes(r)
 
 	websocketRoutes(r)
 	apiGroupRoutes(r)
