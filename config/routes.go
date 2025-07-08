@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/daqing/airway/app/api/page_api"
+	"github.com/daqing/airway/app/api/storage_api"
 	"github.com/daqing/airway/app/api/up_api"
 	"github.com/daqing/airway/app/websocket"
 )
@@ -19,6 +20,7 @@ func apiGroupRoutes(r *gin.Engine) {
 	v1 := r.Group("/api/v1")
 	{
 		page_api.Routes(v1)
+		storage_api.Routes(v1)
 	}
 }
 
