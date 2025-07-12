@@ -8,5 +8,6 @@ func Routes(r *gin.RouterGroup) {
 	g := r.Group("/storage")
 	{
 		g.POST("/upload", UploadAction)
+		g.POST("/delete", DeleteAction)
 	}
 }

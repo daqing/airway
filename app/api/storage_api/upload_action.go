@@ -31,8 +31,7 @@ func UploadAction(c *gin.Context) {
 	extName := filepath.Ext(fileHeader.Filename)
 	filePath := utils.FilePathFromMD5(md5Hash, extName)
 
-	storageRoot := utils.GetEnvMust("STORAGE_ROOT")
-	fullPath := filepath.Join(storageRoot, filePath)
+	fullPath := fullPath(filePath)
 
 	dir := filepath.Dir(fullPath)
 	if err := os.MkdirAll(dir, 0755); err != nil {
@@ -43,4 +42,10 @@ func UploadAction(c *gin.Context) {
 	c.SaveUploadedFile(fileHeader, fullPath)
 
 	resp.OK(c, filePath)
+}
+
+func fullPath(filePath string) string {
+	storageRoot := utils.GetEnvMust("STORAGE_ROOT")
+
+	return filepath.Join(storageRoot, filePath)
 }
