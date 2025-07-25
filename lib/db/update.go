@@ -13,6 +13,10 @@ func Update[T sql.Table](vals sql.H, cond sql.CondBuilder) error {
 	return pg.Update(pg.CurrentDB(), b)
 }
 
+func UpdateById[T sql.Table](id sql.IdType, vals sql.H) error {
+	return Update[T](vals, sql.Eq("id", id))
+}
+
 func UpdateAll[T sql.Table](vals sql.H) error {
 	var t T
 

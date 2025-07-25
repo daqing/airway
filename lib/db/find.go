@@ -20,3 +20,9 @@ func FindOne[T sql.Table](vals sql.H) (*T, error) {
 
 	return pg.FindOne[T](pg.CurrentDB(), b)
 }
+
+func FindById[T sql.Table](id sql.IdType) (*T, error) {
+	return FindOne[T](sql.H{
+		"id": id,
+	})
+}
