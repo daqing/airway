@@ -22,15 +22,11 @@ Rails 框架的缺点，有以下几点：
 
 提示：目前 `airway` 还处于开发阶段，以下内容仅适用于当前的版本。如果有不完善的地方，或者好的点子和改进意见，欢迎提 issue。
 
-## 1. 创建目录结构
-
-我们使用`gonew`工具，来创建新的 go 项目：
+## 1. 克隆项目代码
 
 ```bash
-$ gonew github.com/daqing/airway example.com/foo/bar
+$ git clone https://github.com/daqing/airway.git
 ```
-
-针对你的项目情况，替换 `example.com/foo/bar` 为真实的模块名称。
 
 ## 2. 搭建开发环境
 

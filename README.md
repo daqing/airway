@@ -10,13 +10,11 @@ Get Started
 
 ## 1. Setup project skeleton
 
-Use `gonew` to create a new project based on `airway`:
+Clone the repo
 
 ```bash
-$ gonew github.com/daqing/airway example.com/foo/bar
+$ git clone https://github.com/daqing/airway.git
 ```
-
-Replace `example.com/foo/bar` with your real module name.
 
 ## 2. Configure local development environment
 
