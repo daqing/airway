@@ -1,6 +1,6 @@
 module github.com/daqing/airway
 
-go 1.24.2
+go 1.25.3
 
 require (
 	github.com/fatih/structs v1.1.0
