@@ -77,7 +77,16 @@ $ cp .env.example .env
   * 当前服务器的时区
   * 默认值为: `Asia/Shanghai`
 
-#### 2.6
+#### 2.3
+
+安装 Airway 的命令行工具：`awcli`
+
+
+```bash
+go install github.com/daqing/airway-cli/cmd/awcli@latest
+```
+
+#### 2.4
 
 修改 `Dockerfile`，把里面的`airway`，替换为项目名称。
 

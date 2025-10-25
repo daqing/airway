@@ -44,7 +44,13 @@ The timezone of the server
 
 Example: `Asia/Shanghai`
 
-## 3. Start local development server
+## 3. Install `awcli`: the CLI for airway
+
+```bash
+go install github.com/daqing/airway-cli/cmd/awcli@latest
+```
+
+## 4. Start local development server
 
 Run `just` from the project root directory to start the local
 development server.
