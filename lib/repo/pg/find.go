@@ -18,7 +18,7 @@ func FindOne[T any](db *DB, b *sql.Builder) (*T, error) {
 	}
 
 	if len(rows) == 0 {
-		return nil, ErrorNotFound
+		return nil, nil
 	}
 
 	return rows[0], nil
