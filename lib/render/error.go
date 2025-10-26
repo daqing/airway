@@ -1,4 +1,4 @@
-package resp
+package render
 
 import (
 	"github.com/gin-gonic/gin"
