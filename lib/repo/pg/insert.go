@@ -45,5 +45,9 @@ func insertSkipExists[T any](db *DB, b *sql.Builder, skipExists bool) (*T, error
 		}
 	}
 
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
 	return &t, nil
 }

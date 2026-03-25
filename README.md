@@ -5,6 +5,8 @@ Airway is a full-stack API framework written in Go, inspired by Ruby on Rails.
 
 **[查看中文文档](https://github.com/daqing/airway/blob/main/docs/zh-CN/README.md)**
 
+**[SQL Builder DSL Guide (Chinese)](https://github.com/daqing/airway/blob/main/docs/zh-CN/sql-builder.md)**
+
 Get Started
 ===========
 

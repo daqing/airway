@@ -45,5 +45,9 @@ func Find[T any](db *DB, b *sql.Builder) ([]*T, error) {
 		records = append(records, &record)
 	}
 
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
 	return records, nil
 }
