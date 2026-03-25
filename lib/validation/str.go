@@ -1,7 +1,7 @@
 package validation
 
 import (
-	"fmt"
+	"errors"
 	"strings"
 )
 
@@ -59,7 +59,7 @@ type checkFuncString func(string) bool
 func checking(val string, cs ...*checkingStruct) error {
 	for _, c := range cs {
 		if !c.Fn(val) {
-			return fmt.Errorf(c.Name + "." + c.Tip)
+			return errors.New(c.Name + "." + c.Tip)
 		}
 	}
 
