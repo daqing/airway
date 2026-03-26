@@ -1,4 +1,4 @@
-package pg
+package repo
 
 import "github.com/daqing/airway/lib/sql"
 

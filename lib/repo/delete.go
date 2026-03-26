@@ -1,4 +1,4 @@
-package pg
+package repo
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	buildersql "github.com/daqing/airway/lib/sql"
 )
 
-func Update(db *DB, b *buildersql.Builder) error {
+func Delete(db *DB, b *buildersql.Builder) error {
 	query, args, err := db.prepareBuilder(b)
 	if err != nil {
 		return err

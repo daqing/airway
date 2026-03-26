@@ -6,7 +6,7 @@ import (
 
 	"github.com/daqing/airway/cmd"
 	"github.com/daqing/airway/lib/redis_client"
-	"github.com/daqing/airway/lib/repo/pg"
+	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -34,7 +34,7 @@ func main() {
 	dsn, err := utils.GetEnv("AIRWAY_DB_DSN")
 
 	if err == nil {
-		if _, setupErr := pg.Setup(dsn); setupErr != nil {
+		if _, setupErr := repo.SetupDB(dsn); setupErr != nil {
 			log.Printf("database setup failed: %v", setupErr)
 			os.Exit(3)
 		}

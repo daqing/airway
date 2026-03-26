@@ -108,14 +108,14 @@ query, args := b.ToSQL()
 返回值：
 
 - `query`: 最终 SQL 字符串
-- `args`: `map[string]any`，用于传给 `pgx.NamedArgs`
+- `args`: `map[string]any`，命名参数集合
 
 仓储层中已经封装好了这一步，参考：
 
-- [lib/repo/pg/find.go](/Users/daqing/mzevo/open-source/airway/lib/repo/pg/find.go)
-- [lib/repo/pg/insert.go](/Users/daqing/mzevo/open-source/airway/lib/repo/pg/insert.go)
-- [lib/repo/pg/update.go](/Users/daqing/mzevo/open-source/airway/lib/repo/pg/update.go)
-- [lib/repo/pg/delete.go](/Users/daqing/mzevo/open-source/airway/lib/repo/pg/delete.go)
+- [lib/repo/find.go](/Users/daqing/mzevo/open-source/airway/lib/repo/find.go)
+- [lib/repo/insert.go](/Users/daqing/mzevo/open-source/airway/lib/repo/insert.go)
+- [lib/repo/update.go](/Users/daqing/mzevo/open-source/airway/lib/repo/update.go)
+- [lib/repo/delete.go](/Users/daqing/mzevo/open-source/airway/lib/repo/delete.go)
 
 
 ### 2.2 基本 SELECT
@@ -712,7 +712,7 @@ cond := sql.AllOf(
 func FindById[T sql.Table](id sql.IdType) (*T, error) {
     var t T
     b := sql.FindByCond(t, sql.FieldEq(sql.FieldFor(t, "id"), id))
-    return pg.FindOne[T](pg.CurrentDB(), b)
+    return repo.FindOne[T](repo.CurrentDB(), b)
 }
 ```
 
@@ -797,4 +797,4 @@ sql.MatchTable(t, vals)
 完整的调用示例可以直接看：
 
 - [lib/sql/builder_test.go](/Users/daqing/mzevo/open-source/airway/lib/sql/builder_test.go)
-- [lib/repo/pg/db_test.go](/Users/daqing/mzevo/open-source/airway/lib/repo/pg/db_test.go)
+- [lib/repo/crud_integration_test.go](/Users/daqing/mzevo/open-source/airway/lib/repo/crud_integration_test.go)

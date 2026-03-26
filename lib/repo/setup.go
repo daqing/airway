@@ -1,4 +1,4 @@
-package pg
+package repo
 
 import (
 	"errors"
@@ -9,10 +9,18 @@ var __DB__ *DB
 var ErrNotSetup = errors.New("database is not setup yet")
 
 func Setup(dsn string) (*DB, error) {
-	return SetupWithDriver("", dsn)
+	return SetupDB(dsn)
 }
 
 func SetupWithDriver(driverName string, dsn string) (*DB, error) {
+	return SetupDBWithDriver(driverName, dsn)
+}
+
+func SetupDB(dsn string) (*DB, error) {
+	return SetupDBWithDriver("", dsn)
+}
+
+func SetupDBWithDriver(driverName string, dsn string) (*DB, error) {
 	db, err := NewDBWithDriver(driverName, dsn)
 	if err != nil {
 		return nil, err
