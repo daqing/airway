@@ -1,17 +1,24 @@
 # SQL Builder DSL 使用文档
 
-本文档介绍 Airway 当前内置的 SQL Builder DSL，重点说明如何在项目中构建 PostgreSQL 查询，而不依赖重量级 ORM。
+本文档介绍 Airway 当前内置的 SQL Builder DSL，重点说明如何在项目中构建 SQL 查询，而不依赖重量级 ORM。
 
 这套 DSL 的目标是：
 
 - 保持 SQL 语义清晰，可预测地生成 SQL
 - 使用命名参数，避免手写占位符和参数顺序错误
+- 基础 CRUD 语句可复用于 PostgreSQL、SQLite 3 和 MySQL 8
 - 支持 PostgreSQL 常见查询能力
 - 通过表/字段引用减少裸字符串 SQL 片段
 - 在简单场景保持足够轻量，在复杂场景提供更强约束
 
 
 ## 0. 先说结论
+
+当前兼容性边界：
+
+- 基础的 `SELECT`、`INSERT`、`UPDATE`、`DELETE`、分页、排序、普通条件拼接，已经按跨数据库复用的方向设计。
+- 如果你的查询只使用通用 SQL 语义，通常可以在 PostgreSQL、SQLite 3 和 MySQL 8 之间复用。
+- 如果你使用 ARRAY、JSONB、部分 `ON CONFLICT` 细节、`LATERAL JOIN` 或更偏 PostgreSQL 的表达式 helper，就需要按具体数据库能力判断是否可移植。
 
 这套表/字段引用能力值得保留，但不应该强制在所有查询里使用。
 

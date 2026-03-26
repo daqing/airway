@@ -3,14 +3,16 @@ package pg
 import (
 	"context"
 
-	"github.com/daqing/airway/lib/sql"
-	"github.com/jackc/pgx/v5"
+	buildersql "github.com/daqing/airway/lib/sql"
 )
 
-func Count(db *DB, b *sql.Builder) (n int64, err error) {
-	sql, vals := b.ToSQL()
+func Count(db *DB, b *buildersql.Builder) (n int64, err error) {
+	query, args, err := db.prepareBuilder(b)
+	if err != nil {
+		return 0, err
+	}
 
-	err = db.pool.QueryRow(context.Background(), sql, pgx.NamedArgs(vals)).Scan(&n)
+	err = db.conn.QueryRowxContext(context.Background(), query, args...).Scan(&n)
 
 	return n, err
 }

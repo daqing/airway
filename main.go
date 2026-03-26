@@ -31,9 +31,13 @@ func main() {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	dsn, err := utils.GetEnv("AIRWAY_PG")
+	dsn, err := utils.GetEnv("AIRWAY_DB_DSN")
+
 	if err == nil {
-		pg.Setup(dsn)
+		if _, setupErr := pg.Setup(dsn); setupErr != nil {
+			log.Printf("database setup failed: %v", setupErr)
+			os.Exit(3)
+		}
 	}
 
 	redisURL, err := utils.GetEnv("AIRWAY_REDIS")

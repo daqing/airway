@@ -67,11 +67,55 @@ $ cp .env.example .env
 
 这个文件，定义了几个环境变量，说明如下：
 
-* AIRWAY_PG
+* AIRWAY_DB_DSN
 
-  * 连接PostgreSQL字符串，类似这样的形式:
+  * 应用数据库连接字符串，支持 PostgreSQL、SQLite 3 和 MySQL 8.4。
 
-  * `postgres://daqing:passwd@127.0.0.1:5432/airway`
+  * PostgreSQL 示例: `postgres://daqing:passwd@127.0.0.1:5432/airway`
+
+  * MySQL 示例: `mysql://daqing:passwd@127.0.0.1:3306/airway?charset=utf8mb4`
+
+  * SQLite 示例: `sqlite://./tmp/airway.db`
+
+#### 2.2.1 常见数据库配置示例
+
+在当前版本中，应用层代码不需要改动，只需要切换 DSN 配置，就可以在 PostgreSQL、SQLite 3 和 MySQL 8 之间切换。
+
+PostgreSQL:
+
+```env
+AIRWAY_DB_DSN="postgres://daqing:passwd@127.0.0.1:5432/airway"
+```
+
+SQLite 3 文件数据库:
+
+```env
+AIRWAY_DB_DSN="sqlite://./tmp/airway.db"
+```
+
+SQLite 3 内存数据库:
+
+```env
+AIRWAY_DB_DSN="sqlite://:memory:"
+```
+
+MySQL 8:
+
+```env
+AIRWAY_DB_DSN="mysql://root:passwd@127.0.0.1:3306/airway?charset=utf8mb4"
+```
+
+MySQL 也支持 Go 驱动原生 DSN:
+
+```env
+AIRWAY_DB_DSN="root:passwd@tcp(127.0.0.1:3306)/airway?charset=utf8mb4&parseTime=true"
+```
+
+补充说明：
+
+- Airway 会根据 DSN 自动识别数据库驱动。
+- 当前通用 CRUD 能力已经覆盖 PostgreSQL、SQLite 3 和 MySQL 8。
+- `lib/sql` 中仍然有一部分明显偏 PostgreSQL 的高级 DSL，例如 ARRAY、JSONB、部分 `LATERAL`/复杂表达式写法；这些场景暂时不承诺三库完全一致。
 
 * AIRWAY_PORT
 

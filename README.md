@@ -28,11 +28,51 @@ $ cp .env.example .env
 
 This file defines a few environment variables:
 
-**AIRWAY_PG**
+**AIRWAY_DB_DSN**
 
-The URL string for connecting to PostgreSQL.
+The URL string for connecting to the application database.
 
-Example: `postgres://daqing@localhost:5432/airway`
+Examples: `postgres://daqing@localhost:5432/airway`, `sqlite://./tmp/airway.db`, `mysql://root:passwd@127.0.0.1:3306/airway?charset=utf8mb4`
+
+### Database Examples
+
+Use the same application code and switch databases by changing only the DSN.
+
+PostgreSQL:
+
+```env
+AIRWAY_DB_DSN="postgres://daqing:passwd@127.0.0.1:5432/airway"
+```
+
+SQLite 3:
+
+```env
+AIRWAY_DB_DSN="sqlite://./tmp/airway.db"
+```
+
+SQLite 3 in-memory:
+
+```env
+AIRWAY_DB_DSN="sqlite://:memory:"
+```
+
+MySQL 8:
+
+```env
+AIRWAY_DB_DSN="mysql://root:passwd@127.0.0.1:3306/airway?charset=utf8mb4"
+```
+
+MySQL also accepts the native Go driver DSN format:
+
+```env
+AIRWAY_DB_DSN="root:passwd@tcp(127.0.0.1:3306)/airway?charset=utf8mb4&parseTime=true"
+```
+
+Notes:
+
+- Airway infers the database driver directly from the DSN.
+- Basic CRUD flows are intended to work across PostgreSQL, SQLite 3, and MySQL 8 with the same Builder and repository APIs.
+- Some advanced SQL Builder helpers are still PostgreSQL-oriented, especially ARRAY, JSONB, and a few lateral/window-heavy expressions.
 
 **AIRWAY_PORT**
 

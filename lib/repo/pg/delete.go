@@ -3,13 +3,16 @@ package pg
 import (
 	"context"
 
-	"github.com/daqing/airway/lib/sql"
-	"github.com/jackc/pgx/v5"
+	buildersql "github.com/daqing/airway/lib/sql"
 )
 
-func Delete(db *DB, b *sql.Builder) error {
-	sql, vals := b.ToSQL()
-	_, err := db.pool.Exec(context.Background(), sql, pgx.NamedArgs(vals))
+func Delete(db *DB, b *buildersql.Builder) error {
+	query, args, err := db.prepareBuilder(b)
+	if err != nil {
+		return err
+	}
+
+	_, err = db.conn.ExecContext(context.Background(), query, args...)
 
 	return err
 }
