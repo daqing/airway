@@ -6,7 +6,7 @@ import (
 	buildersql "github.com/daqing/airway/lib/sql"
 )
 
-func Update(db *DB, b *buildersql.Builder) error {
+func Update(db *DB, b buildersql.Stmt) error {
 	query, args, err := db.prepareBuilder(b)
 	if err != nil {
 		return err

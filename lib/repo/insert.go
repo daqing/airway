@@ -8,15 +8,15 @@ import (
 	buildersql "github.com/daqing/airway/lib/sql"
 )
 
-func Create[T any](db *DB, b *buildersql.Builder) (*T, error) {
+func Create[T any](db *DB, b buildersql.Stmt) (*T, error) {
 	return Insert[T](db, b)
 }
 
-func Insert[T any](db *DB, b *buildersql.Builder) (*T, error) {
+func Insert[T any](db *DB, b buildersql.Stmt) (*T, error) {
 	return insertSkipExists[T](db, b, false)
 }
 
-func insertSkipExists[T any](db *DB, b *buildersql.Builder, skipExists bool) (*T, error) {
+func insertSkipExists[T any](db *DB, b buildersql.Stmt, skipExists bool) (*T, error) {
 	if skipExists {
 		ex, err := Exists(db, b)
 		if err != nil {
@@ -58,7 +58,7 @@ func insertSkipExists[T any](db *DB, b *buildersql.Builder, skipExists bool) (*T
 	return &t, nil
 }
 
-func insertMySQL[T any](db *DB, b *buildersql.Builder) (*T, error) {
+func insertMySQL[T any](db *DB, b buildersql.Stmt) (*T, error) {
 	query, args, err := db.prepareInsertBuilder(b)
 	if err != nil {
 		return nil, err
@@ -88,7 +88,7 @@ func insertMySQL[T any](db *DB, b *buildersql.Builder) (*T, error) {
 	return &record, nil
 }
 
-func (db *DB) resolveInsertLookup(b *buildersql.Builder, result any) (string, any, error) {
+func (db *DB) resolveInsertLookup(b buildersql.Stmt, result any) (string, any, error) {
 	if execResult, ok := result.(interface{ LastInsertId() (int64, error) }); ok {
 		lastInsertID, err := execResult.LastInsertId()
 		if err == nil && lastInsertID > 0 {

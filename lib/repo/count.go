@@ -6,7 +6,7 @@ import (
 	buildersql "github.com/daqing/airway/lib/sql"
 )
 
-func Count(db *DB, b *buildersql.Builder) (n int64, err error) {
+func Count(db *DB, b buildersql.Stmt) (n int64, err error) {
 	query, args, err := db.prepareBuilder(b)
 	if err != nil {
 		return 0, err

@@ -6,7 +6,7 @@ import (
 	buildersql "github.com/daqing/airway/lib/sql"
 )
 
-func FindOne[T any](db *DB, b *buildersql.Builder) (*T, error) {
+func FindOne[T any](db *DB, b buildersql.Stmt) (*T, error) {
 	rows, err := Find[T](db, b)
 	if err != nil {
 		return nil, err
@@ -24,7 +24,7 @@ func FindOne[T any](db *DB, b *buildersql.Builder) (*T, error) {
 }
 
 // limit = 0 means no limit
-func Find[T any](db *DB, b *buildersql.Builder) ([]*T, error) {
+func Find[T any](db *DB, b buildersql.Stmt) ([]*T, error) {
 	var records = []*T{}
 
 	query, args, err := db.prepareBuilder(b)

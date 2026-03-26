@@ -24,12 +24,12 @@ var mysqlConflictDoUpdatePattern = regexp.MustCompile(`\s+ON\s+CONFLICT(?:\s+ON\
 
 var mysqlExcludedPattern = regexp.MustCompile(`\bEXCLUDED\.([A-Za-z_][A-Za-z0-9_]*)\b`)
 
-func (db *DB) prepareBuilder(b *buildersql.Builder) (string, []any, error) {
+func (db *DB) prepareBuilder(b buildersql.Stmt) (string, []any, error) {
 	query, vals := b.ToSQL()
 	return db.prepareQuery(query, vals)
 }
 
-func (db *DB) prepareInsertBuilder(b *buildersql.Builder) (string, []any, error) {
+func (db *DB) prepareInsertBuilder(b buildersql.Stmt) (string, []any, error) {
 	query, vals := b.ToSQL()
 	if db.driver == DriverMySQL {
 		query = stripReturningClause(query)

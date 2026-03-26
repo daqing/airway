@@ -1,35 +1,137 @@
 # SQL Builder DSL 使用文档
 
-本文档介绍 Airway 当前内置的 SQL Builder DSL，重点说明如何在项目中构建 SQL 查询，而不依赖重量级 ORM。
+本文档介绍 Airway 当前内置的 SQL Builder 体系，重点说明如何在项目中构建 SQL 查询，而不依赖重量级 ORM。
 
-这套 DSL 的目标是：
+当前实现已经从“一个 Builder 尝试兼容所有数据库”的方向，调整为“一个核心 DSL + 三个方言 Builder”的结构：
+
+- `lib/sql`：底层通用 DSL 与内部实现
+- `lib/sql/pg`：PostgreSQL Builder
+- `lib/sql/mysql`：MySQL Builder
+- `lib/sql/sqlite`：SQLite Builder
+
+这套 Builder 体系的目标是：
 
 - 保持 SQL 语义清晰，可预测地生成 SQL
 - 使用命名参数，避免手写占位符和参数顺序错误
-- 基础 CRUD 语句可复用于 PostgreSQL、SQLite 3 和 MySQL 8
-- 支持 PostgreSQL 常见查询能力
+- 让业务代码在编译期就明确绑定数据库方言
+- 把数据库能力边界直接体现在 API 暴露面上
+- 让 PostgreSQL、SQLite 3、MySQL 8 各自按真实能力使用，而不是在运行时碰撞出错
 - 通过表/字段引用减少裸字符串 SQL 片段
 - 在简单场景保持足够轻量，在复杂场景提供更强约束
 
 
 ## 0. 先说结论
 
-当前兼容性边界：
+现在推荐的使用原则非常明确：
 
-- 基础的 `SELECT`、`INSERT`、`UPDATE`、`DELETE`、分页、排序、普通条件拼接，已经按跨数据库复用的方向设计。
-- 如果你的查询只使用通用 SQL 语义，通常可以在 PostgreSQL、SQLite 3 和 MySQL 8 之间复用。
-- 如果你使用 ARRAY、JSONB、部分 `ON CONFLICT` 细节、`LATERAL JOIN` 或更偏 PostgreSQL 的表达式 helper，就需要按具体数据库能力判断是否可移植。
+- 业务代码不要再默认直接依赖 `lib/sql`
+- 业务代码应该根据项目选定的数据库，明确导入一个方言包：`pg`、`mysql` 或 `sqlite`
+- `lib/sql` 现在主要承担底层实现、共用类型和共用 helper 的职责
+- `lib/repo` 已经改为接收 `sql.Stmt` 接口，因此三套 Builder 都可以直接传给 `repo.Find`、`repo.Insert`、`repo.Update`、`repo.Delete`
 
-这套表/字段引用能力值得保留，但不应该强制在所有查询里使用。
+这样做的直接收益是：
+
+- 如果某个数据库不支持某个能力，那么对应 Builder 就不暴露这个方法
+- 代码会在编译期失败，而不是运行时才发现 SQL 不可执行
+- API 的暴露面本身就成为数据库能力文档
+
+例如：
+
+- `pg.Builder` 支持 `DistinctOn`、`JoinLateral`、`ForShare`、`UpdateFrom`、`Using`、`ILike`、JSONB/ARRAY helper
+- `mysql.Builder` 不支持这些方法，因此不会误用
+- `sqlite.Builder` 支持 `Returning`，但不支持 `LATERAL JOIN`、`FOR UPDATE`、`ILIKE`
+
+### 0.1 你应该导入哪个包
+
+PostgreSQL 项目：
+
+```go
+import pg "github.com/daqing/airway/lib/sql/pg"
+```
+
+MySQL 项目：
+
+```go
+import mysql "github.com/daqing/airway/lib/sql/mysql"
+```
+
+SQLite 项目：
+
+```go
+import sqlite "github.com/daqing/airway/lib/sql/sqlite"
+```
+
+只有在以下情况，才应该直接依赖 `lib/sql`：
+
+- 实现底层 SQL DSL 本身
+- 编写方言 Builder 的包装层
+- 编写 `repo` 层这类需要接收统一接口的基础设施代码
+
+### 0.2 当前结构
+
+核心结构如下：
+
+- [lib/sql/base.go](/Users/daqing/mzevo/open-source/airway/lib/sql/base.go)：定义 `Stmt`、`H`、基础类型
+- [lib/sql/builder.go](/Users/daqing/mzevo/open-source/airway/lib/sql/builder.go)：底层 Builder 实现
+- [lib/sql/pg/builder.go](/Users/daqing/mzevo/open-source/airway/lib/sql/pg/builder.go)：PostgreSQL 方言包装
+- [lib/sql/mysql/builder.go](/Users/daqing/mzevo/open-source/airway/lib/sql/mysql/builder.go)：MySQL 方言包装
+- [lib/sql/sqlite/builder.go](/Users/daqing/mzevo/open-source/airway/lib/sql/sqlite/builder.go)：SQLite 方言包装
+- [lib/repo/query.go](/Users/daqing/mzevo/open-source/airway/lib/repo/query.go)：执行前的数据库方言转换和命名参数编译
+
+### 0.3 能力矩阵
+
+下表按“是否暴露为 Builder API”来理解，而不是数据库理论上是否完全支持某种 SQL 变体。
+
+| 能力 | pg | mysql | sqlite |
+| --- | --- | --- | --- |
+| 基础 SELECT / INSERT / UPDATE / DELETE | `Yes` | `Yes` | `Yes` |
+| `RETURNING` | `Yes` | `No` | `Yes` |
+| `DISTINCT ON` | `Yes` | `No` | `No` |
+| `JOIN LATERAL` | `Yes` | `No` | `No` |
+| `FULL JOIN` | `Yes` | `No` | `Yes` |
+| `FOR UPDATE` | `Yes` | `Yes` | `No` |
+| `FOR SHARE` | `Yes` | `No` | `No` |
+| `UPDATE ... FROM` | `Yes` | `No` | `No` |
+| `DELETE ... USING` | `Yes` | `No` | `No` |
+| `ON CONFLICT (columns)` | `Yes` | `Yes` | `Yes` |
+| `ON CONFLICT ON CONSTRAINT` | `Yes` | `No` | `No` |
+| `ILIKE / NOT ILIKE` | `Yes` | `No` | `No` |
+| JSONB helper | `Yes` | `No` | `No` |
+| ARRAY helper | `Yes` | `No` | `No` |
+| `INTERSECT ALL / EXCEPT ALL` | `Yes` | `No` | `Yes` |
+
+补充说明：
+
+- `mysql.OnConflictDoNothing(...)` 最终会在 `repo` 层转换为 `INSERT IGNORE`
+- `mysql.OnConflictDoUpdate(...)` 最终会在 `repo` 层转换为 `ON DUPLICATE KEY UPDATE`
+- `sqlite.Returning(...)` 依赖 SQLite 3.35+
+- `sqlite.FullJoin(...)` 依赖 SQLite 3.39+
+
+### 0.4 为什么不再追求一个统一 SQL 层
+
+因为不同数据库之间的真实差异并不只是语法皮肤差异，而是能力边界差异：
+
+- PostgreSQL 有 `JSONB`、`ARRAY`、`DISTINCT ON`、`LATERAL JOIN`
+- MySQL 没有 `RETURNING`，冲突更新语法也不是 `ON CONFLICT`
+- SQLite 虽然支持 `RETURNING`，但不支持 `FOR UPDATE` / `FOR SHARE`
+
+如果继续把所有能力都堆进同一个对外 Builder，调用端会面临两个问题：
+
+- IDE 自动补全会暴露大量当前数据库根本不能使用的方法
+- 开发者只能靠文档或运行时报错记住哪些能力不能用
+
+现在的结构是把“数据库能力差异”前移到 API 层，直接通过包和方法可见性表达出来。
+
+### 0.5 推荐开发习惯
 
 更合理的原则是：
 
 - 单表、简单 CRUD、字段很少的查询：继续使用字符串 API 完全可以接受
-- 多表 join、别名较多、schema-qualified table、复杂排序/返回列、JSONB/ARRAY 表达式：优先使用表/字段引用写法
+- 多表 join、别名较多、schema-qualified table、复杂排序/返回列：优先使用表/字段引用写法
+- PostgreSQL 独有能力：只在 `pg` 包中书写和维护
+- 如果项目未来可能切数据库，不要在通用查询中混入 PostgreSQL 专有 helper
 
-也就是说，表引用这层能力应该是“复杂查询的稳定工具”，而不是“所有查询都必须写得很重”。
-
-当前 DSL 建议采用两层风格：
+当前 DSL 仍然建议采用两层风格：
 
 - 默认写法：简单、直接
 - 表/字段写法：在复杂 SQL 中提供更高可读性和安全性
@@ -59,6 +161,16 @@ b := sql.SelectFields(u.AllFields(), u.Field("email")).
 - `SelectFields(...)`
 - `FieldEq(...)`
 
+这些命名在三个方言包里都做了重新导出，因此你可以这样写：
+
+```go
+users := pg.TableAlias("users", "u")
+
+b := pg.SelectFields(users.AllFields()).
+    FromTable(users).
+    Where(pg.FieldEq(users.Field("enabled"), true))
+```
+
 
 兼容性说明：
 
@@ -77,14 +189,21 @@ b := sql.SelectFields(u.AllFields(), u.Field("email")).
 
 ## 1. 核心概念
 
-SQL Builder 主要分为 4 层：
+从实现上看，现在 Builder 分为 5 层：
 
+- 方言层：`pg`、`mysql`、`sqlite`
 - 语句层：`Select`、`Insert`、`Update`、`Delete`
 - 条件层：`Where`、`AllOf`、`AnyOf`、`Compare`、`FieldEq` 等
 - 表达式层：`Func`、`Array`、`Any`、`JSONGetText`、`Raw` 等
 - 引用层：`TableOf`、`TableAlias`、`Field`、`TableFor`、`FieldFor`
 
-最常见的入口都在这些文件中：
+业务代码最常见的入口应该是这三个文件：
+
+- [lib/sql/pg/builder.go](/Users/daqing/mzevo/open-source/airway/lib/sql/pg/builder.go)
+- [lib/sql/mysql/builder.go](/Users/daqing/mzevo/open-source/airway/lib/sql/mysql/builder.go)
+- [lib/sql/sqlite/builder.go](/Users/daqing/mzevo/open-source/airway/lib/sql/sqlite/builder.go)
+
+底层实现和共用类型仍然在这些文件中：
 
 - [lib/sql/builder.go](/Users/daqing/mzevo/open-source/airway/lib/sql/builder.go)
 - [lib/sql/op.go](/Users/daqing/mzevo/open-source/airway/lib/sql/op.go)
@@ -100,7 +219,7 @@ SQL Builder 主要分为 4 层：
 所有 Builder 最终都通过 `ToSQL()` 导出 SQL 和命名参数：
 
 ```go
-b := sql.Select("*").From("users").Where(sql.Eq("enabled", true))
+b := pg.Select("*").From("users").Where(pg.Eq("enabled", true))
 
 query, args := b.ToSQL()
 ```
@@ -110,12 +229,27 @@ query, args := b.ToSQL()
 - `query`: 最终 SQL 字符串
 - `args`: `map[string]any`，命名参数集合
 
+如果你通过 `repo` 层执行，则通常不需要自己手工消费这两个返回值。
+
+现在仓储层统一接收的是 `sql.Stmt` 接口，而不是 `*sql.Builder`。也就是说：
+
+- `*pg.Builder` 可以直接传进去
+- `*mysql.Builder` 可以直接传进去
+- `*sqlite.Builder` 可以直接传进去
+- 原始 `*sql.Builder` 也仍然可以传进去
+
 仓储层中已经封装好了这一步，参考：
 
 - [lib/repo/find.go](/Users/daqing/mzevo/open-source/airway/lib/repo/find.go)
 - [lib/repo/insert.go](/Users/daqing/mzevo/open-source/airway/lib/repo/insert.go)
 - [lib/repo/update.go](/Users/daqing/mzevo/open-source/airway/lib/repo/update.go)
 - [lib/repo/delete.go](/Users/daqing/mzevo/open-source/airway/lib/repo/delete.go)
+
+例如：
+
+```go
+user, err := repo.FindOne[User](repo.CurrentDB(), pg.Select("*").From("users").Where(pg.Eq("id", 1)))
+```
 
 
 ### 2.2 基本 SELECT
@@ -200,6 +334,12 @@ b := sql.DeleteFrom(users).
     Where(sql.FieldEq(users.Field("id"), 1))
 ```
 
+说明：
+
+- 从这一节开始，后面的示例为了简洁，仍然大量使用 `sql.xxx` 作为抽象写法
+- 在真实业务代码中，请把 `sql` 替换为你项目选定的方言包，例如 `pg.xxx`、`mysql.xxx`、`sqlite.xxx`
+- 如果示例里出现了 PostgreSQL 独有 helper，例如 `ILike`、`Array`、`JSONGetText`，那么它只应该出现在 `pg` 包代码里
+
 
 ## 3. 表/字段引用
 
@@ -280,8 +420,8 @@ b := sql.SelectFields(
 - `Lte`
 - `Like`
 - `NotLike`
-- `ILike`
-- `NotILike`
+- `ILike`（仅 `pg`）
+- `NotILike`（仅 `pg`）
 - `In`
 - `NotIn`
 - `Between`
@@ -311,7 +451,7 @@ sql.AllOf(
 - `FieldLt`
 - `FieldLte`
 - `FieldLike`
-- `FieldILike`
+- `FieldILike`（仅 `pg`）
 - `Compare`
 
 示例：
@@ -366,6 +506,15 @@ cond := sql.MatchFields(users, sql.H{
 
 这会把 map 中的 key 自动绑定到 `users` 表作用域下的列引用，而不是继续用裸字符串列名。
 
+如果你的业务代码已经明确绑定某个数据库，推荐始终从方言包调用这些 helper，例如：
+
+```go
+cond := pg.MatchFields(users, pg.H{
+    "email":  "dev@example.com",
+    "status": "active",
+})
+```
+
 
 ## 5. 表达式 DSL
 
@@ -378,12 +527,15 @@ cond := sql.MatchFields(users, sql.H{
 - `Func(name, args...)`
 - `Op(left, operator, right)`
 - `Cast(value, type)`
-- `Array(values...)`
-- `Any(value)`
-- `AllExpr(value)`
 - `Excluded(column)`
 - `Default()`
 - `SubQuery(query)`
+
+其中：
+
+- `Array(values...)`、`Any(value)`、`AllExpr(value)` 只在 `pg` 包中暴露
+- `Excluded(column)` 在三个方言包中都可见，但最常见于 `OnConflictDoUpdate(...)`
+- `SubQuery(query)` 接收的是当前方言 Builder，而不是其他方言 Builder
 
 示例：
 
@@ -405,6 +557,8 @@ sql.Compare(
 
 
 ## 6. SELECT DSL
+
+这一节列出的很多能力都来自底层 core builder，但不同方言包只会选择性暴露其中一部分。
 
 ### 6.1 选择列
 
@@ -442,6 +596,11 @@ b := sql.SelectFields(users.Field("id"), users.Field("email")).
 - `JoinLateral(...)`
 - `LeftJoinLateral(...)`
 
+可用性：
+
+- `FullJoin(...)` / `FullJoinTable(...)`：仅 `pg` 和 `sqlite`
+- `JoinLateral(...)` / `LeftJoinLateral(...)`：仅 `pg`
+
 示例：
 
 ```go
@@ -462,6 +621,11 @@ b := sql.SelectFields(users.Field("id"), posts.Field("title")).
 - `GroupByFields(columns...)`
 - `Having(cond)`
 - `Window(definitions...)`
+
+可用性：
+
+- `DistinctOn(fields...)`：仅 `pg`
+- `Window(definitions...)`：`pg`、`mysql`、`sqlite` 都提供
 
 示例：
 
@@ -497,6 +661,12 @@ b.OrderBy(users.Field("id").Desc())
 - `ForUpdate()`
 - `ForShare()`
 
+可用性：
+
+- `For(clause)`：仅 `pg`
+- `ForUpdate()`：`pg`、`mysql`
+- `ForShare()`：仅 `pg`
+
 
 ### 6.6 CTE
 
@@ -524,6 +694,11 @@ b := sql.SelectFields(users.Field("id")).
 - `IntersectAll(query)`
 - `Except(query)`
 - `ExceptAll(query)`
+
+可用性：
+
+- `Union`、`UnionAll`、`Intersect`、`Except`：三个方言包都提供
+- `IntersectAll`、`ExceptAll`：仅 `pg`、`sqlite`
 
 示例：
 
@@ -581,6 +756,19 @@ b := sql.Insert(nil).
 - `OnConflictDoUpdate(columns, vals)`
 - `OnConflictOnConstraintDoUpdate(constraint, vals)`
 
+可用性：
+
+- `OnConflictDoNothing(columns...)`：三个方言包都提供
+- `OnConflictDoUpdate(columns, vals)`：三个方言包都提供
+- `OnConflictOnConstraintDoNothing(...)`：仅 `pg`
+- `OnConflictOnConstraintDoUpdate(...)`：仅 `pg`
+
+MySQL 特别说明：
+
+- `mysql.OnConflictDoNothing(...)` 在执行前会被转换成 `INSERT IGNORE`
+- `mysql.OnConflictDoUpdate(...)` 在执行前会被转换成 `ON DUPLICATE KEY UPDATE`
+- 这部分转换逻辑位于 [lib/repo/query.go](/Users/daqing/mzevo/open-source/airway/lib/repo/query.go)
+
 示例：
 
 ```go
@@ -600,6 +788,12 @@ b := sql.InsertRows(
 - `ReturningFields(columns...)`
 - `ReturningAll()`
 
+可用性：
+
+- `pg`：支持
+- `sqlite`：支持
+- `mysql`：不暴露
+
 
 ## 8. UPDATE DSL
 
@@ -607,6 +801,12 @@ b := sql.InsertRows(
 - `UpdateFrom(tables...)`
 - `Returning(...)`
 - `ReturningFields(...)`
+
+可用性：
+
+- `Set(vals)`：三个方言包都提供
+- `UpdateFrom(tables...)`：仅 `pg`
+- `Returning(...)` / `ReturningFields(...)`：`pg`、`sqlite`
 
 示例：
 
@@ -631,6 +831,12 @@ b := sql.UpdateTable(users).
 - `Using(tables...)`
 - `Returning(...)`
 - `ReturningFields(...)`
+
+可用性：
+
+- `DeleteFrom(table)`、`DeleteKey(column)`、`DeleteKeyField(field)`：三个方言包都提供
+- `Using(tables...)`：仅 `pg`
+- `Returning(...)` / `ReturningFields(...)`：`pg`、`sqlite`
 
 当 `DELETE` 语句带有 `ORDER BY / LIMIT / OFFSET` 时，Builder 会自动退化为：
 
@@ -657,6 +863,8 @@ b := sql.DeleteFrom(events).
 
 
 ## 10. PostgreSQL JSONB / ARRAY helper
+
+这一章是 PostgreSQL 专属能力，只应该在 `pg` 包中使用。
 
 ### 10.1 ARRAY
 
@@ -697,7 +905,86 @@ cond := sql.AllOf(
 ```
 
 
-## 11. 与项目封装层配合使用
+## 11. 迁移指引
+
+如果你的代码之前统一使用：
+
+```go
+import sql "github.com/daqing/airway/lib/sql"
+```
+
+现在建议按下面方式迁移。
+
+### 11.1 业务代码迁移
+
+PostgreSQL 项目：
+
+```go
+import pg "github.com/daqing/airway/lib/sql/pg"
+```
+
+把：
+
+```go
+sql.Select("*")
+sql.Insert(...)
+sql.Update(...)
+sql.Delete()
+sql.FieldEq(...)
+```
+
+替换为：
+
+```go
+pg.Select("*")
+pg.Insert(...)
+pg.Update(...)
+pg.Delete()
+pg.FieldEq(...)
+```
+
+MySQL 和 SQLite 项目同理，只是前缀替换为 `mysql` 或 `sqlite`。
+
+### 11.2 `repo` 层调用无需特殊改造
+
+之前：
+
+```go
+b := sql.Select("*").From("users")
+user, err := repo.FindOne[User](repo.CurrentDB(), b)
+```
+
+现在：
+
+```go
+b := pg.Select("*").From("users")
+user, err := repo.FindOne[User](repo.CurrentDB(), b)
+```
+
+原因是 `repo` 现在接收的是 `sql.Stmt` 接口，而不是固定的 `*sql.Builder`。
+
+### 11.3 什么时候还可以继续用 `lib/sql`
+
+以下场景继续直接使用 `lib/sql` 是合理的：
+
+- 你在维护底层 Builder 本身
+- 你在编写一个新的方言包装层
+- 你在写基础设施代码，希望接收 `sql.Stmt` 而不关心具体数据库
+
+普通业务查询不建议继续直接依赖 `lib/sql`，否则你会重新失去“按数据库能力裁剪 API”的收益。
+
+### 11.4 常见迁移策略
+
+建议这样逐步迁移：
+
+1. 先按项目数据库类型，把 import 从 `lib/sql` 替换成对应方言包
+2. 确认项目还能通过编译
+3. 编译报错的位置，通常就是你正在调用该数据库不支持的能力
+4. 再针对这些位置决定：改写 SQL，还是保留为 PostgreSQL 专有查询
+
+这也是这次改造最重要的目标之一：让“不兼容能力”在编译阶段暴露出来。
+
+## 12. 与项目封装层配合使用
 
 项目已经把部分 helper 和 CRUD 封装迁到了表/字段 DSL：
 
@@ -725,10 +1012,12 @@ func FindById[T sql.Table](id sql.IdType) (*T, error) {
 - `SelectFields`
 - `FromTable`
 
+如果你的封装层不想绑定具体数据库，也可以像 `lib/repo` 一样，直接接收 `sql.Stmt` 作为参数类型。
 
-## 12. 推荐实践
 
-### 12.1 优先使用表/字段引用写法
+## 13. 推荐实践
+
+### 13.1 优先使用表/字段引用写法
 
 复杂查询推荐：
 
@@ -746,7 +1035,7 @@ sql.Eq("id", 1)
 只有在别名、多表、schema、复杂 SQL 表达式开始增多时，再切换到这种表/字段引用写法，收益才最明显。
 
 
-### 12.2 原始 SQL 只留给复杂表达式
+### 13.2 原始 SQL 只留给复杂表达式
 
 适合用原始字符串的场景：
 
@@ -761,7 +1050,7 @@ Columns(`ROW_NUMBER() OVER (ORDER BY "p"."created_at" DESC) AS rn`)
 ```
 
 
-### 12.3 单表 map 条件优先用 `MatchTable`
+### 13.3 单表 map 条件优先用 `MatchTable`
 
 如果你是从 HTTP 参数或 service 层拿到一个 `map[string]any`，不要直接继续拼字段名，优先使用：
 
@@ -770,7 +1059,7 @@ sql.MatchTable(t, vals)
 ```
 
 
-### 12.4 用测试验证生成 SQL
+### 13.4 用测试验证生成 SQL
 
 这套 DSL 的一个重要优势，就是生成 SQL 足够稳定，因此很适合直接测试 query string 和 args。
 
@@ -779,7 +1068,7 @@ sql.MatchTable(t, vals)
 - [lib/sql/builder_test.go](/Users/daqing/mzevo/open-source/airway/lib/sql/builder_test.go)
 
 
-## 13. 当前限制
+## 14. 当前限制
 
 当前 DSL 已经支持大部分常见 PostgreSQL 查询，但仍然有一些能力还没有专门封装成更高层 API，例如：
 
@@ -792,7 +1081,7 @@ sql.MatchTable(t, vals)
 这些能力目前仍然可以通过 `Raw(...)`、`Columns(...)`、`Expr(...)`、`Compare(...)` 组合实现。
 
 
-## 14. 参考示例
+## 15. 参考示例
 
 完整的调用示例可以直接看：
 
