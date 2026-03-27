@@ -13,6 +13,8 @@ func Run(args []string) {
 	command := args[0]
 
 	switch command {
+	case "repl":
+		runRepoREPL(args[1:])
 	case "version":
 		showVersion(args[1:])
 	default:

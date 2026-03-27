@@ -96,3 +96,48 @@ go install github.com/daqing/airway-cli/cmd/awcli@latest
 
 Run `just` from the project root directory to start the local
 development server.
+
+Repo REPL
+=========
+
+Airway now includes a built-in REPL for exercising `lib/repo` directly against a configured database.
+
+Start it with the app database from `AIRWAY_DB_DSN`:
+
+```bash
+go run . repl
+```
+
+Or point it at a different database explicitly:
+
+```bash
+go run . repl --driver sqlite3 --dsn ./tmp/airway.db
+go run . repl --dsn sqlite://./tmp/airway.db
+```
+
+Supported commands:
+
+- `tables`
+- `driver`
+- `help`
+- `exit`
+
+Examples:
+
+```text
+repo.FindOne("users", pg.Eq("id", 1))
+repo.Find("users", pg.AllOf(pg.Eq("enabled", true), pg.Like("email", "%@example.com")))
+repo.Insert("users", pg.H{"email": "dev@example.com", "enabled": true})
+repo.Update("users", pg.H{"enabled": false}, pg.Eq("id", 1))
+repo.Delete("users", pg.Eq("id", 1))
+repo.Preview(pg.Select("*").From("users").Where(pg.Eq("id", 1)))
+pg.Select("*").From("users").Where(pg.Eq("id", 1))
+```
+
+Available namespaces in the REPL are `repo`, `sql`, `pg`, `mysql`, and `sqlite`.
+
+`repo.Find` / `repo.FindOne` / `repo.Count` / `repo.Exists` accept either a built statement, or `table + condition` arguments.
+
+`repo.Update` and `repo.Delete` reject full-table writes unless the last argument is explicit `true`.
+
+If you enter a builder expression directly, the REPL prints the compiled SQL and bind args.
