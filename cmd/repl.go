@@ -141,6 +141,7 @@ func (r repoREPL) printHelp() {
 Expressions:
   repo.FindOne("users", pg.Eq("id", 1))
   repo.FindOne[models.User](pg.Select("id").Where(pg.Eq("id", 1)))
+  repo.Insert[models.User](pg.H{"id": 1234})
   repo.FindOne[User](pg.Eq("id", 1))
   repo.FindOne[struct{ ID int64; Email string }](pg.Select("id AS id, email AS email").From("users").Where(pg.Eq("id", 1)))
 	repo.Find("users", pg.Select("*").Where(pg.Eq("id", 1)))
@@ -171,6 +172,7 @@ Notes:
 	repo.Find/FindOne/Count/Exists also accept table + stmt and will bind the table when the stmt has no table yet
   repo.Find[T]/FindOne[T] support anonymous struct type arguments and use struct scan instead of map results
   when T implements TableName(), repo.Find[T]/FindOne[T] can infer the table and omit the first table argument
+  app/models types are also available as top-level type names such as User
   entering a builder expression directly prints the compiled SQL and args`)
 }
 

@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"unicode"
 
 	appmodels "github.com/daqing/airway/app/models"
 	"github.com/daqing/airway/lib/repo"
@@ -38,7 +39,15 @@ func newREPLEvaluator(db *repo.DB) *replEvaluator {
 	evaluator.symbols["pg"] = newPGNamespace()
 	evaluator.symbols["mysql"] = newMySQLNamespace()
 	evaluator.symbols["sqlite"] = newSQLiteNamespace()
-	evaluator.symbols["models"] = newModelsNamespace()
+	modelsNamespace := newModelsNamespace()
+	evaluator.symbols["models"] = modelsNamespace
+	for name, value := range modelsNamespace {
+		if _, exists := evaluator.symbols[name]; exists {
+			continue
+		}
+
+		evaluator.symbols[name] = value
+	}
 
 	return evaluator
 }
@@ -697,11 +706,26 @@ func (e *replEvaluator) newRepoNamespace() replNamespace {
 			call: replCallable(e.callRepoFindOne),
 			bind: e.bindRepoFindOne,
 		},
-		"Count":   replCallable(e.callRepoCount),
-		"Exists":  replCallable(e.callRepoExists),
-		"Insert":  replCallable(e.callRepoInsert),
-		"Update":  replCallable(e.callRepoUpdate),
-		"Delete":  replCallable(e.callRepoDelete),
+		"Count": replOverloadedCallable{
+			call: replCallable(e.callRepoCount),
+			bind: e.bindRepoCount,
+		},
+		"Exists": replOverloadedCallable{
+			call: replCallable(e.callRepoExists),
+			bind: e.bindRepoExists,
+		},
+		"Insert": replOverloadedCallable{
+			call: replCallable(e.callRepoInsert),
+			bind: e.bindRepoInsert,
+		},
+		"Update": replOverloadedCallable{
+			call: replCallable(e.callRepoUpdate),
+			bind: e.bindRepoUpdate,
+		},
+		"Delete": replOverloadedCallable{
+			call: replCallable(e.callRepoDelete),
+			bind: e.bindRepoDelete,
+		},
 		"Preview": replCallable(e.callRepoPreview),
 		"SQL":     replCallable(e.callRepoPreview),
 		"Tables":  replCallable(e.callRepoTables),
@@ -994,6 +1018,22 @@ func (e *replEvaluator) callRepoCount(args []any) (any, error) {
 	return repo.Count(e.db, stmt)
 }
 
+func (e *replEvaluator) bindRepoCount(typeArgs []reflect.Type) (any, error) {
+	if len(typeArgs) != 1 {
+		return nil, fmt.Errorf("repo.Count expects exactly 1 type argument")
+	}
+
+	modelType := typeArgs[0]
+	return replCallable(func(args []any) (any, error) {
+		stmt, err := e.buildCountStmtForModel(modelType, args)
+		if err != nil {
+			return nil, err
+		}
+
+		return repo.Count(e.db, stmt)
+	}), nil
+}
+
 func (e *replEvaluator) callRepoExists(args []any) (any, error) {
 	stmt, err := e.buildCountStmt(args)
 	if err != nil {
@@ -1001,6 +1041,22 @@ func (e *replEvaluator) callRepoExists(args []any) (any, error) {
 	}
 
 	return repo.Exists(e.db, stmt)
+}
+
+func (e *replEvaluator) bindRepoExists(typeArgs []reflect.Type) (any, error) {
+	if len(typeArgs) != 1 {
+		return nil, fmt.Errorf("repo.Exists expects exactly 1 type argument")
+	}
+
+	modelType := typeArgs[0]
+	return replCallable(func(args []any) (any, error) {
+		stmt, err := e.buildCountStmtForModel(modelType, args)
+		if err != nil {
+			return nil, err
+		}
+
+		return repo.Exists(e.db, stmt)
+	}), nil
 }
 
 func (e *replEvaluator) callRepoInsert(args []any) (any, error) {
@@ -1012,6 +1068,22 @@ func (e *replEvaluator) callRepoInsert(args []any) (any, error) {
 	return repo.InsertMap(e.db, stmt)
 }
 
+func (e *replEvaluator) bindRepoInsert(typeArgs []reflect.Type) (any, error) {
+	if len(typeArgs) != 1 {
+		return nil, fmt.Errorf("repo.Insert expects exactly 1 type argument")
+	}
+
+	modelType := typeArgs[0]
+	return replCallable(func(args []any) (any, error) {
+		stmt, err := e.buildInsertStmtForModel(modelType, args)
+		if err != nil {
+			return nil, err
+		}
+
+		return repo.InsertByType(e.db, stmt, modelType)
+	}), nil
+}
+
 func (e *replEvaluator) callRepoUpdate(args []any) (any, error) {
 	stmt, err := e.buildUpdateStmt(args)
 	if err != nil {
@@ -1021,6 +1093,22 @@ func (e *replEvaluator) callRepoUpdate(args []any) (any, error) {
 	return repo.UpdateAffected(e.db, stmt)
 }
 
+func (e *replEvaluator) bindRepoUpdate(typeArgs []reflect.Type) (any, error) {
+	if len(typeArgs) != 1 {
+		return nil, fmt.Errorf("repo.Update expects exactly 1 type argument")
+	}
+
+	modelType := typeArgs[0]
+	return replCallable(func(args []any) (any, error) {
+		stmt, err := e.buildUpdateStmtForModel(modelType, args)
+		if err != nil {
+			return nil, err
+		}
+
+		return repo.UpdateAffected(e.db, stmt)
+	}), nil
+}
+
 func (e *replEvaluator) callRepoDelete(args []any) (any, error) {
 	stmt, err := e.buildDeleteStmt(args)
 	if err != nil {
@@ -1028,6 +1116,22 @@ func (e *replEvaluator) callRepoDelete(args []any) (any, error) {
 	}
 
 	return repo.DeleteAffected(e.db, stmt)
+}
+
+func (e *replEvaluator) bindRepoDelete(typeArgs []reflect.Type) (any, error) {
+	if len(typeArgs) != 1 {
+		return nil, fmt.Errorf("repo.Delete expects exactly 1 type argument")
+	}
+
+	modelType := typeArgs[0]
+	return replCallable(func(args []any) (any, error) {
+		stmt, err := e.buildDeleteStmtForModel(modelType, args)
+		if err != nil {
+			return nil, err
+		}
+
+		return repo.DeleteAffected(e.db, stmt)
+	}), nil
 }
 
 func (e *replEvaluator) callRepoPreview(args []any) (any, error) {
@@ -1142,7 +1246,7 @@ func (e *replEvaluator) buildSelectStmtForModel(modelType reflect.Type, args []a
 		return e.buildSelectStmt(args)
 	}
 
-	return buildSelectStmtWithTable(table, args)
+	return buildSelectStmtWithModel(table, modelType, args)
 }
 
 func buildSelectStmtWithTable(table reposql.TableName, args []any) (reposql.Stmt, error) {
@@ -1223,6 +1327,42 @@ func (e *replEvaluator) buildCountStmt(args []any) (reposql.Stmt, error) {
 	return reposql.SelectColumns("count(*)").FromTable(table).Where(cond), nil
 }
 
+func (e *replEvaluator) buildCountStmtForModel(modelType reflect.Type, args []any) (reposql.Stmt, error) {
+	if len(args) > 0 {
+		if _, err := coerceTable(args[0]); err == nil {
+			return e.buildCountStmt(args)
+		}
+	}
+
+	table, ok := tableForModelType(modelType)
+	if !ok {
+		return e.buildCountStmt(args)
+	}
+
+	return buildCountStmtWithTable(table, args)
+}
+
+func buildCountStmtWithTable(table reposql.TableName, args []any) (reposql.Stmt, error) {
+	if len(args) == 0 {
+		return reposql.SelectColumns("count(*)").FromTable(table), nil
+	}
+
+	if len(args) != 1 {
+		return nil, fmt.Errorf("repo.Count and repo.Exists accept table+cond or stmt")
+	}
+
+	if stmt, err := coerceStmt(args[0]); err == nil {
+		return bindStmtTable(table, stmt)
+	}
+
+	cond, err := coerceCond(args[0])
+	if err != nil {
+		return nil, err
+	}
+
+	return reposql.SelectColumns("count(*)").FromTable(table).Where(cond), nil
+}
+
 func (e *replEvaluator) buildInsertStmt(args []any) (reposql.Stmt, error) {
 	if len(args) == 0 {
 		return nil, fmt.Errorf("repo.Insert requires at least 1 arg")
@@ -1259,6 +1399,99 @@ func (e *replEvaluator) buildInsertStmt(args []any) (reposql.Stmt, error) {
 	return builder, nil
 }
 
+func buildSelectStmtWithModel(table reposql.TableName, modelType reflect.Type, args []any) (reposql.Stmt, error) {
+	fields := defaultSelectFieldsForModel(table, modelType)
+
+	if len(args) == 0 {
+		return reposql.SelectColumns(fields...).FromTable(table), nil
+	}
+
+	if len(args) == 1 {
+		if stmt, err := coerceStmt(args[0]); err == nil {
+			return bindStmtTable(table, stmt)
+		}
+
+		if cond, err := coerceCond(args[0]); err == nil {
+			return reposql.SelectColumns(fields...).FromTable(table).Where(cond), nil
+		}
+
+		explicitFields, err := coerceFields(table, args[0])
+		if err != nil {
+			return nil, err
+		}
+
+		return reposql.SelectColumns(explicitFields...).FromTable(table), nil
+	}
+
+	if len(args) == 2 {
+		explicitFields, err := coerceFields(table, args[0])
+		if err != nil {
+			return nil, err
+		}
+
+		cond, err := coerceCond(args[1])
+		if err != nil {
+			return nil, err
+		}
+
+		return reposql.SelectColumns(explicitFields...).FromTable(table).Where(cond), nil
+	}
+
+	return nil, fmt.Errorf("too many args for repo.Find or repo.FindOne")
+}
+
+func (e *replEvaluator) buildInsertStmtForModel(modelType reflect.Type, args []any) (reposql.Stmt, error) {
+	if len(args) > 0 {
+		if _, err := coerceTable(args[0]); err == nil {
+			return e.buildInsertStmt(args)
+		}
+	}
+
+	table, ok := tableForModelType(modelType)
+	if !ok {
+		return e.buildInsertStmt(args)
+	}
+
+	return buildInsertStmtWithTable(table, args)
+}
+
+func buildInsertStmtWithTable(table reposql.TableName, args []any) (reposql.Stmt, error) {
+	if len(args) == 0 {
+		return nil, fmt.Errorf("repo.Insert requires at least 1 arg")
+	}
+
+	if len(args) == 1 {
+		if stmt, err := coerceStmt(args[0]); err == nil {
+			return bindInsertStmtTable(table, stmt)
+		}
+
+		values, err := coerceH(args[0])
+		if err != nil {
+			return nil, fmt.Errorf("repo.Insert accepts stmt or table, values, [returning]")
+		}
+
+		return reposql.Insert(values).IntoTable(table), nil
+	}
+
+	if len(args) == 2 {
+		values, err := coerceH(args[0])
+		if err != nil {
+			return nil, fmt.Errorf("repo.Insert accepts stmt or table, values, [returning]")
+		}
+
+		builder := reposql.Insert(values).IntoTable(table)
+		fields, err := coerceFields(table, args[1])
+		if err != nil {
+			return nil, err
+		}
+
+		builder.Returning(fields...)
+		return builder, nil
+	}
+
+	return nil, fmt.Errorf("repo.Insert accepts stmt or table, values, [returning]")
+}
+
 func (e *replEvaluator) buildUpdateStmt(args []any) (reposql.Stmt, error) {
 	if len(args) == 0 {
 		return nil, fmt.Errorf("repo.Update requires at least 1 arg")
@@ -1292,6 +1525,66 @@ func (e *replEvaluator) buildUpdateStmt(args []any) (reposql.Stmt, error) {
 	}
 
 	cond, err := coerceCond(args[2])
+	if err != nil {
+		return nil, err
+	}
+
+	builder.Where(cond)
+	return builder, nil
+}
+
+func (e *replEvaluator) buildUpdateStmtForModel(modelType reflect.Type, args []any) (reposql.Stmt, error) {
+	if len(args) > 0 {
+		if _, err := coerceTable(args[0]); err == nil {
+			return e.buildUpdateStmt(args)
+		}
+	}
+
+	table, ok := tableForModelType(modelType)
+	if !ok {
+		return e.buildUpdateStmt(args)
+	}
+
+	return buildUpdateStmtWithTable(table, args)
+}
+
+func buildUpdateStmtWithTable(table reposql.TableName, args []any) (reposql.Stmt, error) {
+	if len(args) == 0 {
+		return nil, fmt.Errorf("repo.Update requires at least 1 arg")
+	}
+
+	if len(args) == 1 {
+		stmt, err := coerceStmt(args[0])
+		if err != nil {
+			return nil, fmt.Errorf("repo.Update accepts stmt or table, values, cond|true")
+		}
+
+		if stmt.TableName() == "" {
+			return nil, fmt.Errorf("repo.Update stmt must already be bound to a table")
+		}
+
+		return stmt, nil
+	}
+
+	if len(args) != 2 {
+		return nil, fmt.Errorf("repo.Update accepts stmt or table, values, cond|true")
+	}
+
+	values, err := coerceH(args[0])
+	if err != nil {
+		return nil, err
+	}
+
+	builder := reposql.UpdateTable(table).Set(values)
+	if allowAll, ok := args[1].(bool); ok {
+		if !allowAll {
+			return nil, fmt.Errorf("repo.Update full-table update requires true as the last arg")
+		}
+
+		return builder, nil
+	}
+
+	cond, err := coerceCond(args[1])
 	if err != nil {
 		return nil, err
 	}
@@ -1340,6 +1633,52 @@ func (e *replEvaluator) buildDeleteStmt(args []any) (reposql.Stmt, error) {
 	return builder, nil
 }
 
+func (e *replEvaluator) buildDeleteStmtForModel(modelType reflect.Type, args []any) (reposql.Stmt, error) {
+	if len(args) > 0 {
+		if _, err := coerceTable(args[0]); err == nil {
+			return e.buildDeleteStmt(args)
+		}
+	}
+
+	table, ok := tableForModelType(modelType)
+	if !ok {
+		return e.buildDeleteStmt(args)
+	}
+
+	return buildDeleteStmtWithTable(table, args)
+}
+
+func buildDeleteStmtWithTable(table reposql.TableName, args []any) (reposql.Stmt, error) {
+	if len(args) == 0 {
+		return nil, fmt.Errorf("repo.Delete requires at least 1 arg")
+	}
+
+	if len(args) == 1 {
+		if stmt, err := coerceStmt(args[0]); err == nil {
+			return bindStmtTable(table, stmt)
+		}
+
+		builder := reposql.DeleteFrom(table)
+		if allowAll, ok := args[0].(bool); ok {
+			if !allowAll {
+				return nil, fmt.Errorf("repo.Delete full-table delete requires true as the second arg")
+			}
+
+			return builder, nil
+		}
+
+		cond, err := coerceCond(args[0])
+		if err != nil {
+			return nil, fmt.Errorf("repo.Delete accepts stmt or table, cond|true")
+		}
+
+		builder.Where(cond)
+		return builder, nil
+	}
+
+	return nil, fmt.Errorf("repo.Delete accepts stmt or table, cond|true")
+}
+
 func coerceStmt(value any) (reposql.Stmt, error) {
 	stmt, ok := value.(reposql.Stmt)
 	if !ok {
@@ -1358,13 +1697,54 @@ func bindStmtTable(table reposql.TableName, stmt reposql.Stmt) (reposql.Stmt, er
 		return stmt, nil
 	}
 
-	if stmt.Kind() != "SELECT" {
+	switch stmt.Kind() {
+	case "SELECT":
+		method, ok := lookupMethod(stmt, "FromTable")
+		if !ok {
+			return nil, fmt.Errorf("stmt %T does not support FromTable", stmt)
+		}
+
+		bound, err := invokeCallable(method, []any{table})
+		if err != nil {
+			return nil, err
+		}
+
+		return coerceStmt(bound)
+	case "INSERT":
+		return bindInsertStmtTable(table, stmt)
+	case "DELETE":
+		method, ok := lookupMethod(stmt, "FromTable")
+		if !ok {
+			return nil, fmt.Errorf("stmt %T does not support FromTable", stmt)
+		}
+
+		bound, err := invokeCallable(method, []any{table})
+		if err != nil {
+			return nil, err
+		}
+
+		return coerceStmt(bound)
+	default:
+		return stmt, nil
+	}
+}
+
+func bindInsertStmtTable(table reposql.TableName, stmt reposql.Stmt) (reposql.Stmt, error) {
+	if stmt == nil {
+		return nil, fmt.Errorf("stmt cannot be nil")
+	}
+
+	if stmt.TableName() != "" {
 		return stmt, nil
 	}
 
-	method, ok := lookupMethod(stmt, "FromTable")
+	if stmt.Kind() != "INSERT" {
+		return stmt, nil
+	}
+
+	method, ok := lookupMethod(stmt, "IntoTable")
 	if !ok {
-		return nil, fmt.Errorf("stmt %T does not support FromTable", stmt)
+		return nil, fmt.Errorf("stmt %T does not support IntoTable", stmt)
 	}
 
 	bound, err := invokeCallable(method, []any{table})
@@ -1397,6 +1777,98 @@ func tableForModelType(modelType reflect.Type) (reposql.TableName, bool) {
 	}
 
 	return reposql.TableName{}, false
+}
+
+func defaultSelectFieldsForModel(table reposql.TableName, modelType reflect.Type) []string {
+	modelType, err := normalizeStructModelType(modelType)
+	if err != nil {
+		return []string{table.AllFields().String()}
+	}
+
+	fields := collectModelSelectFields(table, modelType)
+	if len(fields) == 0 {
+		return []string{table.AllFields().String()}
+	}
+
+	return fields
+}
+
+func normalizeStructModelType(modelType reflect.Type) (reflect.Type, error) {
+	if modelType == nil {
+		return nil, fmt.Errorf("model type cannot be nil")
+	}
+
+	for modelType.Kind() == reflect.Pointer {
+		modelType = modelType.Elem()
+	}
+
+	if modelType.Kind() != reflect.Struct {
+		return nil, fmt.Errorf("model type must be a struct or pointer to struct, got %s", modelType)
+	}
+
+	return modelType, nil
+}
+
+func collectModelSelectFields(table reposql.TableName, modelType reflect.Type) []string {
+	fields := make([]string, 0, modelType.NumField())
+	for idx := 0; idx < modelType.NumField(); idx++ {
+		field := modelType.Field(idx)
+		if field.PkgPath != "" {
+			continue
+		}
+
+		if field.Anonymous && field.Type.Kind() == reflect.Struct {
+			fields = append(fields, collectModelSelectFields(table, field.Type)...)
+			continue
+		}
+
+		column := parseDBTag(field.Tag.Get("db"))
+		if column == "-" {
+			continue
+		}
+		if column == "" {
+			column = toSnakeCase(field.Name)
+		}
+
+		fields = append(fields, table.Field(column).String())
+	}
+
+	return fields
+}
+
+func parseDBTag(tag string) string {
+	tag = strings.TrimSpace(tag)
+	if tag == "" {
+		return ""
+	}
+
+	parts := strings.Split(tag, ",")
+	return strings.TrimSpace(parts[0])
+}
+
+func toSnakeCase(value string) string {
+	if value == "" {
+		return value
+	}
+
+	var builder strings.Builder
+	runes := []rune(value)
+	for idx, rn := range runes {
+		if unicode.IsUpper(rn) {
+			if idx > 0 {
+				prev := runes[idx-1]
+				if unicode.IsLower(prev) || (idx+1 < len(runes) && unicode.IsLower(runes[idx+1])) {
+					builder.WriteByte('_')
+				}
+			}
+			builder.WriteRune(unicode.ToLower(rn))
+			continue
+		}
+
+		builder.WriteRune(rn)
+	}
+
+	return builder.String()
 }
 
 func coerceTableArg(args []any) (reposql.TableName, error) {

@@ -15,6 +15,7 @@ import (
 
 type replUser struct {
 	ID        int64     `db:"id"`
+	Name      *string   `db:"name"`
 	Email     string    `db:"email"`
 	Enabled   bool      `db:"enabled"`
 	CreatedAt time.Time `db:"created_at"`
@@ -149,6 +150,21 @@ func TestRepoREPLSupportsGenericRepoFindCalls(t *testing.T) {
 	}
 }
 
+func TestRepoREPLSupportsGenericRepoInsertCalls(t *testing.T) {
+	session := newTestREPL(t)
+	session.evaluator.symbols["replUser"] = reflect.TypeOf(replUser{})
+
+	inserted := executeAndDecode(t, session, `repo.Insert[replUser](pg.H{"id": 1234, "email": "typed@example.com", "enabled": true})`)
+	insertedRow, ok := inserted.(map[string]any)
+	if !ok {
+		t.Fatalf("expected typed inserted row object, got %#v", inserted)
+	}
+
+	if insertedRow["ID"] != float64(1234) {
+		t.Fatalf("unexpected typed inserted row: %#v", insertedRow)
+	}
+}
+
 func TestRepoREPLExposesProjectModelsNamespace(t *testing.T) {
 	session := newTestREPL(t)
 
@@ -162,6 +178,33 @@ func TestRepoREPLExposesProjectModelsNamespace(t *testing.T) {
 
 	if foundRow["ID"] != float64(1) {
 		t.Fatalf("unexpected model row: %#v", foundRow)
+	}
+}
+
+func TestRepoREPLExposesProjectModelsAsTopLevelTypes(t *testing.T) {
+	session := newTestREPL(t)
+
+	executeAndDecode(t, session, `repo.Insert("users", pg.H{"id": 7, "email": "top@example.com", "enabled": true})`)
+
+	found := executeAndDecode(t, session, `repo.FindOne[User](pg.Eq("id", 7))`)
+	foundRow, ok := found.(map[string]any)
+	if !ok {
+		t.Fatalf("expected top-level model row object, got %#v", found)
+	}
+
+	if foundRow["ID"] != float64(7) {
+		t.Fatalf("unexpected top-level model row: %#v", foundRow)
+	}
+}
+
+func TestRepoREPLSupportsGenericRepoDeleteCalls(t *testing.T) {
+	session := newTestREPL(t)
+
+	executeAndDecode(t, session, `repo.Insert("users", pg.H{"id": 333, "email": "delete@example.com", "enabled": true})`)
+
+	deleted := executeAndDecode(t, session, `repo.Delete[User](pg.Eq("id", 333))`)
+	if deleted.(float64) != 1 {
+		t.Fatalf("unexpected typed delete result: %#v", deleted)
 	}
 }
 
@@ -181,6 +224,7 @@ func newTestREPL(t *testing.T) *repoREPL {
 	_, err = setupDB.Exec(`
 CREATE TABLE users (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	name TEXT NULL,
 	email TEXT NOT NULL,
 	enabled BOOLEAN NOT NULL DEFAULT FALSE,
 	created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
