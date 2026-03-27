@@ -1,13 +1,20 @@
 package cmd
 
 import (
+	"fmt"
 	"log"
 )
 
 // len(args) >= 1
 func Run(args []string) {
+	if err := run(args); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func run(args []string) error {
 	if len(args) == 0 {
-		log.Fatal("No args")
+		return fmt.Errorf("no args")
 	}
 
 	command := args[0]
@@ -17,7 +24,11 @@ func Run(args []string) {
 		runRepoREPL(args[1:])
 	case "version":
 		showVersion(args[1:])
+	case "cli":
+		return runCLI(args[1:])
 	default:
-		log.Fatalf("Unknown command: %s", command)
+		return fmt.Errorf("unknown command: %s", command)
 	}
+
+	return nil
 }
