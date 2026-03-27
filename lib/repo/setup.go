@@ -41,3 +41,11 @@ func CurrentDB() *DB {
 
 	return __DB__
 }
+
+func CurrentDBOK() (*DB, bool) {
+	if __DB__ == nil {
+		return nil, false
+	}
+
+	return __DB__, true
+}
