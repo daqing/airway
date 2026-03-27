@@ -413,6 +413,62 @@ func (b *Builder) ToSQL() (string, NamedArgs) {
 	return sql, state.args
 }
 
+func (b *Builder) Kind() string {
+	if b == nil {
+		return ""
+	}
+
+	return b.kind
+}
+
+func (b *Builder) TableName() string {
+	if b == nil {
+		return ""
+	}
+
+	return b.tableName
+}
+
+func (b *Builder) InsertValues() H {
+	if b == nil || len(b.vals) == 0 {
+		return nil
+	}
+
+	vals := H{}
+	for key, value := range b.vals {
+		vals[key] = value
+	}
+
+	return vals
+}
+
+func (b *Builder) InsertRows() []H {
+	if b == nil || len(b.rows) == 0 {
+		return nil
+	}
+
+	rows := make([]H, 0, len(b.rows))
+	for _, row := range b.rows {
+		copied := H{}
+		for key, value := range row {
+			copied[key] = value
+		}
+		rows = append(rows, copied)
+	}
+
+	return rows
+}
+
+func (b *Builder) ConflictTarget() []string {
+	if b == nil || b.conflict == nil || len(b.conflict.target) == 0 {
+		return nil
+	}
+
+	target := make([]string, 0, len(b.conflict.target))
+	target = append(target, b.conflict.target...)
+	return target
+}
+
 func (b *Builder) buildSelect(state *buildState) string {
 	baseSQL := b.buildSelectCore(state)
 	if len(b.setOps) == 0 {
@@ -426,7 +482,6 @@ func (b *Builder) buildSelect(state *buildState) string {
 
 		return sql.String()
 	}
-
 	var sql strings.Builder
 	sql.WriteString(baseSQL)
 	for _, setOp := range b.setOps {

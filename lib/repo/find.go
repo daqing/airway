@@ -1,13 +1,12 @@
-package pg
+package repo
 
 import (
 	"context"
 
-	"github.com/daqing/airway/lib/sql"
-	"github.com/jackc/pgx/v5"
+	buildersql "github.com/daqing/airway/lib/sql"
 )
 
-func FindOne[T any](db *DB, b *sql.Builder) (*T, error) {
+func FindOne[T any](db *DB, b buildersql.Stmt) (*T, error) {
 	rows, err := Find[T](db, b)
 	if err != nil {
 		return nil, err
@@ -25,11 +24,15 @@ func FindOne[T any](db *DB, b *sql.Builder) (*T, error) {
 }
 
 // limit = 0 means no limit
-func Find[T any](db *DB, b *sql.Builder) ([]*T, error) {
+func Find[T any](db *DB, b buildersql.Stmt) ([]*T, error) {
 	var records = []*T{}
 
-	sql, vals := b.ToSQL()
-	rows, err := db.pool.Query(context.Background(), sql, pgx.NamedArgs(vals))
+	query, args, err := db.prepareBuilder(b)
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := db.conn.QueryxContext(context.Background(), query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -38,8 +41,7 @@ func Find[T any](db *DB, b *sql.Builder) ([]*T, error) {
 
 	for rows.Next() {
 		var record T
-		record, err := pgx.RowToStructByName[T](rows)
-		if err != nil {
+		if err := rows.StructScan(&record); err != nil {
 			return nil, err
 		}
 		records = append(records, &record)
