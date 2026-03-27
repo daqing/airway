@@ -1,7 +1,7 @@
 package validation
 
 import (
-	"fmt"
+	"errors"
 	"strings"
 )
 
@@ -52,7 +52,7 @@ func notEmptyInt(val int) bool {
 func checkingInt(val int, cs ...*checkingIntStruct) error {
 	for _, c := range cs {
 		if !c.Fn(val) {
-			return fmt.Errorf(c.Name + "." + c.Tip)
+			return errors.New(c.Name + "." + c.Tip)
 		}
 	}
 

@@ -1,20 +1,21 @@
 package db
 
 import (
-	"github.com/daqing/airway/lib/repo/pg"
+	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/sql"
 )
 
 func Update[T sql.Table](vals sql.H, cond sql.CondBuilder) error {
 	var t T
 
-	b := sql.Update(t.TableName()).Set(vals).Where(cond)
+	b := sql.UpdateTable(sql.TableFor(t)).Set(vals).Where(cond)
 
-	return pg.Update(pg.CurrentDB(), b)
+	return repo.Update(repo.CurrentDB(), b)
 }
 
 func UpdateById[T sql.Table](id sql.IdType, vals sql.H) error {
-	return Update[T](vals, sql.Eq("id", id))
+	var t T
+	return Update[T](vals, sql.FieldEq(sql.FieldFor(t, "id"), id))
 }
 
 func UpdateAll[T sql.Table](vals sql.H) error {
@@ -22,5 +23,5 @@ func UpdateAll[T sql.Table](vals sql.H) error {
 
 	b := sql.UpdateAll(t, vals)
 
-	return pg.Update(pg.CurrentDB(), b)
+	return repo.Update(repo.CurrentDB(), b)
 }

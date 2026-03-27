@@ -6,6 +6,17 @@ import (
 	"github.com/fatih/structs"
 )
 
+// Stmt is the common interface implemented by *Builder and all dialect-specific builders.
+// lib/repo functions accept this interface so callers can use any dialect builder directly.
+type Stmt interface {
+	ToSQL() (string, NamedArgs)
+	Kind() string
+	TableName() string
+	InsertValues() H
+	InsertRows() []H
+	ConflictTarget() []string
+}
+
 type PolyModel interface {
 	PolyId() IdType
 	PolyType() string

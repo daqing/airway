@@ -4,30 +4,49 @@ type Table interface {
 	TableName() string
 }
 
+func TableFor(t Table) TableName {
+	return Ref(t.TableName())
+}
+
+func TableRefOf(t Table) TableName {
+	return TableFor(t)
+}
+
+func FieldFor(t Table, column string) FieldName {
+	return TableFor(t).Field(column)
+}
+
+func TableColumn(t Table, column string) FieldName {
+	return FieldFor(t, column)
+}
+
 func All(t Table) *Builder {
-	return Select("*").From(t.TableName())
+	table := TableFor(t)
+	return SelectFields(table.AllFields()).FromTable(table)
 }
 
 func FindBy(t Table, vals H) *Builder {
-	return FindByCond(t, HCond(vals))
+	return FindByCond(t, MatchTable(t, vals))
 }
 
 func FindByCond(t Table, cond CondBuilder) *Builder {
-	return Select("*").From(t.TableName()).Where(cond)
+	table := TableFor(t)
+	return SelectFields(table.AllFields()).FromTable(table).Where(cond)
 }
 
 func Create(t Table, vals H) *Builder {
-	return Insert(vals).Into(t.TableName())
+	return Insert(vals).IntoTable(TableFor(t))
 }
 
 func UpdateAll(t Table, vals H) *Builder {
-	return Update(t.TableName()).Set(vals)
+	return UpdateTable(TableFor(t)).Set(vals)
 }
 
 func DeleteById(t Table, id IdType) *Builder {
-	return Delete().From(t.TableName()).Where(Eq("id", id))
+	table := TableFor(t)
+	return DeleteFrom(table).Where(FieldEq(table.Field("id"), id))
 }
 
 func Exists(t Table, vals H) *Builder {
-	return Select("count(*)").From(t.TableName()).Where(HCond(vals)).Limit(1)
+	return SelectColumns("count(*)").FromTable(TableFor(t)).Where(MatchTable(t, vals)).Limit(1)
 }
