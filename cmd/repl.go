@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"bufio"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -57,32 +56,31 @@ func runRepoREPL(args []string) {
 		return
 	}
 
-	fmt.Fprintf(session.out, "repo repl connected to %s\n", db.Driver())
-	fmt.Fprintln(session.out, `type "help" for commands, "exit" to quit`)
+	_, _ = io.WriteString(session.out, fmt.Sprintf("repo repl connected to %s\r\n", db.Driver()))
+	_, _ = io.WriteString(session.out, "type \"help\" for commands, \"exit\" to quit\r\n")
 
-	scanner := bufio.NewScanner(os.Stdin)
-	scanner.Buffer(make([]byte, 1024), 1024*1024)
+	input := newREPLInput(os.Stdin, session.out)
 
 	for {
-		fmt.Fprint(session.out, "repo> ")
-		if !scanner.Scan() {
-			fmt.Fprintln(session.out)
-			break
+		line, readErr := input.ReadLine("repo> ")
+		if readErr != nil {
+			if readErr == io.EOF {
+				_, _ = io.WriteString(session.out, "\r\n")
+				break
+			}
+
+			logFatal(readErr)
 		}
 
-		exit, execErr := session.execute(scanner.Text())
+		exit, execErr := session.execute(line)
 		if execErr != nil {
-			fmt.Fprintf(session.errOut, "error: %v\n", execErr)
+			_, _ = io.WriteString(session.errOut, fmt.Sprintf("error: %v\r\n", execErr))
 			continue
 		}
 
 		if exit {
 			break
 		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		logFatal(err)
 	}
 }
 
@@ -134,7 +132,7 @@ func (r repoREPL) handleTables() error {
 }
 
 func (r repoREPL) printHelp() {
-	fmt.Fprintln(r.out, `Commands:
+	writeDisplay(r.out, `Commands:
   help
   driver
   tables
@@ -142,6 +140,10 @@ func (r repoREPL) printHelp() {
 
 Expressions:
   repo.FindOne("users", pg.Eq("id", 1))
+  repo.FindOne[models.User](pg.Select("id").Where(pg.Eq("id", 1)))
+  repo.FindOne[User](pg.Eq("id", 1))
+  repo.FindOne[struct{ ID int64; Email string }](pg.Select("id AS id, email AS email").From("users").Where(pg.Eq("id", 1)))
+	repo.Find("users", pg.Select("*").Where(pg.Eq("id", 1)))
   repo.Find("users", pg.AllOf(pg.Eq("enabled", true), pg.Like("email", "%@example.com")))
   repo.Insert("users", pg.H{"email": "dev@example.com", "enabled": true})
   repo.Update("users", pg.H{"enabled": false}, pg.Eq("id", 1))
@@ -150,7 +152,7 @@ Expressions:
   pg.Select("*").From("users").Where(pg.Eq("id", 1))
 
 Available namespaces:
-  repo, sql, pg, mysql, sqlite
+  repo, sql, pg, mysql, sqlite, models
 
 Repo helpers:
   repo.Find(tableOrStmt, [cond])
@@ -166,6 +168,9 @@ Repo helpers:
 
 Notes:
   update/delete without a condition require explicit true as the last argument
+	repo.Find/FindOne/Count/Exists also accept table + stmt and will bind the table when the stmt has no table yet
+  repo.Find[T]/FindOne[T] support anonymous struct type arguments and use struct scan instead of map results
+  when T implements TableName(), repo.Find[T]/FindOne[T] can infer the table and omit the first table argument
   entering a builder expression directly prints the compiled SQL and args`)
 }
 
@@ -201,7 +206,7 @@ func (r repoREPL) writeJSON(value any) error {
 		return err
 	}
 
-	_, err = fmt.Fprintln(r.out, string(encoded))
+	_, err = io.WriteString(r.out, normalizeDisplayText(string(encoded))+"\r\n")
 	return err
 }
 
@@ -273,6 +278,15 @@ func logFatal(err error) {
 		return
 	}
 
-	fmt.Fprintln(os.Stderr, err)
+	_, _ = io.WriteString(os.Stderr, fmt.Sprintf("%v\r\n", err))
 	os.Exit(1)
+}
+
+func writeDisplay(out io.Writer, text string) {
+	_, _ = io.WriteString(out, normalizeDisplayText(text)+"\r\n")
+}
+
+func normalizeDisplayText(text string) string {
+	text = strings.ReplaceAll(text, "\r\n", "\n")
+	return strings.ReplaceAll(text, "\n", "\r\n")
 }

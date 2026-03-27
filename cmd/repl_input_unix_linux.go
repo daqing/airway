@@ -1,0 +1,10 @@
+//go:build linux
+
+package cmd
+
+import "golang.org/x/sys/unix"
+
+const (
+	ioctlReadTermios  = unix.TCGETS
+	ioctlWriteTermios = unix.TCSETS
+)

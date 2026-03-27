@@ -6,10 +6,23 @@ import (
 	"encoding/json"
 	"io"
 	"path/filepath"
+	"reflect"
 	"testing"
+	"time"
 
 	"github.com/daqing/airway/lib/repo"
 )
+
+type replUser struct {
+	ID        int64     `db:"id"`
+	Email     string    `db:"email"`
+	Enabled   bool      `db:"enabled"`
+	CreatedAt time.Time `db:"created_at"`
+}
+
+func (replUser) TableName() string {
+	return "users"
+}
 
 func TestRepoREPLExecutesGoStyleRepoCalls(t *testing.T) {
 	session := newTestREPL(t)
@@ -33,6 +46,17 @@ func TestRepoREPLExecutesGoStyleRepoCalls(t *testing.T) {
 
 	if foundRow["email"] != "alice@example.com" {
 		t.Fatalf("unexpected row: %#v", foundRow)
+	}
+
+	foundByStmt := executeAndDecode(t, session, `repo.Find("users", pg.Select("*").Where(pg.Eq("id", 1)))`)
+	foundRows, ok := foundByStmt.([]any)
+	if !ok || len(foundRows) != 1 {
+		t.Fatalf("expected one row from stmt-based find, got %#v", foundByStmt)
+	}
+
+	countByStmt := executeAndDecode(t, session, `repo.Count("users", pg.Select("count(*)").Where(pg.Eq("id", 1)))`)
+	if countByStmt.(float64) != 1 {
+		t.Fatalf("unexpected stmt-based count result: %#v", countByStmt)
 	}
 
 	updated := executeAndDecode(t, session, `repo.Update("users", pg.H{"enabled": false}, pg.Eq("email", "alice@example.com"))`)
@@ -89,6 +113,55 @@ func TestRepoREPLPreviewsBuildersAndProtectsFullTableWrites(t *testing.T) {
 	deleted := executeAndDecode(t, session, `repo.Delete("users", true)`)
 	if deleted.(float64) != 0 {
 		t.Fatalf("unexpected full-table delete result: %#v", deleted)
+	}
+}
+
+func TestRepoREPLSupportsGenericRepoFindCalls(t *testing.T) {
+	session := newTestREPL(t)
+	session.evaluator.symbols["replUser"] = reflect.TypeOf(replUser{})
+
+	executeAndDecode(t, session, `repo.Insert("users", pg.H{"email": "alice@example.com", "enabled": true})`)
+
+	inferred := executeAndDecode(t, session, `repo.FindOne[replUser](pg.Eq("id", 1))`)
+	inferredRow, ok := inferred.(map[string]any)
+	if !ok {
+		t.Fatalf("expected inferred typed row object, got %#v", inferred)
+	}
+
+	if inferredRow["Email"] != "alice@example.com" {
+		t.Fatalf("unexpected inferred typed row: %#v", inferredRow)
+	}
+
+	found := executeAndDecode(t, session, `repo.FindOne[struct{ ID int64 `+"`db:\"id\"`"+`; Email string `+"`db:\"email\"`"+`; Enabled bool `+"`db:\"enabled\"`"+` }]("users", pg.Select("id, email, enabled").Where(pg.Eq("id", 1)))`)
+	foundRow, ok := found.(map[string]any)
+	if !ok {
+		t.Fatalf("expected typed row object, got %#v", found)
+	}
+
+	if foundRow["Email"] != "alice@example.com" {
+		t.Fatalf("unexpected typed row: %#v", foundRow)
+	}
+
+	rows := executeAndDecode(t, session, `repo.Find[struct{ ID int64 `+"`db:\"id\"`"+`; Email string `+"`db:\"email\"`"+` }](pg.Select("id, email").From("users").Where(pg.Eq("enabled", true)))`)
+	rowList, ok := rows.([]any)
+	if !ok || len(rowList) != 1 {
+		t.Fatalf("expected typed rows result, got %#v", rows)
+	}
+}
+
+func TestRepoREPLExposesProjectModelsNamespace(t *testing.T) {
+	session := newTestREPL(t)
+
+	executeAndDecode(t, session, `repo.Insert("users", pg.H{"email": "alice@example.com", "enabled": true})`)
+
+	found := executeAndDecode(t, session, `repo.FindOne[models.User](pg.Select("id").Where(pg.Eq("id", 1)))`)
+	foundRow, ok := found.(map[string]any)
+	if !ok {
+		t.Fatalf("expected model row object, got %#v", found)
+	}
+
+	if foundRow["ID"] != float64(1) {
+		t.Fatalf("unexpected model row: %#v", foundRow)
 	}
 }
 

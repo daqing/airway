@@ -126,6 +126,7 @@ Examples:
 
 ```text
 repo.FindOne("users", pg.Eq("id", 1))
+repo.Find("users", pg.Select("*").Where(pg.Eq("id", 1)))
 repo.Find("users", pg.AllOf(pg.Eq("enabled", true), pg.Like("email", "%@example.com")))
 repo.Insert("users", pg.H{"email": "dev@example.com", "enabled": true})
 repo.Update("users", pg.H{"enabled": false}, pg.Eq("id", 1))
@@ -137,6 +138,8 @@ pg.Select("*").From("users").Where(pg.Eq("id", 1))
 Available namespaces in the REPL are `repo`, `sql`, `pg`, `mysql`, and `sqlite`.
 
 `repo.Find` / `repo.FindOne` / `repo.Count` / `repo.Exists` accept either a built statement, or `table + condition` arguments.
+
+They also accept `table + stmt`; if the stmt has not bound a table yet, the REPL will bind that table before execution.
 
 `repo.Update` and `repo.Delete` reject full-table writes unless the last argument is explicit `true`.
 

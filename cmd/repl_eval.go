@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	appmodels "github.com/daqing/airway/app/models"
 	"github.com/daqing/airway/lib/repo"
 	reposql "github.com/daqing/airway/lib/sql"
 	mysqlsql "github.com/daqing/airway/lib/sql/mysql"
@@ -17,6 +18,11 @@ import (
 )
 
 type replCallable func(args []any) (any, error)
+
+type replOverloadedCallable struct {
+	call replCallable
+	bind func(typeArgs []reflect.Type) (any, error)
+}
 
 type replNamespace map[string]any
 
@@ -32,6 +38,7 @@ func newREPLEvaluator(db *repo.DB) *replEvaluator {
 	evaluator.symbols["pg"] = newPGNamespace()
 	evaluator.symbols["mysql"] = newMySQLNamespace()
 	evaluator.symbols["sqlite"] = newSQLiteNamespace()
+	evaluator.symbols["models"] = newModelsNamespace()
 
 	return evaluator
 }
@@ -61,6 +68,10 @@ func (e *replEvaluator) evalExpr(expr ast.Expr) (any, error) {
 		return e.evalUnary(node)
 	case *ast.ParenExpr:
 		return e.evalExpr(node.X)
+	case *ast.IndexExpr:
+		return e.evalIndex(node.X, []ast.Expr{node.Index})
+	case *ast.IndexListExpr:
+		return e.evalIndex(node.X, node.Indices)
 	default:
 		return nil, fmt.Errorf("unsupported expression: %T", expr)
 	}
@@ -236,10 +247,194 @@ func (e *replEvaluator) evalUnary(expr *ast.UnaryExpr) (any, error) {
 	}
 }
 
+func (e *replEvaluator) evalIndex(target ast.Expr, indices []ast.Expr) (any, error) {
+	value, err := e.evalExpr(target)
+	if err != nil {
+		return nil, err
+	}
+
+	typeArgs := make([]reflect.Type, 0, len(indices))
+	for _, index := range indices {
+		typ, err := e.evalType(index)
+		if err != nil {
+			return nil, err
+		}
+
+		typeArgs = append(typeArgs, typ)
+	}
+
+	switch typed := value.(type) {
+	case replOverloadedCallable:
+		if typed.bind == nil {
+			return nil, fmt.Errorf("value does not accept type arguments")
+		}
+
+		return typed.bind(typeArgs)
+	default:
+		return nil, fmt.Errorf("value does not accept type arguments")
+	}
+}
+
+func (e *replEvaluator) evalType(expr ast.Expr) (reflect.Type, error) {
+	switch typed := expr.(type) {
+	case *ast.Ident:
+		if basic, ok := builtinTypeByName(typed.Name); ok {
+			return basic, nil
+		}
+
+		value, ok := e.symbols[typed.Name]
+		if !ok {
+			return nil, fmt.Errorf("unknown type: %s", typed.Name)
+		}
+
+		modelType, ok := value.(reflect.Type)
+		if !ok {
+			return nil, fmt.Errorf("%s is not a type", typed.Name)
+		}
+
+		return modelType, nil
+	case *ast.SelectorExpr:
+		parent, err := e.evalExpr(typed.X)
+		if err != nil {
+			return nil, err
+		}
+
+		namespace, ok := parent.(replNamespace)
+		if !ok {
+			return nil, fmt.Errorf("%T is not a type namespace", parent)
+		}
+
+		value, exists := namespace[typed.Sel.Name]
+		if !exists {
+			return nil, fmt.Errorf("unknown type: %s", typed.Sel.Name)
+		}
+
+		modelType, ok := value.(reflect.Type)
+		if !ok {
+			return nil, fmt.Errorf("%s is not a type", typed.Sel.Name)
+		}
+
+		return modelType, nil
+	case *ast.StructType:
+		return e.evalStructType(typed)
+	case *ast.ArrayType:
+		if typed.Len != nil {
+			return nil, fmt.Errorf("array types are not supported in type arguments")
+		}
+
+		elemType, err := e.evalType(typed.Elt)
+		if err != nil {
+			return nil, err
+		}
+
+		return reflect.SliceOf(elemType), nil
+	case *ast.StarExpr:
+		elemType, err := e.evalType(typed.X)
+		if err != nil {
+			return nil, err
+		}
+
+		return reflect.PointerTo(elemType), nil
+	case *ast.MapType:
+		keyType, err := e.evalType(typed.Key)
+		if err != nil {
+			return nil, err
+		}
+
+		valueType, err := e.evalType(typed.Value)
+		if err != nil {
+			return nil, err
+		}
+
+		return reflect.MapOf(keyType, valueType), nil
+	case *ast.InterfaceType:
+		if typed.Methods != nil && len(typed.Methods.List) > 0 {
+			return nil, fmt.Errorf("non-empty interface types are not supported")
+		}
+
+		return reflect.TypeOf((*any)(nil)).Elem(), nil
+	case *ast.ParenExpr:
+		return e.evalType(typed.X)
+	default:
+		return nil, fmt.Errorf("unsupported type expression: %T", expr)
+	}
+}
+
+func (e *replEvaluator) evalStructType(expr *ast.StructType) (reflect.Type, error) {
+	fields := make([]reflect.StructField, 0, len(expr.Fields.List))
+	for _, field := range expr.Fields.List {
+		if len(field.Names) == 0 {
+			return nil, fmt.Errorf("embedded fields are not supported in struct type arguments")
+		}
+
+		fieldType, err := e.evalType(field.Type)
+		if err != nil {
+			return nil, err
+		}
+
+		tag := ""
+		if field.Tag != nil {
+			tag, err = strconv.Unquote(field.Tag.Value)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		for _, name := range field.Names {
+			fields = append(fields, reflect.StructField{
+				Name: name.Name,
+				Type: fieldType,
+				Tag:  reflect.StructTag(tag),
+			})
+		}
+	}
+
+	return reflect.StructOf(fields), nil
+}
+
+func builtinTypeByName(name string) (reflect.Type, bool) {
+	switch name {
+	case "any":
+		return reflect.TypeOf((*any)(nil)).Elem(), true
+	case "string":
+		return reflect.TypeOf(""), true
+	case "bool":
+		return reflect.TypeOf(false), true
+	case "int":
+		return reflect.TypeOf(int(0)), true
+	case "int8":
+		return reflect.TypeOf(int8(0)), true
+	case "int16":
+		return reflect.TypeOf(int16(0)), true
+	case "int32", "rune":
+		return reflect.TypeOf(int32(0)), true
+	case "int64":
+		return reflect.TypeOf(int64(0)), true
+	case "uint":
+		return reflect.TypeOf(uint(0)), true
+	case "uint8", "byte":
+		return reflect.TypeOf(uint8(0)), true
+	case "uint16":
+		return reflect.TypeOf(uint16(0)), true
+	case "uint32":
+		return reflect.TypeOf(uint32(0)), true
+	case "uint64":
+		return reflect.TypeOf(uint64(0)), true
+	case "float32":
+		return reflect.TypeOf(float32(0)), true
+	case "float64":
+		return reflect.TypeOf(float64(0)), true
+	default:
+		return nil, false
+	}
+}
+
 func invokeCallable(callee any, args []any) (any, error) {
 	switch typed := callee.(type) {
 	case replCallable:
 		return typed(args)
+	case replOverloadedCallable:
+		return typed.call(args)
 	case reflect.Value:
 		return callReflect(typed, args)
 	default:
@@ -494,8 +689,14 @@ func lookupMethod(receiver any, name string) (any, bool) {
 
 func (e *replEvaluator) newRepoNamespace() replNamespace {
 	return replNamespace{
-		"Find":    replCallable(e.callRepoFind),
-		"FindOne": replCallable(e.callRepoFindOne),
+		"Find": replOverloadedCallable{
+			call: replCallable(e.callRepoFind),
+			bind: e.bindRepoFind,
+		},
+		"FindOne": replOverloadedCallable{
+			call: replCallable(e.callRepoFindOne),
+			bind: e.bindRepoFindOne,
+		},
 		"Count":   replCallable(e.callRepoCount),
 		"Exists":  replCallable(e.callRepoExists),
 		"Insert":  replCallable(e.callRepoInsert),
@@ -624,6 +825,15 @@ func newSQLiteNamespace() replNamespace {
 	return namespace
 }
 
+func newModelsNamespace() replNamespace {
+	namespace := replNamespace{}
+	for name, modelType := range appmodels.REPLNamespace() {
+		namespace[name] = modelType
+	}
+
+	return namespace
+}
+
 func newBuilderNamespace(selectFn any, selectColumnsFn any, insertFn any, updateFn any, deleteFn any, deleteFromFn replCallable, updateTableFn replCallable) replNamespace {
 	return replNamespace{
 		"Select":        selectFn,
@@ -743,6 +953,38 @@ func (e *replEvaluator) callRepoFindOne(args []any) (any, error) {
 	return repo.FindOneMap(e.db, stmt)
 }
 
+func (e *replEvaluator) bindRepoFind(typeArgs []reflect.Type) (any, error) {
+	if len(typeArgs) != 1 {
+		return nil, fmt.Errorf("repo.Find expects exactly 1 type argument")
+	}
+
+	modelType := typeArgs[0]
+	return replCallable(func(args []any) (any, error) {
+		stmt, err := e.buildSelectStmtForModel(modelType, args)
+		if err != nil {
+			return nil, err
+		}
+
+		return repo.FindByType(e.db, stmt, modelType)
+	}), nil
+}
+
+func (e *replEvaluator) bindRepoFindOne(typeArgs []reflect.Type) (any, error) {
+	if len(typeArgs) != 1 {
+		return nil, fmt.Errorf("repo.FindOne expects exactly 1 type argument")
+	}
+
+	modelType := typeArgs[0]
+	return replCallable(func(args []any) (any, error) {
+		stmt, err := e.buildSelectStmtForModel(modelType, args)
+		if err != nil {
+			return nil, err
+		}
+
+		return repo.FindOneByType(e.db, stmt, modelType)
+	}), nil
+}
+
 func (e *replEvaluator) callRepoCount(args []any) (any, error) {
 	stmt, err := e.buildCountStmt(args)
 	if err != nil {
@@ -848,6 +1090,12 @@ func (e *replEvaluator) buildSelectStmt(args []any) (reposql.Stmt, error) {
 		return nil, err
 	}
 
+	if len(args) == 2 {
+		if stmt, err := coerceStmt(args[1]); err == nil {
+			return bindStmtTable(table, stmt)
+		}
+	}
+
 	fields := []string{table.AllFields().String()}
 	var cond reposql.CondBuilder
 
@@ -882,6 +1130,60 @@ func (e *replEvaluator) buildSelectStmt(args []any) (reposql.Stmt, error) {
 	return builder, nil
 }
 
+func (e *replEvaluator) buildSelectStmtForModel(modelType reflect.Type, args []any) (reposql.Stmt, error) {
+	if len(args) > 0 {
+		if _, err := coerceTable(args[0]); err == nil {
+			return e.buildSelectStmt(args)
+		}
+	}
+
+	table, ok := tableForModelType(modelType)
+	if !ok {
+		return e.buildSelectStmt(args)
+	}
+
+	return buildSelectStmtWithTable(table, args)
+}
+
+func buildSelectStmtWithTable(table reposql.TableName, args []any) (reposql.Stmt, error) {
+	if len(args) == 0 {
+		return reposql.SelectColumns(table.AllFields().String()).FromTable(table), nil
+	}
+
+	if len(args) == 1 {
+		if stmt, err := coerceStmt(args[0]); err == nil {
+			return bindStmtTable(table, stmt)
+		}
+
+		if cond, err := coerceCond(args[0]); err == nil {
+			return reposql.SelectColumns(table.AllFields().String()).FromTable(table).Where(cond), nil
+		}
+
+		fields, err := coerceFields(table, args[0])
+		if err != nil {
+			return nil, err
+		}
+
+		return reposql.SelectColumns(fields...).FromTable(table), nil
+	}
+
+	if len(args) == 2 {
+		fields, err := coerceFields(table, args[0])
+		if err != nil {
+			return nil, err
+		}
+
+		cond, err := coerceCond(args[1])
+		if err != nil {
+			return nil, err
+		}
+
+		return reposql.SelectColumns(fields...).FromTable(table).Where(cond), nil
+	}
+
+	return nil, fmt.Errorf("too many args for repo.Find or repo.FindOne")
+}
+
 func (e *replEvaluator) buildCountStmt(args []any) (reposql.Stmt, error) {
 	if len(args) == 0 {
 		return nil, fmt.Errorf("repo.Count and repo.Exists require at least 1 arg")
@@ -907,6 +1209,10 @@ func (e *replEvaluator) buildCountStmt(args []any) (reposql.Stmt, error) {
 	table, err := coerceTable(args[0])
 	if err != nil {
 		return nil, err
+	}
+
+	if stmt, err := coerceStmt(args[1]); err == nil {
+		return bindStmtTable(table, stmt)
 	}
 
 	cond, err := coerceCond(args[1])
@@ -1041,6 +1347,56 @@ func coerceStmt(value any) (reposql.Stmt, error) {
 	}
 
 	return stmt, nil
+}
+
+func bindStmtTable(table reposql.TableName, stmt reposql.Stmt) (reposql.Stmt, error) {
+	if stmt == nil {
+		return nil, fmt.Errorf("stmt cannot be nil")
+	}
+
+	if stmt.TableName() != "" {
+		return stmt, nil
+	}
+
+	if stmt.Kind() != "SELECT" {
+		return stmt, nil
+	}
+
+	method, ok := lookupMethod(stmt, "FromTable")
+	if !ok {
+		return nil, fmt.Errorf("stmt %T does not support FromTable", stmt)
+	}
+
+	bound, err := invokeCallable(method, []any{table})
+	if err != nil {
+		return nil, err
+	}
+
+	return coerceStmt(bound)
+}
+
+func tableForModelType(modelType reflect.Type) (reposql.TableName, bool) {
+	if modelType == nil {
+		return reposql.TableName{}, false
+	}
+
+	for modelType.Kind() == reflect.Pointer {
+		modelType = modelType.Elem()
+	}
+
+	tableType := reflect.TypeOf((*reposql.Table)(nil)).Elem()
+	if modelType.Implements(tableType) {
+		value := reflect.Zero(modelType).Interface().(reposql.Table)
+		return reposql.TableFor(value), true
+	}
+
+	pointerType := reflect.PointerTo(modelType)
+	if pointerType.Implements(tableType) {
+		value := reflect.New(modelType).Interface().(reposql.Table)
+		return reposql.TableFor(value), true
+	}
+
+	return reposql.TableName{}, false
 }
 
 func coerceTableArg(args []any) (reposql.TableName, error) {
