@@ -9,17 +9,31 @@ import (
 	"strings"
 	"time"
 
+	_ "github.com/daqing/airway/db/migrate"
+	"github.com/daqing/airway/lib/migrate/dialect"
+	"github.com/daqing/airway/lib/migrate/schema"
 	"github.com/daqing/airway/lib/repo"
 	"github.com/jmoiron/sqlx"
 )
 
 const migrationDir = "./db/migrate"
 const schemaMigrationsTable = "schema_migrations"
+const schemaSnapshotPath = "./db/schema.json"
 
 type migrationFile struct {
 	Version string
 	Name    string
 	Path    string
+}
+
+type migrationUnit struct {
+	Version string
+	Name    string
+	Kind    string
+	UpSQL   string
+	DownSQL string
+	UpOps   []schema.Operation
+	DownOps []schema.Operation
 }
 
 func runCLIMigrate(args []string) error {
@@ -67,8 +81,10 @@ func runCLIStatus(_ []string) error {
 }
 
 type migrationManager struct {
-	db  *repo.DB
-	now func() time.Time
+	db       *repo.DB
+	now      func() time.Time
+	compiler *dialect.Compiler
+	state    *schema.State
 }
 
 func newMigrationManagerFromEnv() (*migrationManager, error) {
@@ -82,7 +98,7 @@ func newMigrationManagerFromEnv() (*migrationManager, error) {
 		return nil, err
 	}
 
-	return &migrationManager{db: db, now: time.Now}, nil
+	return &migrationManager{db: db, now: time.Now, compiler: dialect.NewCompiler(db.Driver())}, nil
 }
 
 func (m *migrationManager) Close() error {
@@ -98,7 +114,7 @@ func (m *migrationManager) Migrate(targetVersion string) error {
 		return err
 	}
 
-	files, err := readMigrationFiles(migrationDir, ".up.sql")
+	units, err := m.loadMigrationUnits()
 	if err != nil {
 		return err
 	}
@@ -108,32 +124,55 @@ func (m *migrationManager) Migrate(targetVersion string) error {
 		return err
 	}
 
-	pending := make([]migrationFile, 0, len(files))
-	for _, file := range files {
-		if applied[file.Version] {
-			fmt.Printf("Migration %s already applied, skipping...\n", filepath.Base(file.Path))
+	m.state, _ = deriveSchemaState(units, applied)
+	m.restoreSchemaState()
+
+	pending := make([]migrationUnit, 0, len(units))
+	for _, unit := range units {
+		if applied[unit.Version] {
+			fmt.Printf("Migration %s already applied, skipping...\n", unit.displayName())
 			continue
 		}
 
-		if targetVersion != "" && file.Version > targetVersion {
+		if targetVersion != "" && unit.Version > targetVersion {
 			continue
 		}
 
-		pending = append(pending, file)
+		pending = append(pending, unit)
 	}
 
 	if len(pending) == 0 {
 		fmt.Printf("Already at the latest migration\n")
-		return nil
-	}
-
-	for _, file := range pending {
-		if err := m.applyMigration(file); err != nil {
-			return err
+	} else {
+		for _, unit := range pending {
+			if err := m.applyMigration(unit); err != nil {
+				return err
+			}
+			if unit.Kind == "sql" {
+				m.state = nil
+			}
 		}
+		fmt.Printf("Migration files inside %s executed successfully\n", migrationDir)
 	}
 
-	fmt.Printf("Migration files inside %s executed successfully\n", migrationDir)
+	if err := m.dumpSchemaState(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *migrationManager) dumpSchemaState() error {
+	state, err := repo.InspectSchema(m.db)
+	if err != nil {
+		return fmt.Errorf("inspect schema: %w", err)
+	}
+
+	if err := schema.SaveSnapshot(schemaSnapshotPath, state, true); err != nil {
+		return fmt.Errorf("save schema snapshot: %w", err)
+	}
+
+	fmt.Printf("Schema snapshot written to %s\n", schemaSnapshotPath)
 	return nil
 }
 
@@ -160,26 +199,40 @@ func (m *migrationManager) Rollback(step int) error {
 		step = len(applied)
 	}
 
-	downFiles, err := readMigrationFiles(migrationDir, ".down.sql")
+	units, err := m.loadMigrationUnits()
 	if err != nil {
 		return err
 	}
 
-	downByVersion := make(map[string]migrationFile, len(downFiles))
-	for _, file := range downFiles {
-		downByVersion[file.Version] = file
+	appliedSet := make(map[string]bool, len(applied))
+	for _, version := range applied {
+		appliedSet[version] = true
+	}
+	m.state, _ = deriveSchemaState(units, appliedSet)
+	m.restoreSchemaState()
+
+	downByVersion := make(map[string]migrationUnit, len(units))
+	for _, unit := range units {
+		downByVersion[unit.Version] = unit
 	}
 
 	for i := 0; i < step; i++ {
 		version := applied[len(applied)-1-i]
-		file, ok := downByVersion[version]
+		unit, ok := downByVersion[version]
 		if !ok {
 			return fmt.Errorf("rollback file for version %s not found", version)
 		}
 
-		if err := m.rollbackMigration(file); err != nil {
+		if err := m.rollbackMigration(unit); err != nil {
 			return err
 		}
+		if unit.Kind == "sql" {
+			m.state = nil
+		}
+	}
+
+	if err := m.dumpSchemaState(); err != nil {
+		return err
 	}
 
 	return nil
@@ -190,7 +243,7 @@ func (m *migrationManager) Status() error {
 		return err
 	}
 
-	upFiles, err := readMigrationFiles(migrationDir, ".up.sql")
+	units, err := m.loadMigrationUnits()
 	if err != nil {
 		return err
 	}
@@ -200,18 +253,18 @@ func (m *migrationManager) Status() error {
 		return err
 	}
 
-	if len(upFiles) == 0 {
+	if len(units) == 0 {
 		fmt.Println("No migration files found")
 		return nil
 	}
 
-	for _, file := range upFiles {
+	for _, unit := range units {
 		state := "pending"
-		if applied[file.Version] {
+		if applied[unit.Version] {
 			state = "applied"
 		}
 
-		fmt.Printf("%s\t%s\n", state, filepath.Base(file.Path))
+		fmt.Printf("%s\t%s\n", state, unit.displayName())
 	}
 
 	return nil
@@ -268,13 +321,8 @@ func (m *migrationManager) appliedVersionList() ([]string, error) {
 	return versions, rows.Err()
 }
 
-func (m *migrationManager) applyMigration(file migrationFile) error {
-	sqlText, err := os.ReadFile(file.Path)
-	if err != nil {
-		return err
-	}
-
-	fmt.Printf("Running migration file %s...\n", filepath.Base(file.Path))
+func (m *migrationManager) applyMigration(unit migrationUnit) error {
+	fmt.Printf("Running migration file %s...\n", unit.displayName())
 
 	tx, err := m.db.Conn().BeginTxx(context.Background(), nil)
 	if err != nil {
@@ -282,14 +330,14 @@ func (m *migrationManager) applyMigration(file migrationFile) error {
 	}
 	defer tx.Rollback()
 
-	if err := execSQLScript(context.Background(), tx, string(sqlText)); err != nil {
-		return fmt.Errorf("execute %s: %w", filepath.Base(file.Path), err)
+	if err := m.executeMigrationUnit(context.Background(), tx, unit, true); err != nil {
+		return fmt.Errorf("execute %s: %w", unit.displayName(), err)
 	}
 
 	if _, err := tx.ExecContext(
 		context.Background(),
 		fmt.Sprintf("INSERT INTO %s (version) VALUES (%s)", schemaMigrationsTable, m.bindVar(1)),
-		file.Version,
+		unit.Version,
 	); err != nil {
 		return err
 	}
@@ -297,26 +345,21 @@ func (m *migrationManager) applyMigration(file migrationFile) error {
 	return tx.Commit()
 }
 
-func (m *migrationManager) rollbackMigration(file migrationFile) error {
-	sqlText, err := os.ReadFile(file.Path)
-	if err != nil {
-		return err
-	}
-
+func (m *migrationManager) rollbackMigration(unit migrationUnit) error {
 	tx, err := m.db.Conn().BeginTxx(context.Background(), nil)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 
-	if err := execSQLScript(context.Background(), tx, string(sqlText)); err != nil {
-		return fmt.Errorf("execute %s: %w", filepath.Base(file.Path), err)
+	if err := m.executeMigrationUnit(context.Background(), tx, unit, false); err != nil {
+		return fmt.Errorf("execute %s: %w", unit.displayName(), err)
 	}
 
 	if _, err := tx.ExecContext(
 		context.Background(),
 		fmt.Sprintf("DELETE FROM %s WHERE version = %s", schemaMigrationsTable, m.bindVar(1)),
-		file.Version,
+		unit.Version,
 	); err != nil {
 		return err
 	}
@@ -325,8 +368,335 @@ func (m *migrationManager) rollbackMigration(file migrationFile) error {
 		return err
 	}
 
-	fmt.Printf("Migration %s rolled back successfully\n", file.Version)
+	fmt.Printf("Migration %s rolled back successfully\n", unit.Version)
 	return nil
+}
+
+func (m *migrationManager) executeMigrationUnit(ctx context.Context, tx *sqlx.Tx, unit migrationUnit, up bool) error {
+	switch unit.Kind {
+	case "sql":
+		sqlText := unit.UpSQL
+		if !up {
+			sqlText = unit.DownSQL
+		}
+		return execSQLScript(ctx, tx, sqlText)
+	case "dsl":
+		ops := unit.UpOps
+		if !up {
+			ops = unit.DownOps
+		}
+		savedState := m.state
+		workingState := savedState
+		if savedState != nil {
+			workingState = savedState.Clone()
+		}
+		m.state = workingState
+		err := m.executeOperations(ctx, tx, ops)
+		if err != nil {
+			m.state = savedState
+			return err
+		}
+		return nil
+	default:
+		return fmt.Errorf("unsupported migration kind: %s", unit.Kind)
+	}
+}
+
+func (m *migrationManager) executeOperations(ctx context.Context, tx *sqlx.Tx, ops []schema.Operation) error {
+	for _, op := range ops {
+		resolvedOp, err := m.resolveOperation(op)
+		if err != nil {
+			return err
+		}
+
+		if m.db.Driver() == repo.DriverSQLite {
+			if handled, err := m.executeSQLiteSchemaOperation(ctx, tx, resolvedOp); handled || err != nil {
+				if err != nil {
+					return err
+				}
+				if m.state != nil {
+					if err := m.state.Apply(resolvedOp); err != nil {
+						return err
+					}
+				}
+				continue
+			}
+		}
+
+		statements, err := m.compiler.Compile(resolvedOp)
+		if err != nil {
+			return err
+		}
+
+		for _, stmt := range statements {
+			if strings.TrimSpace(stmt) == "" {
+				continue
+			}
+
+			if _, err := tx.ExecContext(ctx, stmt); err != nil {
+				return fmt.Errorf("%s: %w", stmt, err)
+			}
+		}
+
+		if m.state != nil {
+			if err := m.state.Apply(resolvedOp); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func (m *migrationManager) resolveOperation(op schema.Operation) (schema.Operation, error) {
+	if m.state == nil {
+		return op, nil
+	}
+
+	switch actual := op.(type) {
+	case schema.SetNullOp:
+		column, ok := m.state.Column(actual.Table, actual.ColumnName)
+		if !ok {
+			return nil, fmt.Errorf("column %s does not exist on table %s", actual.ColumnName, actual.Table)
+		}
+		column.Null = schema.Bool(actual.Nullable)
+		return schema.ChangeColumnOp{Table: actual.Table, Column: column}, nil
+	case schema.SetDefaultOp:
+		column, ok := m.state.Column(actual.Table, actual.ColumnName)
+		if !ok {
+			return nil, fmt.Errorf("column %s does not exist on table %s", actual.ColumnName, actual.Table)
+		}
+		if actual.Remove {
+			column.Default = nil
+		} else {
+			column.Default = actual.Default
+		}
+		return schema.ChangeColumnOp{Table: actual.Table, Column: column}, nil
+	default:
+		return op, nil
+	}
+}
+
+func (m *migrationManager) executeSQLiteSchemaOperation(ctx context.Context, tx *sqlx.Tx, op schema.Operation) (bool, error) {
+	if m.state == nil {
+		return false, nil
+	}
+
+	switch actual := op.(type) {
+	case schema.RemoveColumnOp:
+		return true, m.executeSQLiteTableRebuild(ctx, tx, actual.Table, actual)
+	case schema.ChangeColumnOp:
+		return true, m.executeSQLiteTableRebuild(ctx, tx, actual.Table, actual)
+	case schema.AddForeignKeyOp:
+		return true, m.executeSQLiteTableRebuild(ctx, tx, actual.Table, actual)
+	case schema.RemoveForeignKeyOp:
+		return true, m.executeSQLiteTableRebuild(ctx, tx, actual.Table, actual)
+	default:
+		return false, nil
+	}
+}
+
+func (m *migrationManager) executeSQLiteTableRebuild(ctx context.Context, tx *sqlx.Tx, tableName string, op schema.Operation) error {
+	currentTable, ok := m.state.Table(tableName)
+	if !ok {
+		return fmt.Errorf("table %s does not exist in schema state", tableName)
+	}
+
+	nextState := m.state.Clone()
+	if err := nextState.Apply(op); err != nil {
+		return err
+	}
+
+	nextTable, ok := nextState.Table(tableName)
+	if !ok {
+		return fmt.Errorf("table %s does not exist after applying operation", tableName)
+	}
+
+	tempTableName := fmt.Sprintf("__airway_tmp_%s_%s", tableName, m.now().Format("150405"))
+	tempTable := nextTable.Clone()
+	tempTable.Name = tempTableName
+
+	createSQL, err := m.compiler.Compile(schema.CreateTableOp{
+		Table:       tempTable.Name,
+		Columns:     tempTable.Columns,
+		Indexes:     tempTable.Indexes,
+		ForeignKeys: tempTable.ForeignKeys,
+	})
+	if err != nil {
+		return err
+	}
+
+	for _, stmt := range createSQL[:1] {
+		if _, err := tx.ExecContext(ctx, stmt); err != nil {
+			return err
+		}
+	}
+
+	columns := make([]string, 0, len(nextTable.Columns))
+	for _, column := range sharedColumns(currentTable.Columns, nextTable.Columns) {
+		columns = append(columns, quoteIdent(column.Name, repo.DriverSQLite))
+	}
+	columnList := strings.Join(columns, ", ")
+	if columnList != "" {
+		copySQL := fmt.Sprintf(
+			"INSERT INTO %s (%s) SELECT %s FROM %s",
+			quoteIdent(tempTableName, repo.DriverSQLite),
+			columnList,
+			columnList,
+			quoteIdent(tableName, repo.DriverSQLite),
+		)
+		if _, err := tx.ExecContext(ctx, copySQL); err != nil {
+			return err
+		}
+	}
+
+	if _, err := tx.ExecContext(ctx, fmt.Sprintf("DROP TABLE %s", quoteIdent(tableName, repo.DriverSQLite))); err != nil {
+		return err
+	}
+
+	if _, err := tx.ExecContext(ctx, fmt.Sprintf("ALTER TABLE %s RENAME TO %s", quoteIdent(tempTableName, repo.DriverSQLite), quoteIdent(tableName, repo.DriverSQLite))); err != nil {
+		return err
+	}
+
+	for _, stmt := range createSQL[1:] {
+		rewritten := strings.ReplaceAll(stmt, quoteIdent(tempTableName, repo.DriverSQLite), quoteIdent(tableName, repo.DriverSQLite))
+		if _, err := tx.ExecContext(ctx, rewritten); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (m *migrationManager) loadMigrationUnits() ([]migrationUnit, error) {
+	sqlUpFiles, err := readMigrationFiles(migrationDir, ".up.sql")
+	if err != nil {
+		return nil, err
+	}
+
+	sqlDownFiles, err := readMigrationFiles(migrationDir, ".down.sql")
+	if err != nil {
+		return nil, err
+	}
+
+	downByVersion := map[string]migrationFile{}
+	for _, file := range sqlDownFiles {
+		downByVersion[file.Version] = file
+	}
+
+	units := make([]migrationUnit, 0, len(sqlUpFiles)+len(schema.Definitions()))
+	versions := map[string]bool{}
+
+	for _, upFile := range sqlUpFiles {
+		downFile, ok := downByVersion[upFile.Version]
+		if !ok {
+			return nil, fmt.Errorf("missing down migration for version %s", upFile.Version)
+		}
+
+		upSQL, err := os.ReadFile(upFile.Path)
+		if err != nil {
+			return nil, err
+		}
+
+		downSQL, err := os.ReadFile(downFile.Path)
+		if err != nil {
+			return nil, err
+		}
+
+		if versions[upFile.Version] {
+			return nil, fmt.Errorf("duplicate migration version %s", upFile.Version)
+		}
+		versions[upFile.Version] = true
+
+		units = append(units, migrationUnit{
+			Version: upFile.Version,
+			Name:    upFile.Name,
+			Kind:    "sql",
+			UpSQL:   string(upSQL),
+			DownSQL: string(downSQL),
+		})
+	}
+
+	for _, def := range schema.Definitions() {
+		if versions[def.Version] {
+			return nil, fmt.Errorf("duplicate migration version %s", def.Version)
+		}
+		versions[def.Version] = true
+
+		units = append(units, migrationUnit{
+			Version: def.Version,
+			Name:    def.Name + ".go",
+			Kind:    "dsl",
+			UpOps:   def.UpOps,
+			DownOps: def.DownOps,
+		})
+	}
+
+	sort.Slice(units, func(i, j int) bool {
+		return units[i].Version < units[j].Version
+	})
+
+	return units, nil
+}
+
+func deriveSchemaState(units []migrationUnit, applied map[string]bool) (*schema.State, bool) {
+	state := schema.NewState()
+	for _, unit := range units {
+		if !applied[unit.Version] {
+			continue
+		}
+		if unit.Kind != "dsl" {
+			return nil, false
+		}
+		if err := state.ApplyAll(unit.UpOps); err != nil {
+			return nil, false
+		}
+	}
+	return state, true
+}
+
+func (m *migrationManager) restoreSchemaState() {
+	snapshot, err := schema.LoadSnapshot(schemaSnapshotPath)
+	if err != nil {
+		return
+	}
+
+	if snapshot.Known && snapshot.State != nil {
+		m.state = snapshot.State.Clone()
+	}
+}
+
+func sharedColumns(current []schema.Column, next []schema.Column) []schema.Column {
+	currentByName := make(map[string]schema.Column, len(current))
+	for _, column := range current {
+		currentByName[column.Name] = column
+	}
+
+	shared := make([]schema.Column, 0, len(next))
+	for _, column := range next {
+		if _, ok := currentByName[column.Name]; ok {
+			shared = append(shared, column)
+		}
+	}
+
+	return shared
+}
+
+func quoteIdent(name string, driver repo.Driver) string {
+	switch driver {
+	case repo.DriverMySQL:
+		return "`" + strings.TrimSpace(name) + "`"
+	default:
+		return `"` + strings.TrimSpace(name) + `"`
+	}
+}
+
+func (u migrationUnit) displayName() string {
+	if strings.TrimSpace(u.Name) == "" {
+		return u.Version
+	}
+
+	return u.Name
 }
 
 func readMigrationFiles(dir string, suffix string) ([]migrationFile, error) {
@@ -375,7 +745,11 @@ func extractMigrationVersion(fileName string, suffix string) (string, error) {
 }
 
 func execSQLScript(ctx context.Context, tx *sqlx.Tx, script string) error {
-	statements := splitSQLStatements(script)
+	statements, err := dialect.NewCompiler(repo.DriverSQLite).Compile(schema.RawSQLOp{UpSQL: script})
+	if err != nil {
+		return err
+	}
+
 	for _, stmt := range statements {
 		if strings.TrimSpace(stmt) == "" {
 			continue
@@ -387,102 +761,6 @@ func execSQLScript(ctx context.Context, tx *sqlx.Tx, script string) error {
 	}
 
 	return nil
-}
-
-func splitSQLStatements(script string) []string {
-	var statements []string
-	var current strings.Builder
-
-	inSingleQuote := false
-	inDoubleQuote := false
-	inBacktick := false
-	inLineComment := false
-	inBlockComment := false
-
-	for i := 0; i < len(script); i++ {
-		ch := script[i]
-		next := byte(0)
-		if i+1 < len(script) {
-			next = script[i+1]
-		}
-
-		if inLineComment {
-			current.WriteByte(ch)
-			if ch == '\n' {
-				inLineComment = false
-			}
-			continue
-		}
-
-		if inBlockComment {
-			current.WriteByte(ch)
-			if ch == '*' && next == '/' {
-				current.WriteByte(next)
-				i++
-				inBlockComment = false
-			}
-			continue
-		}
-
-		if !inSingleQuote && !inDoubleQuote && !inBacktick {
-			if ch == '-' && next == '-' {
-				current.WriteByte(ch)
-				current.WriteByte(next)
-				i++
-				inLineComment = true
-				continue
-			}
-
-			if ch == '/' && next == '*' {
-				current.WriteByte(ch)
-				current.WriteByte(next)
-				i++
-				inBlockComment = true
-				continue
-			}
-		}
-
-		switch ch {
-		case '\'':
-			if !inDoubleQuote && !inBacktick && !isEscaped(script, i) {
-				inSingleQuote = !inSingleQuote
-			}
-		case '"':
-			if !inSingleQuote && !inBacktick && !isEscaped(script, i) {
-				inDoubleQuote = !inDoubleQuote
-			}
-		case '`':
-			if !inSingleQuote && !inDoubleQuote {
-				inBacktick = !inBacktick
-			}
-		case ';':
-			if !inSingleQuote && !inDoubleQuote && !inBacktick {
-				trimmed := strings.TrimSpace(current.String())
-				if trimmed != "" {
-					statements = append(statements, trimmed)
-				}
-				current.Reset()
-				continue
-			}
-		}
-
-		current.WriteByte(ch)
-	}
-
-	if trimmed := strings.TrimSpace(current.String()); trimmed != "" {
-		statements = append(statements, trimmed)
-	}
-
-	return statements
-}
-
-func isEscaped(value string, index int) bool {
-	backslashes := 0
-	for i := index - 1; i >= 0 && value[i] == '\\'; i-- {
-		backslashes++
-	}
-
-	return backslashes%2 == 1
 }
 
 func (m *migrationManager) bindVar(position int) string {

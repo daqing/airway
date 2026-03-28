@@ -28,6 +28,12 @@ func runCLI(args []string) error {
 		return runCLIRollback(xargs)
 	case "status":
 		return runCLIStatus(xargs)
+	case "schema:show":
+		return runCLISchemaShow(xargs)
+	case "schema:dump":
+		return runCLISchemaDump(xargs)
+	case "schema":
+		return runCLISchema(xargs)
 	case "plugin", "plugin:install":
 		return runCLIPlugin(command, xargs)
 	case "help", "-h", "--help":
@@ -78,7 +84,53 @@ func printCLIUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "  airway cli migrate [version]")
 	_, _ = fmt.Fprintln(w, "  airway cli rollback [step]")
 	_, _ = fmt.Fprintln(w, "  airway cli status")
+	_, _ = fmt.Fprintln(w, "  airway cli schema:show")
+	_, _ = fmt.Fprintln(w, "  airway cli schema:dump")
 	_, _ = fmt.Fprintln(w, "  airway cli plugin install /path/to/project")
+}
+
+func printCLIGenerateUsage(w io.Writer) {
+	_, _ = fmt.Fprintln(w, "usage:")
+	_, _ = fmt.Fprintln(w, "  airway cli generate [action|api|model|migration|service|cmd] [params]")
+}
+
+func printCLIGenerateMigrationUsage(w io.Writer) {
+	_, _ = fmt.Fprintln(w, "usage:")
+	_, _ = fmt.Fprintln(w, "  airway cli generate migration [name]")
+}
+
+func printCLIGenerateActionUsage(w io.Writer) {
+	_, _ = fmt.Fprintln(w, "usage:")
+	_, _ = fmt.Fprintln(w, "  airway cli generate action [api] [action]")
+}
+
+func printCLIGenerateAPIUsage(w io.Writer) {
+	_, _ = fmt.Fprintln(w, "usage:")
+	_, _ = fmt.Fprintln(w, "  airway cli generate api [name]")
+}
+
+func printCLIGenerateModelUsage(w io.Writer) {
+	_, _ = fmt.Fprintln(w, "usage:")
+	_, _ = fmt.Fprintln(w, "  airway cli generate model [name] [field:type]...")
+}
+
+func printCLIGenerateServiceUsage(w io.Writer) {
+	_, _ = fmt.Fprintln(w, "usage:")
+	_, _ = fmt.Fprintln(w, "  airway cli generate service <name> <field:type> <field:type>...")
+}
+
+func printCLIGenerateCmdUsage(w io.Writer) {
+	_, _ = fmt.Fprintln(w, "usage:")
+	_, _ = fmt.Fprintln(w, "  airway cli generate cmd <name> <field> <field>...")
+}
+
+func isHelpArg(value string) bool {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "help", "-h", "--help":
+		return true
+	default:
+		return false
+	}
 }
 
 func installPlugin(projectPath string, timestamp string) error {

@@ -16,13 +16,13 @@ ORDER BY name`
 		query = `SELECT table_name
 FROM information_schema.tables
 WHERE table_schema = DATABASE()
-  AND table_type = 'BASE TABLE'
+  AND table_type IN ('BASE TABLE', 'SYSTEM TABLE', 'VIEW')
 ORDER BY table_name`
 	default:
 		query = `SELECT table_name
 FROM information_schema.tables
 WHERE table_schema = CURRENT_SCHEMA()
-  AND table_type = 'BASE TABLE'
+  AND table_type IN ('BASE TABLE', 'VIEW')
 ORDER BY table_name`
 	}
 
