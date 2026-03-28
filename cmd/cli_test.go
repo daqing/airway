@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"errors"
 	"io"
 	"os"
@@ -8,6 +9,9 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/daqing/airway/lib/migrate/schema"
+	"github.com/daqing/airway/lib/repo"
 )
 
 func TestRunCLICommandGeneratesModel(t *testing.T) {
@@ -144,15 +148,100 @@ func TestGenerateMigrationCreatesUpAndDownFiles(t *testing.T) {
 		t.Fatalf("run generate migration: %v", err)
 	}
 
-	upPath := filepath.Join(wd, "db", "migrate", "20260327123456_create_posts.up.sql")
-	downPath := filepath.Join(wd, "db", "migrate", "20260327123456_create_posts.down.sql")
+	migrationPath := filepath.Join(wd, "db", "migrate", "20260327123456_create_posts.go")
 
-	if _, err := os.Stat(upPath); err != nil {
-		t.Fatalf("expected up migration file: %v", err)
+	content := readFile(t, migrationPath)
+	if !strings.Contains(content, `schema.RegisterChange("20260327123456", "create_posts"`) {
+		t.Fatalf("expected DSL migration template, got:\n%s", content)
+	}
+}
+
+func TestCLIGenerateHelpPrintsUsage(t *testing.T) {
+	output := captureStdout(t, func() {
+		if err := run([]string{"cli", "generate", "-h"}); err != nil {
+			t.Fatalf("run generate help: %v", err)
+		}
+	})
+
+	if !strings.Contains(output, "airway cli generate [action|api|model|migration|service|cmd] [params]") {
+		t.Fatalf("expected generate usage output, got:\n%s", output)
+	}
+}
+
+func TestCLIGenerateSubcommandHelpPrintsUsage(t *testing.T) {
+	testCases := []struct {
+		name     string
+		args     []string
+		expected string
+	}{
+		{
+			name:     "action",
+			args:     []string{"cli", "generate", "action", "-h"},
+			expected: "airway cli generate action [api] [action]",
+		},
+		{
+			name:     "api",
+			args:     []string{"cli", "generate", "api", "-h"},
+			expected: "airway cli generate api [name]",
+		},
+		{
+			name:     "model",
+			args:     []string{"cli", "generate", "model", "-h"},
+			expected: "airway cli generate model [name] [field:type]...",
+		},
+		{
+			name:     "migration",
+			args:     []string{"cli", "generate", "migration", "-h"},
+			expected: "airway cli generate migration [name]",
+		},
+		{
+			name:     "service",
+			args:     []string{"cli", "generate", "service", "-h"},
+			expected: "airway cli generate service <name> <field:type> <field:type>...",
+		},
+		{
+			name:     "cmd",
+			args:     []string{"cli", "generate", "cmd", "-h"},
+			expected: "airway cli generate cmd <name> <field> <field>...",
+		},
 	}
 
-	if _, err := os.Stat(downPath); err != nil {
-		t.Fatalf("expected down migration file: %v", err)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			output := captureStdout(t, func() {
+				if err := run(tc.args); err != nil {
+					t.Fatalf("run help: %v", err)
+				}
+			})
+
+			if !strings.Contains(output, tc.expected) {
+				t.Fatalf("expected help output %q, got:\n%s", tc.expected, output)
+			}
+		})
+	}
+}
+
+func TestGenerateMigrationHelpPrintsUsageWithoutCreatingFile(t *testing.T) {
+	wd := useTempWorkingDir(t)
+	makeDirs(t, filepath.Join(wd, "db", "migrate"))
+
+	output := captureStdout(t, func() {
+		if err := run([]string{"cli", "generate", "migration", "-h"}); err != nil {
+			t.Fatalf("run generate migration help: %v", err)
+		}
+	})
+
+	if !strings.Contains(output, "airway cli generate migration [name]") {
+		t.Fatalf("expected migration usage output, got:\n%s", output)
+	}
+
+	entries, err := os.ReadDir(filepath.Join(wd, "db", "migrate"))
+	if err != nil {
+		t.Fatalf("read migration dir: %v", err)
+	}
+
+	if len(entries) != 0 {
+		t.Fatalf("expected no migration files for help, found %d", len(entries))
 	}
 }
 
@@ -218,6 +307,494 @@ DROP TABLE posts;
 
 	if err := manager.db.Conn().Get(&count, "SELECT COUNT(*) FROM posts"); err == nil {
 		t.Fatal("expected posts table to be removed after rollback")
+	}
+}
+
+func TestMigrationManagerSupportsDSLMigrationOnSQLite(t *testing.T) {
+	wd := useTempWorkingDir(t)
+	makeDirs(t, filepath.Join(wd, "db", "migrate"))
+	makeDirs(t, filepath.Join(wd, "tmp"))
+
+	schema.ResetRegistryForTest()
+	t.Cleanup(schema.ResetRegistryForTest)
+
+	schema.RegisterChange("20260327130000", "create_widgets", func(m *schema.Migrator) {
+		m.CreateTable("widgets", func(t *schema.Table) {
+			t.ID()
+			t.String("name", 100).Null(false)
+			t.Boolean("enabled").Null(false).Default(true)
+			t.Timestamps()
+			t.UniqueIndex("name")
+		})
+	})
+
+	t.Setenv("AIRWAY_DB_DSN", "sqlite://./tmp/dsl.sqlite3")
+	t.Setenv("AIRWAY_PG", "")
+
+	manager, err := newMigrationManagerFromEnv()
+	if err != nil {
+		t.Fatalf("newMigrationManagerFromEnv: %v", err)
+	}
+	defer manager.Close()
+
+	if err := manager.Migrate(""); err != nil {
+		t.Fatalf("migrate dsl: %v", err)
+	}
+
+	var count int
+	if err := manager.db.Conn().Get(&count, "SELECT COUNT(*) FROM schema_migrations WHERE version = ?", "20260327130000"); err != nil {
+		t.Fatalf("check schema_migrations: %v", err)
+	}
+	if count != 1 {
+		t.Fatalf("expected DSL migration version to be applied, got count %d", count)
+	}
+
+	if _, err := manager.db.Conn().Exec(`INSERT INTO widgets (id, name, enabled, created_at, updated_at) VALUES (1, 'one', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`); err != nil {
+		t.Fatalf("insert widget: %v", err)
+	}
+
+	if err := manager.Rollback(1); err != nil {
+		t.Fatalf("rollback dsl migration: %v", err)
+	}
+
+	if err := manager.db.Conn().Get(&count, "SELECT COUNT(*) FROM widgets"); err == nil {
+		t.Fatal("expected widgets table to be removed after DSL rollback")
+	}
+}
+
+func TestMigrationManagerSupportsReferencesAndForeignKeysOnSQLite(t *testing.T) {
+	wd := useTempWorkingDir(t)
+	makeDirs(t, filepath.Join(wd, "db", "migrate"))
+	makeDirs(t, filepath.Join(wd, "tmp"))
+
+	schema.ResetRegistryForTest()
+	t.Cleanup(schema.ResetRegistryForTest)
+
+	schema.RegisterChange("20260327131000", "create_accounts", func(m *schema.Migrator) {
+		m.CreateTable("accounts", func(t *schema.Table) {
+			t.ID()
+			t.String("name", 100).Null(false)
+		})
+	})
+
+	schema.RegisterChange("20260327132000", "create_users", func(m *schema.Migrator) {
+		m.CreateTable("users", func(t *schema.Table) {
+			t.ID()
+			t.String("email", 255).Null(false)
+			t.References("account").Null(false).Index().ForeignKey().OnDelete("cascade")
+			t.Timestamps()
+		})
+	})
+
+	t.Setenv("AIRWAY_DB_DSN", "sqlite://./tmp/refs.sqlite3")
+	t.Setenv("AIRWAY_PG", "")
+
+	manager, err := newMigrationManagerFromEnv()
+	if err != nil {
+		t.Fatalf("newMigrationManagerFromEnv: %v", err)
+	}
+	defer manager.Close()
+
+	if err := manager.Migrate(""); err != nil {
+		t.Fatalf("migrate references DSL: %v", err)
+	}
+
+	var createSQL string
+	if err := manager.db.Conn().Get(&createSQL, `SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'users'`); err != nil {
+		t.Fatalf("read users table sql: %v", err)
+	}
+
+	if !strings.Contains(createSQL, `FOREIGN KEY ("account_id") REFERENCES "accounts" ("id") ON DELETE CASCADE`) {
+		t.Fatalf("expected foreign key in sqlite schema, got:\n%s", createSQL)
+	}
+
+	var indexSQL string
+	if err := manager.db.Conn().Get(&indexSQL, `SELECT sql FROM sqlite_master WHERE type = 'index' AND name = 'idx_users_account_id'`); err != nil {
+		t.Fatalf("read users index sql: %v", err)
+	}
+
+	if !strings.Contains(indexSQL, `CREATE INDEX "idx_users_account_id" ON "users" ("account_id")`) {
+		t.Fatalf("expected account index in sqlite schema, got:\n%s", indexSQL)
+	}
+}
+
+func TestMigrationManagerSupportsRenameAndStandaloneIndexesOnSQLite(t *testing.T) {
+	wd := useTempWorkingDir(t)
+	makeDirs(t, filepath.Join(wd, "db", "migrate"))
+	makeDirs(t, filepath.Join(wd, "tmp"))
+
+	schema.ResetRegistryForTest()
+	t.Cleanup(schema.ResetRegistryForTest)
+
+	schema.RegisterChange("20260327133000", "create_users", func(m *schema.Migrator) {
+		m.CreateTable("users", func(t *schema.Table) {
+			t.ID()
+			t.String("email", 255).Null(false)
+		})
+		m.AddIndex("users", "email").Unique().Name("users_email_unique_idx")
+	})
+
+	schema.RegisterChange("20260327134000", "rename_users", func(m *schema.Migrator) {
+		m.RenameTable("users", "members")
+		m.RenameColumn("members", "email", "login_email")
+		m.RemoveIndex("members", "users_email_unique_idx")
+		m.AddIndex("members", "login_email").Unique().Name("members_login_email_unique_idx")
+	})
+
+	t.Setenv("AIRWAY_DB_DSN", "sqlite://./tmp/rename.sqlite3")
+	t.Setenv("AIRWAY_PG", "")
+
+	manager, err := newMigrationManagerFromEnv()
+	if err != nil {
+		t.Fatalf("newMigrationManagerFromEnv: %v", err)
+	}
+	defer manager.Close()
+
+	if err := manager.Migrate(""); err != nil {
+		t.Fatalf("migrate rename DSL: %v", err)
+	}
+
+	var createSQL string
+	if err := manager.db.Conn().Get(&createSQL, `SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'members'`); err != nil {
+		t.Fatalf("read members table sql: %v", err)
+	}
+	if !strings.Contains(createSQL, `"login_email" TEXT NOT NULL`) {
+		t.Fatalf("expected renamed column in sqlite schema, got:\n%s", createSQL)
+	}
+
+	var indexCount int
+	if err := manager.db.Conn().Get(&indexCount, `SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name = 'members_login_email_unique_idx'`); err != nil {
+		t.Fatalf("read renamed index count: %v", err)
+	}
+	if indexCount != 1 {
+		t.Fatalf("expected renamed unique index to exist, got count %d", indexCount)
+	}
+}
+
+func TestMigrationManagerSupportsSQLiteRemoveColumnViaRebuild(t *testing.T) {
+	wd := useTempWorkingDir(t)
+	makeDirs(t, filepath.Join(wd, "db", "migrate"))
+	makeDirs(t, filepath.Join(wd, "tmp"))
+
+	schema.ResetRegistryForTest()
+	t.Cleanup(schema.ResetRegistryForTest)
+
+	schema.RegisterChange("20260327135000", "create_profiles", func(m *schema.Migrator) {
+		m.CreateTable("profiles", func(t *schema.Table) {
+			t.ID()
+			t.String("email", 255).Null(false)
+			t.String("nickname", 100)
+			t.Timestamps()
+		})
+	})
+
+	schema.Register("20260327136000", "remove_nickname",
+		func(m *schema.Migrator) {
+			m.RemoveColumn("profiles", "nickname")
+		},
+		func(m *schema.Migrator) {
+			m.AddColumn("profiles", schema.Column{
+				Name: "nickname",
+				Type: schema.Type{Kind: schema.TypeString, Length: 100},
+			})
+		},
+	)
+
+	t.Setenv("AIRWAY_DB_DSN", "sqlite://./tmp/remove-column.sqlite3")
+	t.Setenv("AIRWAY_PG", "")
+
+	manager, err := newMigrationManagerFromEnv()
+	if err != nil {
+		t.Fatalf("newMigrationManagerFromEnv: %v", err)
+	}
+	defer manager.Close()
+
+	if err := manager.Migrate(""); err != nil {
+		t.Fatalf("migrate remove column DSL: %v", err)
+	}
+
+	var createSQL string
+	if err := manager.db.Conn().Get(&createSQL, `SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'profiles'`); err != nil {
+		t.Fatalf("read profiles table sql: %v", err)
+	}
+	if strings.Contains(createSQL, `"nickname"`) {
+		t.Fatalf("expected nickname column to be removed, got:\n%s", createSQL)
+	}
+
+	if err := manager.Rollback(1); err != nil {
+		t.Fatalf("rollback remove column DSL: %v", err)
+	}
+
+	if err := manager.db.Conn().Get(&createSQL, `SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'profiles'`); err != nil {
+		t.Fatalf("read profiles table sql after rollback: %v", err)
+	}
+	if !strings.Contains(createSQL, `"nickname" TEXT`) {
+		t.Fatalf("expected nickname column to be restored after rollback, got:\n%s", createSQL)
+	}
+}
+
+func TestMigrationManagerSupportsSQLiteAddAndRemoveForeignKeyViaRebuild(t *testing.T) {
+	wd := useTempWorkingDir(t)
+	makeDirs(t, filepath.Join(wd, "db", "migrate"))
+	makeDirs(t, filepath.Join(wd, "tmp"))
+
+	schema.ResetRegistryForTest()
+	t.Cleanup(schema.ResetRegistryForTest)
+
+	schema.RegisterChange("20260327137000", "create_accounts", func(m *schema.Migrator) {
+		m.CreateTable("accounts", func(t *schema.Table) {
+			t.ID()
+			t.String("name", 100).Null(false)
+		})
+	})
+
+	schema.RegisterChange("20260327138000", "create_users", func(m *schema.Migrator) {
+		m.CreateTable("users", func(t *schema.Table) {
+			t.ID()
+			t.BigInt("account_id").Null(false)
+			t.String("email", 255).Null(false)
+		})
+		m.AddIndex("users", "account_id").Name("users_account_id_idx")
+	})
+
+	schema.Register("20260327139000", "add_users_account_fk",
+		func(m *schema.Migrator) {
+			m.AddForeignKey("users", "account_id", "accounts").Name("users_account_fk").OnDelete("cascade")
+		},
+		func(m *schema.Migrator) {
+			m.RemoveForeignKey("users", "account_id", "accounts", "id")
+		},
+	)
+
+	t.Setenv("AIRWAY_DB_DSN", "sqlite://./tmp/fk-rebuild.sqlite3")
+	t.Setenv("AIRWAY_PG", "")
+
+	manager, err := newMigrationManagerFromEnv()
+	if err != nil {
+		t.Fatalf("newMigrationManagerFromEnv: %v", err)
+	}
+	defer manager.Close()
+
+	if err := manager.Migrate(""); err != nil {
+		t.Fatalf("migrate add foreign key DSL: %v", err)
+	}
+
+	var createSQL string
+	if err := manager.db.Conn().Get(&createSQL, `SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'users'`); err != nil {
+		t.Fatalf("read users table sql after fk add: %v", err)
+	}
+	if !strings.Contains(createSQL, `CONSTRAINT "users_account_fk" FOREIGN KEY ("account_id") REFERENCES "accounts" ("id") ON DELETE CASCADE`) &&
+		!strings.Contains(createSQL, `FOREIGN KEY ("account_id") REFERENCES "accounts" ("id") ON DELETE CASCADE`) {
+		t.Fatalf("expected foreign key after rebuild, got:\n%s", createSQL)
+	}
+
+	if err := manager.Rollback(1); err != nil {
+		t.Fatalf("rollback add foreign key DSL: %v", err)
+	}
+
+	if err := manager.db.Conn().Get(&createSQL, `SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'users'`); err != nil {
+		t.Fatalf("read users table sql after fk rollback: %v", err)
+	}
+	if strings.Contains(createSQL, `FOREIGN KEY ("account_id") REFERENCES "accounts" ("id")`) {
+		t.Fatalf("expected foreign key to be removed after rollback, got:\n%s", createSQL)
+	}
+}
+
+func TestMigrationManagerSupportsSQLiteSetNullAndDefaultViaRebuild(t *testing.T) {
+	wd := useTempWorkingDir(t)
+	makeDirs(t, filepath.Join(wd, "db", "migrate"))
+	makeDirs(t, filepath.Join(wd, "tmp"))
+
+	schema.ResetRegistryForTest()
+	t.Cleanup(schema.ResetRegistryForTest)
+
+	schema.RegisterChange("20260327140000", "create_settings", func(m *schema.Migrator) {
+		m.CreateTable("settings", func(t *schema.Table) {
+			t.ID()
+			t.String("name", 120)
+			t.Boolean("enabled")
+		})
+	})
+
+	schema.Register("20260327141000", "tighten_settings",
+		func(m *schema.Migrator) {
+			m.SetNull("settings", "name", false)
+			m.SetDefault("settings", "enabled", true)
+		},
+		func(m *schema.Migrator) {
+			m.SetNull("settings", "name", true)
+			m.RemoveDefault("settings", "enabled")
+		},
+	)
+
+	t.Setenv("AIRWAY_DB_DSN", "sqlite://./tmp/set-null-default.sqlite3")
+	t.Setenv("AIRWAY_PG", "")
+
+	manager, err := newMigrationManagerFromEnv()
+	if err != nil {
+		t.Fatalf("newMigrationManagerFromEnv: %v", err)
+	}
+	defer manager.Close()
+
+	if err := manager.Migrate(""); err != nil {
+		t.Fatalf("migrate set null/default DSL: %v", err)
+	}
+
+	var createSQL string
+	if err := manager.db.Conn().Get(&createSQL, `SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'settings'`); err != nil {
+		t.Fatalf("read settings table sql: %v", err)
+	}
+	if !strings.Contains(createSQL, `"name" TEXT NOT NULL`) {
+		t.Fatalf("expected name NOT NULL after rebuild, got:\n%s", createSQL)
+	}
+	if !strings.Contains(createSQL, `"enabled" INTEGER DEFAULT TRUE`) {
+		t.Fatalf("expected enabled default after rebuild, got:\n%s", createSQL)
+	}
+
+	if err := manager.Rollback(1); err != nil {
+		t.Fatalf("rollback set null/default DSL: %v", err)
+	}
+
+	if err := manager.db.Conn().Get(&createSQL, `SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'settings'`); err != nil {
+		t.Fatalf("read settings table sql after rollback: %v", err)
+	}
+	if strings.Contains(createSQL, `"name" TEXT NOT NULL`) {
+		t.Fatalf("expected name nullability to be restored after rollback, got:\n%s", createSQL)
+	}
+	if strings.Contains(createSQL, `"enabled" INTEGER DEFAULT TRUE`) {
+		t.Fatalf("expected enabled default to be removed after rollback, got:\n%s", createSQL)
+	}
+}
+
+func TestMigrationManagerWritesSchemaSnapshotAfterDSLMigrateAndRollback(t *testing.T) {
+	wd := useTempWorkingDir(t)
+	makeDirs(t, filepath.Join(wd, "db", "migrate"))
+	makeDirs(t, filepath.Join(wd, "tmp"))
+
+	schema.ResetRegistryForTest()
+	t.Cleanup(schema.ResetRegistryForTest)
+
+	schema.RegisterChange("20260327142000", "create_projects", func(m *schema.Migrator) {
+		m.CreateTable("projects", func(t *schema.Table) {
+			t.ID()
+			t.String("name", 120).Null(false)
+		})
+	})
+
+	t.Setenv("AIRWAY_DB_DSN", "sqlite://./tmp/snapshot.sqlite3")
+	t.Setenv("AIRWAY_PG", "")
+
+	manager, err := newMigrationManagerFromEnv()
+	if err != nil {
+		t.Fatalf("newMigrationManagerFromEnv: %v", err)
+	}
+	defer manager.Close()
+
+	if err := manager.Migrate(""); err != nil {
+		t.Fatalf("migrate snapshot DSL: %v", err)
+	}
+
+	snapshot := readSnapshotFile(t, filepath.Join(wd, "db", "schema.json"))
+	if !snapshot.Known {
+		t.Fatal("expected schema snapshot to be marked known after DSL migrate")
+	}
+	if _, ok := snapshot.State.Tables["projects"]; !ok {
+		t.Fatalf("expected projects table in schema snapshot, got %#v", snapshot.State.Tables)
+	}
+
+	if err := manager.Rollback(1); err != nil {
+		t.Fatalf("rollback snapshot DSL: %v", err)
+	}
+
+	snapshot = readSnapshotFile(t, filepath.Join(wd, "db", "schema.json"))
+	if _, ok := snapshot.State.Tables["projects"]; ok {
+		t.Fatalf("expected projects table to be removed from schema snapshot after rollback, got %#v", snapshot.State.Tables)
+	}
+}
+
+func TestCLISchemaDumpUsesCurrentDatabaseSchema(t *testing.T) {
+	wd := useTempWorkingDir(t)
+	makeDirs(t, filepath.Join(wd, "tmp"))
+	makeDirs(t, filepath.Join(wd, "db"))
+
+	t.Setenv("AIRWAY_DB_DSN", "sqlite://./tmp/live-schema.sqlite3")
+	t.Setenv("AIRWAY_PG", "")
+
+	db, err := repo.NewDB("sqlite://./tmp/live-schema.sqlite3")
+	if err != nil {
+		t.Fatalf("new db: %v", err)
+	}
+	defer db.Close()
+
+	if _, err := db.Conn().Exec(`PRAGMA foreign_keys = ON`); err != nil {
+		t.Fatalf("enable foreign keys: %v", err)
+	}
+
+	if _, err := db.Conn().Exec(`
+CREATE TABLE users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  email TEXT NOT NULL UNIQUE
+);
+`); err != nil {
+		t.Fatalf("create users table: %v", err)
+	}
+
+	if _, err := db.Conn().Exec(`
+CREATE TABLE audit_logs (
+  id INTEGER PRIMARY KEY,
+  user_id INTEGER NOT NULL,
+  payload TEXT,
+  FOREIGN KEY(user_id) REFERENCES users(id)
+);
+`); err != nil {
+		t.Fatalf("create audit_logs table: %v", err)
+	}
+
+	if _, err := db.Conn().Exec(`CREATE INDEX idx_audit_logs_user_id ON audit_logs(user_id)`); err != nil {
+		t.Fatalf("create index: %v", err)
+	}
+
+	if err := schema.SaveSnapshot(filepath.Join(wd, "db", "schema.json"), &schema.State{
+		Tables: map[string]*schema.TableState{
+			"stale_table": {Name: "stale_table"},
+		},
+	}, true); err != nil {
+		t.Fatalf("write stale snapshot: %v", err)
+	}
+
+	if err := runCLISchemaDump(nil); err != nil {
+		t.Fatalf("schema dump: %v", err)
+	}
+
+	snapshot := readSnapshotFile(t, filepath.Join(wd, "db", "schema.json"))
+	if !snapshot.Known {
+		t.Fatal("expected schema snapshot to be marked known")
+	}
+
+	if _, ok := snapshot.State.Tables["stale_table"]; ok {
+		t.Fatalf("expected stale snapshot contents to be replaced, got %#v", snapshot.State.Tables)
+	}
+
+	users, ok := snapshot.State.Tables["users"]
+	if !ok {
+		t.Fatalf("expected users table in snapshot, got %#v", snapshot.State.Tables)
+	}
+
+	auditLogs, ok := snapshot.State.Tables["audit_logs"]
+	if !ok {
+		t.Fatalf("expected audit_logs table in snapshot, got %#v", snapshot.State.Tables)
+	}
+
+	emailColumn, found := snapshot.State.Column("users", "email")
+	if !found {
+		t.Fatalf("expected users.email column in snapshot, got %#v", users.Columns)
+	}
+	if emailColumn.Null == nil || *emailColumn.Null {
+		t.Fatalf("expected users.email to be not null, got %#v", emailColumn)
+	}
+
+	if len(auditLogs.ForeignKeys) == 0 {
+		t.Fatalf("expected audit_logs foreign keys in snapshot, got %#v", auditLogs.ForeignKeys)
 	}
 }
 
@@ -330,4 +907,24 @@ func captureStdout(t *testing.T, fn func()) string {
 	}
 
 	return string(content)
+}
+
+func readSnapshotFile(t *testing.T, path string) schema.Snapshot {
+	t.Helper()
+
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read snapshot file %s: %v", path, err)
+	}
+
+	var snapshot schema.Snapshot
+	if err := json.Unmarshal(content, &snapshot); err != nil {
+		t.Fatalf("unmarshal snapshot file %s: %v", path, err)
+	}
+
+	if snapshot.State == nil {
+		snapshot.State = schema.NewState()
+	}
+
+	return snapshot
 }

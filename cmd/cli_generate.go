@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -10,10 +11,16 @@ import (
 
 func runCLIGenerate(args []string) error {
 	if len(args) == 0 {
-		return fmt.Errorf("usage: airway cli generate [action|api|model|migration|service|cmd] [params]")
+		printCLIGenerateUsage(os.Stdout)
+		return nil
 	}
 
 	kind := strings.ToLower(strings.TrimSpace(args[0]))
+	if isHelpArg(kind) {
+		printCLIGenerateUsage(os.Stdout)
+		return nil
+	}
+
 	xargs := args[1:]
 
 	switch kind {
@@ -35,6 +42,11 @@ func runCLIGenerate(args []string) error {
 }
 
 func generateAction(args []string) error {
+	if len(args) == 1 && isHelpArg(args[0]) {
+		printCLIGenerateActionUsage(os.Stdout)
+		return nil
+	}
+
 	if len(args) != 2 {
 		return fmt.Errorf("usage: airway cli generate action [api] [action]")
 	}
@@ -53,6 +65,11 @@ func generateAction(args []string) error {
 }
 
 func generateAPI(args []string) error {
+	if len(args) == 1 && isHelpArg(args[0]) {
+		printCLIGenerateAPIUsage(os.Stdout)
+		return nil
+	}
+
 	if len(args) != 1 {
 		return fmt.Errorf("usage: airway cli generate api [name]")
 	}
@@ -76,6 +93,11 @@ func generateAPI(args []string) error {
 }
 
 func generateModel(args []string) error {
+	if len(args) == 1 && isHelpArg(args[0]) {
+		printCLIGenerateModelUsage(os.Stdout)
+		return nil
+	}
+
 	if len(args) == 0 {
 		return fmt.Errorf("usage: airway cli generate model [name] [field:type]...")
 	}
@@ -95,6 +117,11 @@ func generateMigration(args []string) error {
 }
 
 func generateService(args []string) error {
+	if len(args) == 1 && isHelpArg(args[0]) {
+		printCLIGenerateServiceUsage(os.Stdout)
+		return nil
+	}
+
 	if len(args) < 2 {
 		return fmt.Errorf("usage: airway cli generate service <name> <field:type> <field:type>...")
 	}
@@ -125,6 +152,11 @@ func generateService(args []string) error {
 }
 
 func generateCmd(args []string) error {
+	if len(args) == 1 && isHelpArg(args[0]) {
+		printCLIGenerateCmdUsage(os.Stdout)
+		return nil
+	}
+
 	if len(args) < 2 {
 		return fmt.Errorf("usage: airway cli generate cmd <name> <field> <field>...")
 	}

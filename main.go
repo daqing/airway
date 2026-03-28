@@ -19,6 +19,8 @@ func main() {
 
 	if isCLICommand {
 		loadCLIEnv()
+		cmd.Run(args)
+		return
 	}
 
 	appConfig := utils.AppConfig()
@@ -55,9 +57,10 @@ func main() {
 
 	if len(args) > 0 {
 		cmd.Run(args)
-	} else {
-		runApp()
+		return
 	}
+
+	runApp()
 }
 
 func loadCLIEnv() {
