@@ -7,6 +7,8 @@ Airway is a full-stack API framework written in Go, inspired by Ruby on Rails.
 
 **[SQL Builder DSL Guide (Chinese)](https://github.com/daqing/airway/blob/main/docs/zh-CN/sql-builder.md)**
 
+**[CLI Scaffolding Guide](https://github.com/daqing/airway/blob/main/docs/cli.md)**
+
 Get Started
 ===========
 
@@ -86,11 +88,29 @@ The timezone of the server
 
 Example: `Asia/Shanghai`
 
-## 3. Install `awcli`: the CLI for airway
+## 3. Use the built-in CLI scaffolder
+
+Airway now includes the former `awcli` functionality directly in the main command.
+`airway cli ...` automatically attempts to load `.env` from the current project root during local development.
+
+Quick examples:
 
 ```bash
-go install github.com/daqing/airway-cli/cmd/awcli@latest
+go run . cli generate api admin
+go run . cli generate action admin show
+go run . cli generate model post
+go run . cli generate service post title:string published:bool
+go run . cli generate cmd post title published
+go run . cli generate migration create_posts
+go run . cli migrate
+go run . cli rollback 1
+go run . cli status
+go run . cli plugin install /path/to/project
 ```
+
+Migration commands read `AIRWAY_DB_DSN` first and fall back to the legacy `AIRWAY_PG`.
+
+See the full CLI guide at [docs/cli.md](/Users/daqing/mzevo/open-source/airway/docs/cli.md).
 
 ## 4. Start local development server
 

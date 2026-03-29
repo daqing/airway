@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"log"
 	"os"
 
@@ -13,14 +14,23 @@ import (
 )
 
 func main() {
+	args := os.Args[1:]
+	isCLICommand := len(args) > 0 && args[0] == "cli"
+
+	if isCLICommand {
+		loadCLIEnv()
+		cmd.Run(args)
+		return
+	}
+
 	appConfig := utils.AppConfig()
 
-	if appConfig.Env == "" {
+	if !isCLICommand && appConfig.Env == "" {
 		log.Println("AIRWAY_ENV is not set")
 		os.Exit(1)
 	}
 
-	if appConfig.IsLocal {
+	if !isCLICommand && appConfig.IsLocal {
 		envFile := ".env"
 		err := godotenv.Load(envFile)
 		if err != nil {
@@ -45,10 +55,18 @@ func main() {
 		redis_client.Setup(redisURL)
 	}
 
-	if len(os.Args) > 1 {
-		cmd.Run(os.Args[1:])
-	} else {
-		runApp()
+	if len(args) > 0 {
+		cmd.Run(args)
+		return
+	}
+
+	runApp()
+}
+
+func loadCLIEnv() {
+	err := godotenv.Load(".env")
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		log.Printf("Loading env file: .env failed: %v", err)
 	}
 }
 

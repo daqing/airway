@@ -13,3 +13,5 @@
 
 *.sock
 *.sh
+
+schema.json

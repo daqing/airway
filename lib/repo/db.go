@@ -70,6 +70,14 @@ func (db *DB) Close() error {
 	return db.conn.Close()
 }
 
+func (db *DB) Conn() *sqlx.DB {
+	if db == nil {
+		return nil
+	}
+
+	return db.conn
+}
+
 func configurePool(driver Driver, conn *sqlx.DB) {
 	switch driver {
 	case DriverSQLite:
