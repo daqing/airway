@@ -117,6 +117,324 @@ See the full CLI guide at [docs/cli.md](/Users/daqing/mzevo/open-source/airway/d
 Run `just` from the project root directory to start the local
 development server.
 
+---
+
+# Repository API Reference
+
+A unified query layer with ActiveRecord-style association support.
+
+- [Model Definition](#model-definition)
+- [CRUD Operations](#crud-operations)
+- [Preload (Eager Loading)](#preload-eager-loading)
+- [Joins](#joins)
+- [Rails Migration Guide](#rails-migration-guide)
+
+## Model Definition
+
+### Basic Model
+
+```go
+type User struct {
+    ID        int64   `db:"id"`
+    Name      string  `db:"name"`
+    Email     string  `db:"email"`
+    CreatedAt string  `db:"created_at"`
+}
+
+func (User) TableName() string {
+    return "users"
+}
+```
+
+### Model with Associations
+
+```go
+type User struct {
+    ID        int64     `db:"id"`
+    Name      string    `db:"name"`
+    Email     string    `db:"email"`
+    Profile   *Profile  // HasOne association
+    Posts     []*Post   // HasMany association
+}
+
+func (User) TableName() string {
+    return "users"
+}
+
+// Define associations
+func (User) Relations() map[string]repo.Relation {
+    return map[string]repo.Relation{
+        "Profile": repo.NewHasOne(Profile{}, "UserID"),
+        "Posts":   repo.NewHasMany(Post{}, "UserID"),
+    }
+}
+
+type Profile struct {
+    ID     int64  `db:"id"`
+    UserID int64  `db:"user_id"`
+    Bio    string `db:"bio"`
+    User   *User  // BelongsTo association
+}
+
+func (Profile) TableName() string {
+    return "profiles"
+}
+
+type Post struct {
+    ID       int64      `db:"id"`
+    UserID   int64      `db:"user_id"`
+    Title    string     `db:"title"`
+    Content  string     `db:"content"`
+    Author   *User      // BelongsTo association
+    Comments []*Comment // HasMany association
+}
+
+func (Post) TableName() string {
+    return "posts"
+}
+
+func (Post) Relations() map[string]repo.Relation {
+    return map[string]repo.Relation{
+        "Author":   repo.NewBelongsTo(User{}, "UserID"),
+        "Comments": repo.NewHasMany(Comment{}, "PostID"),
+    }
+}
+```
+
+## CRUD Operations
+
+All CRUD operations use the database connection configured via `AIRWAY_DB_DSN`.
+
+### Create
+
+```go
+// Create a single record
+user, err := repo.CreateFrom[User](sql.H{
+    "name":  "John Doe",
+    "email": "john@example.com",
+})
+```
+
+### Read
+
+```go
+// Find all records
+users, err := repo.FindAll[User]()
+
+// Find by conditions
+users, err := repo.FindBy[User](sql.H{"active": true})
+
+// Find single record
+user, err := repo.FindOneBy[User](sql.H{"email": "john@example.com"})
+
+// Find by ID
+user, err := repo.FindByID[User](1)
+
+// Check if exists
+exists, err := repo.ExistsWhere[User](sql.H{"email": "john@example.com"})
+
+// Count records
+count, err := repo.CountWhere[User](sql.H{"active": true})
+
+// Count all
+total, err := repo.CountEvery[User]()
+```
+
+### Update
+
+```go
+// Update by ID
+err := repo.UpdateByID[User](1, sql.H{"name": "Jane Doe"})
+
+// Update with condition
+err := repo.UpdateWhere[User](
+    sql.H{"status": "inactive"},
+    sql.Eq("last_login_at", nil),
+)
+
+// Update all records
+err := repo.UpdateEvery[User](sql.H{"updated_at": "2024-01-01"})
+```
+
+### Delete
+
+```go
+// Delete by ID
+err := repo.DeleteByID[User](1)
+
+// Delete with condition
+err := repo.DeleteWhere[User](sql.H{"status": "banned"})
+
+// Delete all (use with caution!)
+err := repo.DeleteEvery[User]()
+```
+
+## Preload (Eager Loading)
+
+Preload solves the N+1 query problem by loading associations efficiently.
+
+### Basic Preload
+
+```go
+// Without Preload (N+1 problem) - DON'T DO THIS
+users, _ := repo.FindBy[User](sql.H{})
+for _, user := range users {
+    posts, _ := repo.FindBy[Post](sql.H{"user_id": user.ID}) // N queries!
+    user.Posts = posts
+}
+
+// With Preload (only 2 queries)
+users, _ := repo.FindBy[User](sql.H{})
+err := repo.Preload("Posts").Exec(&users)
+```
+
+### Preload Multiple Associations
+
+```go
+users, _ := repo.FindBy[User](sql.H{})
+err := repo.Preload("Profile", "Posts").Exec(&users)
+
+// Access loaded data
+for _, user := range users {
+    _ = user.Profile.Bio    // Already loaded
+    for _, post := range user.Posts {
+        _ = post.Title      // Already loaded
+    }
+}
+```
+
+### Chained Preload
+
+```go
+// Load nested associations: Users -> Posts -> Comments
+users, _ := repo.FindBy[User](sql.H{})
+err := repo.Preload("Posts").
+    ThenPreload("Profile").
+    ThenPreload("Comments").
+    Exec(&users)
+```
+
+### Conditional Preload
+
+```go
+// Only load approved comments
+users, _ := repo.FindBy[User](sql.H{})
+err := repo.Preload("Posts").
+    ThenPreloadCond("Comments", sql.Eq("approved", true)).
+    Exec(&users)
+
+// Complex conditions
+users, _ := repo.FindBy[User](sql.H{})
+err := repo.PreloadCond("Posts", sql.And(
+    sql.Eq("published", true),
+    sql.Gte("created_at", "2024-01-01"),
+)).Exec(&users)
+```
+
+## Joins
+
+Use Joins when filtering based on associated table data.
+
+### Join Types
+
+```go
+// Inner Join - only users with profiles
+results, err := repo.Join(User{}).Joins("Profile").Find()
+
+// Left Join - all users, with or without profiles
+results, err := repo.Join(User{}).LeftJoins("Profile").Find()
+
+// Right Join
+results, err := repo.Join(User{}).RightJoins("Profile").Find()
+
+// Full Join
+results, err := repo.Join(User{}).FullJoins("Profile").Find()
+```
+
+### Join with Conditions
+
+```go
+// Join with conditions on the joined table
+results, err := repo.Join(User{}).
+    Joins("Posts", sql.Gt("posts.views", 100)).
+    Find()
+
+// Complex conditions
+results, err := repo.Join(User{}).
+    LeftJoins("Posts", sql.And(
+        sql.Eq("posts.published", true),
+        sql.Gte("posts.created_at", "2024-01-01"),
+    )).
+    Find()
+```
+
+### Join with Where, Order, Pagination
+
+```go
+results, err := repo.Join(User{}).
+    Joins("Posts").
+    Joins("Profile").
+    Where(sql.Eq("users.active", true)).
+    Where(sql.Gt("profiles.age", 18)).
+    OrderBy("users.name ASC").
+    Page(1, 20).
+    Find()
+
+// Alternative pagination
+results, err := repo.Join(User{}).
+    Joins("Posts").
+    Limit(10).
+    Offset(20).
+    Find()
+```
+
+### Count with Joins
+
+```go
+count, err := repo.Join(User{}).
+    Joins("Posts").
+    Where(sql.Eq("posts.published", true)).
+    Count()
+```
+
+### Scan Results into Structs
+
+```go
+var users []*User
+err := repo.Join(User{}).
+    LeftJoins("Profile").
+    FindInto(&users)
+
+// Access preloaded data
+for _, user := range users {
+    if user.Profile != nil {
+        fmt.Println(user.Profile.Bio)
+    }
+}
+```
+
+## Rails Migration Guide
+
+| Rails ActiveRecord | Airway Repo |
+|-------------------|-------------|
+| `User.find(id)` | `repo.FindByID[User](id)` |
+| `User.find_by(email: e)` | `repo.FindOneBy[User](sql.H{"email": e})` |
+| `User.where(active: true)` | `repo.FindBy[User](sql.H{"active": true})` |
+| `User.all` | `repo.FindAll[User]()` |
+| `User.create(attrs)` | `repo.CreateFrom[User](attrs)` |
+| `User.update(id, attrs)` | `repo.UpdateByID[User](id, attrs)` |
+| `User.delete(id)` | `repo.DeleteByID[User](id)` |
+| `User.joins(:profile)` | `repo.Join(User{}).Joins("Profile")` |
+| `User.left_joins(:profile)` | `repo.Join(User{}).LeftJoins("Profile")` |
+| `User.includes(:posts)` | `repo.Preload("Posts").Exec(&users)` |
+| `User.includes(:profile, :posts)` | `repo.Preload("Profile", "Posts").Exec(&users)` |
+| `User.includes(posts: :comments)` | `repo.Preload("Posts").ThenPreload("Comments").Exec(&users)` |
+| `User.count` | `repo.CountEvery[User]()` |
+| `User.where(active: true).count` | `repo.CountWhere[User](sql.H{"active": true})` |
+| `User.exists?(id)` | `repo.ExistsWhere[User](sql.H{"id": id})` |
+
+---
+
 Repo REPL
 =========
 

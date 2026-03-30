@@ -192,3 +192,319 @@ $ just
 根据你的 `.env` 中配置的端口，就可以访问对应的网址。
 
 假设你配置的端口是 **2023**, 那么，访问 [http://localhost:2023](http://localhost:2023) 即可。
+
+---
+
+# 数据库操作 API 参考
+
+Airway 提供了类似 Rails ActiveRecord 风格的 API，支持关联查询和 N+1 查询优化。
+
+- [模型定义](#模型定义)
+- [CRUD 操作](#crud-操作)
+- [预加载 Preload](#预加载-preload)
+- [关联查询 Joins](#关联查询-joins)
+- [Rails 迁移对照表](#rails-迁移对照表)
+
+## 模型定义
+
+### 基础模型
+
+```go
+type User struct {
+    ID        int64   `db:"id"`
+    Name      string  `db:"name"`
+    Email     string  `db:"email"`
+    CreatedAt string  `db:"created_at"`
+}
+
+func (User) TableName() string {
+    return "users"
+}
+```
+
+### 带关联的模型
+
+```go
+type User struct {
+    ID        int64     `db:"id"`
+    Name      string    `db:"name"`
+    Email     string    `db:"email"`
+    Profile   *Profile  // HasOne 关联
+    Posts     []*Post   // HasMany 关联
+}
+
+func (User) TableName() string {
+    return "users"
+}
+
+// 定义关联
+func (User) Relations() map[string]repo.Relation {
+    return map[string]repo.Relation{
+        "Profile": repo.NewHasOne(Profile{}, "UserID"),
+        "Posts":   repo.NewHasMany(Post{}, "UserID"),
+    }
+}
+
+type Profile struct {
+    ID     int64  `db:"id"`
+    UserID int64  `db:"user_id"`  // 外键
+    Bio    string `db:"bio"`
+    User   *User  // BelongsTo 关联
+}
+
+func (Profile) TableName() string {
+    return "profiles"
+}
+
+type Post struct {
+    ID       int64      `db:"id"`
+    UserID   int64      `db:"user_id"`  // 外键
+    Title    string     `db:"title"`
+    Content  string     `db:"content"`
+    Author   *User      // BelongsTo 关联
+    Comments []*Comment // HasMany 关联
+}
+
+func (Post) TableName() string {
+    return "posts"
+}
+
+func (Post) Relations() map[string]repo.Relation {
+    return map[string]repo.Relation{
+        "Author":   repo.NewBelongsTo(User{}, "UserID"),
+        "Comments": repo.NewHasMany(Comment{}, "PostID"),
+    }
+}
+```
+
+## CRUD 操作
+
+所有 CRUD 操作都通过 `AIRWAY_DB_DSN` 配置的连接执行。
+
+### 创建
+
+```go
+// 创建单条记录
+user, err := repo.CreateFrom[User](sql.H{
+    "name":  "John Doe",
+    "email": "john@example.com",
+})
+```
+
+### 查询
+
+```go
+// 查询所有记录
+users, err := repo.FindAll[User]()
+
+// 根据条件查询
+users, err := repo.FindBy[User](sql.H{"active": true})
+
+// 查询单条记录
+user, err := repo.FindOneBy[User](sql.H{"email": "john@example.com"})
+
+// 根据 ID 查询
+user, err := repo.FindByID[User](1)
+
+// 检查是否存在
+exists, err := repo.ExistsWhere[User](sql.H{"email": "john@example.com"})
+
+// 统计记录数
+count, err := repo.CountWhere[User](sql.H{"active": true})
+
+// 统计所有记录
+total, err := repo.CountEvery[User]()
+```
+
+### 更新
+
+```go
+// 根据 ID 更新
+err := repo.UpdateByID[User](1, sql.H{"name": "Jane Doe"})
+
+// 根据条件更新
+err := repo.UpdateWhere[User](
+    sql.H{"status": "inactive"},
+    sql.Eq("last_login_at", nil),
+)
+
+// 更新所有记录
+err := repo.UpdateEvery[User](sql.H{"updated_at": "2024-01-01"})
+```
+
+### 删除
+
+```go
+// 根据 ID 删除
+err := repo.DeleteByID[User](1)
+
+// 根据条件删除
+err := repo.DeleteWhere[User](sql.H{"status": "banned"})
+
+// 删除所有记录（谨慎使用！）
+err := repo.DeleteEvery[User]()
+```
+
+## 预加载 Preload
+
+预加载解决 N+1 查询问题，只需 2 次查询即可加载所有关联数据。
+
+### 基础预加载
+
+```go
+// 不使用预加载（N+1 问题）- 不要这样做
+users, _ := repo.FindBy[User](sql.H{})
+for _, user := range users {
+    posts, _ := repo.FindBy[Post](sql.H{"user_id": user.ID}) // N 次查询！
+    user.Posts = posts
+}
+
+// 使用预加载（只需 2 次查询）
+users, _ := repo.FindBy[User](sql.H{})
+err := repo.Preload("Posts").Exec(&users)
+```
+
+### 预加载多个关联
+
+```go
+users, _ := repo.FindBy[User](sql.H{})
+err := repo.Preload("Profile", "Posts").Exec(&users)
+
+// 访问已加载的数据
+for _, user := range users {
+    _ = user.Profile.Bio    // 已加载
+    for _, post := range user.Posts {
+        _ = post.Title      // 已加载
+    }
+}
+```
+
+### 链式预加载
+
+```go
+// 加载多层关联：Users -> Posts -> Comments
+users, _ := repo.FindBy[User](sql.H{})
+err := repo.Preload("Posts").
+    ThenPreload("Profile").
+    ThenPreload("Comments").
+    Exec(&users)
+```
+
+### 条件预加载
+
+```go
+// 只加载已批准的评论
+users, _ := repo.FindBy[User](sql.H{})
+err := repo.Preload("Posts").
+    ThenPreloadCond("Comments", sql.Eq("approved", true)).
+    Exec(&users)
+
+// 复杂条件
+users, _ := repo.FindBy[User](sql.H{})
+err := repo.PreloadCond("Posts", sql.And(
+    sql.Eq("published", true),
+    sql.Gte("created_at", "2024-01-01"),
+)).Exec(&users)
+```
+
+## 关联查询 Joins
+
+使用 Joins 根据关联表数据进行过滤。
+
+### Join 类型
+
+```go
+// Inner Join - 只返回有 Profile 的用户
+results, err := repo.Join(User{}).Joins("Profile").Find()
+
+// Left Join - 返回所有用户，包括没有 Profile 的
+results, err := repo.Join(User{}).LeftJoins("Profile").Find()
+
+// Right Join
+results, err := repo.Join(User{}).RightJoins("Profile").Find()
+
+// Full Join
+results, err := repo.Join(User{}).FullJoins("Profile").Find()
+```
+
+### 带条件的 Join
+
+```go
+// 对关联表添加条件
+results, err := repo.Join(User{}).
+    Joins("Posts", sql.Gt("posts.views", 100)).
+    Find()
+
+// 复杂条件
+results, err := repo.Join(User{}).
+    LeftJoins("Posts", sql.And(
+        sql.Eq("posts.published", true),
+        sql.Gte("posts.created_at", "2024-01-01"),
+    )).
+    Find()
+```
+
+### Join + Where + 排序 + 分页
+
+```go
+results, err := repo.Join(User{}).
+    Joins("Posts").
+    Joins("Profile").
+    Where(sql.Eq("users.active", true)).
+    Where(sql.Gt("profiles.age", 18)).
+    OrderBy("users.name ASC").
+    Page(1, 20).
+    Find()
+
+// 另一种分页方式
+results, err := repo.Join(User{}).
+    Joins("Posts").
+    Limit(10).
+    Offset(20).
+    Find()
+```
+
+### Join 统计
+
+```go
+count, err := repo.Join(User{}).
+    Joins("Posts").
+    Where(sql.Eq("posts.published", true)).
+    Count()
+```
+
+### 扫描到结构体
+
+```go
+var users []*User
+err := repo.Join(User{}).
+    LeftJoins("Profile").
+    FindInto(&users)
+
+// 访问已加载的数据
+for _, user := range users {
+    if user.Profile != nil {
+        fmt.Println(user.Profile.Bio)
+    }
+}
+```
+
+## Rails 迁移对照表
+
+| Rails ActiveRecord | Airway Repo |
+|-------------------|-------------|
+| `User.find(id)` | `repo.FindByID[User](id)` |
+| `User.find_by(email: e)` | `repo.FindOneBy[User](sql.H{"email": e})` |
+| `User.where(active: true)` | `repo.FindBy[User](sql.H{"active": true})` |
+| `User.all` | `repo.FindAll[User]()` |
+| `User.create(attrs)` | `repo.CreateFrom[User](attrs)` |
+| `User.update(id, attrs)` | `repo.UpdateByID[User](id, attrs)` |
+| `User.delete(id)` | `repo.DeleteByID[User](id)` |
+| `User.joins(:profile)` | `repo.Join(User{}).Joins("Profile")` |
+| `User.left_joins(:profile)` | `repo.Join(User{}).LeftJoins("Profile")` |
+| `User.includes(:posts)` | `repo.Preload("Posts").Exec(&users)` |
+| `User.includes(:profile, :posts)` | `repo.Preload("Profile", "Posts").Exec(&users)` |
+| `User.includes(posts: :comments)` | `repo.Preload("Posts").ThenPreload("Comments").Exec(&users)` |
+| `User.count` | `repo.CountEvery[User]()` |
+| `User.where(active: true).count` | `repo.CountWhere[User](sql.H{"active": true})` |
+| `User.exists?(id)` | `repo.ExistsWhere[User](sql.H{"id": id})` |
