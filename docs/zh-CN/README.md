@@ -240,8 +240,8 @@ func (User) TableName() string {
 // 定义关联
 func (User) Relations() map[string]repo.Relation {
     return map[string]repo.Relation{
-        "Profile": repo.NewHasOne(Profile{}, "UserID"),
-        "Posts":   repo.NewHasMany(Post{}, "UserID"),
+        "Profile": repo.HasOne(Profile{}, "UserID"),
+        "Posts":   repo.HasMany(Post{}, "UserID"),
     }
 }
 
@@ -272,7 +272,7 @@ func (Post) TableName() string {
 func (Post) Relations() map[string]repo.Relation {
     return map[string]repo.Relation{
         "Author":   repo.NewBelongsTo(User{}, "UserID"),
-        "Comments": repo.NewHasMany(Comment{}, "PostID"),
+        "Comments": repo.HasMany(Comment{}, "PostID"),
     }
 }
 ```

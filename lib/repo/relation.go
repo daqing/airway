@@ -27,11 +27,11 @@ type Relational interface {
 	Relations() map[string]Relation
 }
 
-// NewHasOne 创建HasOne关联配置
+// HasOne 创建HasOne关联配置
 // model: 关联模型实例
 // foreignKey: 关联表中的外键字段名（如 "UserID"）
 // primaryKey: 主表中的主键字段名（默认为 "ID"）
-func NewHasOne(model any, foreignKey string, primaryKey ...string) Relation {
+func HasOne(model any, foreignKey string, primaryKey ...string) Relation {
 	pk := "ID"
 	if len(primaryKey) > 0 {
 		pk = primaryKey[0]
@@ -44,11 +44,11 @@ func NewHasOne(model any, foreignKey string, primaryKey ...string) Relation {
 	}
 }
 
-// NewHasMany 创建HasMany关联配置
+// HasMany 创建HasMany关联配置
 // model: 关联模型实例
 // foreignKey: 关联表中的外键字段名（如 "UserID"）
 // primaryKey: 主表中的主键字段名（默认为 "ID"）
-func NewHasMany(model any, foreignKey string, primaryKey ...string) Relation {
+func HasMany(model any, foreignKey string, primaryKey ...string) Relation {
 	pk := "ID"
 	if len(primaryKey) > 0 {
 		pk = primaryKey[0]
