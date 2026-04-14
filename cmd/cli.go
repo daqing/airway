@@ -22,11 +22,11 @@ func runCLI(args []string) error {
 	switch command {
 	case "generate", "g":
 		return runCLIGenerate(xargs)
-	case "migrate":
+	case "db:migrate":
 		return runCLIMigrate(xargs)
-	case "rollback":
+	case "db:rollback":
 		return runCLIRollback(xargs)
-	case "status":
+	case "db:status":
 		return runCLIStatus(xargs)
 	case "schema:show":
 		return runCLISchemaShow(xargs)
@@ -34,6 +34,10 @@ func runCLI(args []string) error {
 		return runCLISchemaDump(xargs)
 	case "schema":
 		return runCLISchema(xargs)
+	case "db:drop":
+		return runCLIDBDrop(xargs)
+	case "db:create":
+		return runCLIDBCreate(xargs)
 	case "plugin", "plugin:install":
 		return runCLIPlugin(command, xargs)
 	case "help", "-h", "--help":
@@ -80,13 +84,15 @@ func cliDSN() (string, error) {
 
 func printCLIUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "usage:")
+	_, _ = fmt.Fprintln(w, "  airway cli db:create")
+	_, _ = fmt.Fprintln(w, "  airway cli db:drop")
+	_, _ = fmt.Fprintln(w, "  airway cli db:migrate [version]")
+	_, _ = fmt.Fprintln(w, "  airway cli db:rollback [step]")
+	_, _ = fmt.Fprintln(w, "  airway cli db:status")
 	_, _ = fmt.Fprintln(w, "  airway cli generate [action|api|model|migration|service|cmd] [params]")
-	_, _ = fmt.Fprintln(w, "  airway cli migrate [version]")
-	_, _ = fmt.Fprintln(w, "  airway cli rollback [step]")
-	_, _ = fmt.Fprintln(w, "  airway cli status")
-	_, _ = fmt.Fprintln(w, "  airway cli schema:show")
-	_, _ = fmt.Fprintln(w, "  airway cli schema:dump")
 	_, _ = fmt.Fprintln(w, "  airway cli plugin install /path/to/project")
+	_, _ = fmt.Fprintln(w, "  airway cli schema:dump")
+	_, _ = fmt.Fprintln(w, "  airway cli schema:show")
 }
 
 func printCLIGenerateUsage(w io.Writer) {

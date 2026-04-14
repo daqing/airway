@@ -8,9 +8,9 @@ import (
 type RelationType string
 
 const (
-	HasOne    RelationType = "has_one"
-	HasMany   RelationType = "has_many"
-	BelongsTo RelationType = "belongs_to"
+	HasOneRelation    RelationType = "has_one"
+	HasManyRelation   RelationType = "has_many"
+	BelongsTo         RelationType = "belongs_to"
 )
 
 // Relation 定义模型关联配置
@@ -37,7 +37,7 @@ func HasOne(model any, foreignKey string, primaryKey ...string) Relation {
 		pk = primaryKey[0]
 	}
 	return Relation{
-		Type:       HasOne,
+		Type:       HasOneRelation,
 		Model:      model,
 		ForeignKey: foreignKey,
 		PrimaryKey: pk,
@@ -54,7 +54,7 @@ func HasMany(model any, foreignKey string, primaryKey ...string) Relation {
 		pk = primaryKey[0]
 	}
 	return Relation{
-		Type:       HasMany,
+		Type:       HasManyRelation,
 		Model:      model,
 		ForeignKey: foreignKey,
 		PrimaryKey: pk,

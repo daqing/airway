@@ -17,11 +17,15 @@ If you already built the binary, the same commands also work as:
 ## Command Overview
 
 ```bash
+airway cli db:create
+airway cli db:drop
+airway cli db:migrate [version]
+airway cli db:rollback [step]
+airway cli db:status
 airway cli generate [action|api|model|migration|service|cmd] [params]
-airway cli migrate [version]
-airway cli rollback [step]
-airway cli status
 airway cli plugin install /path/to/project
+airway cli schema:dump
+airway cli schema:show
 ```
 
 ## Code Generators
@@ -124,31 +128,31 @@ This creates a new SQL migration file under:
 ### Run all pending migrations
 
 ```bash
-go run . cli migrate
+go run . cli db:migrate
 ```
 
 ### Migrate to a specific version
 
 ```bash
-go run . cli migrate 20260327120000
+go run . cli db:migrate 20260327120000
 ```
 
 ### Roll back the latest migration
 
 ```bash
-go run . cli rollback
+go run . cli db:rollback
 ```
 
 ### Roll back multiple steps
 
 ```bash
-go run . cli rollback 3
+go run . cli db:rollback 3
 ```
 
 ### Show migration status
 
 ```bash
-go run . cli status
+go run . cli db:status
 ```
 
 Migration commands read:
@@ -202,7 +206,7 @@ CREATE TABLE posts (
 Run the migration:
 
 ```bash
-go run . cli migrate
+go run . cli db:migrate
 ```
 
 ### Step 2. Generate the model

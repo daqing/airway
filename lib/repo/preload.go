@@ -155,10 +155,10 @@ func (p *Preloader) inferRelationConfig(primaryType reflect.Type, relationName s
 		if relType.Kind() == reflect.Ptr {
 			relType = relType.Elem()
 		}
-		relTypeStr = HasMany
+		relTypeStr = HasManyRelation
 	case reflect.Ptr:
 		relType = field.Type.Elem()
-		relTypeStr = HasOne
+		relTypeStr = HasOneRelation
 	default:
 		// 可能是BelongsTo，值类型
 		relType = field.Type
@@ -265,7 +265,7 @@ func (p *Preloader) assignRelatedRecords(primarySlice reflect.Value, relatedMap 
 		}
 
 		switch config.relationType {
-		case HasMany:
+		case HasManyRelation:
 			// 设置为切片
 			sliceType := reflect.SliceOf(reflect.PtrTo(config.modelType))
 			slice := reflect.MakeSlice(sliceType, len(relatedRecords), len(relatedRecords))
@@ -274,7 +274,7 @@ func (p *Preloader) assignRelatedRecords(primarySlice reflect.Value, relatedMap 
 			}
 			field.Set(slice)
 
-		case HasOne:
+		case HasOneRelation:
 			// 设置为指针
 			if len(relatedRecords) > 0 {
 				field.Set(relatedRecords[0])

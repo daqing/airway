@@ -292,10 +292,10 @@ func (jq *JoinQuery) inferRelationConfig(primaryType reflect.Type, relationName 
 		if relType.Kind() == reflect.Ptr {
 			relType = relType.Elem()
 		}
-		relTypeStr = HasMany
+		relTypeStr = HasManyRelation
 	case reflect.Ptr:
 		relType = field.Type.Elem()
-		relTypeStr = HasOne
+		relTypeStr = HasOneRelation
 	default:
 		// 可能是BelongsTo，值类型
 		relType = field.Type

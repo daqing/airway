@@ -17,11 +17,15 @@ go run . cli ...
 ## 命令总览
 
 ```bash
+airway cli db:create
+airway cli db:drop
+airway cli db:migrate [version]
+airway cli db:rollback [step]
+airway cli db:status
 airway cli generate [action|api|model|migration|service|cmd] [params]
-airway cli migrate [version]
-airway cli rollback [step]
-airway cli status
 airway cli plugin install /path/to/project
+airway cli schema:dump
+airway cli schema:show
 ```
 
 ## 代码生成命令
@@ -113,31 +117,31 @@ go run . cli generate migration create_posts
 ### 执行全部待运行迁移
 
 ```bash
-go run . cli migrate
+go run . cli db:migrate
 ```
 
 ### 迁移到指定版本
 
 ```bash
-go run . cli migrate 20260327120000
+go run . cli db:migrate 20260327120000
 ```
 
 ### 回滚最近一次迁移
 
 ```bash
-go run . cli rollback
+go run . cli db:rollback
 ```
 
 ### 按步数回滚
 
 ```bash
-go run . cli rollback 3
+go run . cli db:rollback 3
 ```
 
 ### 查看迁移状态
 
 ```bash
-go run . cli status
+go run . cli db:status
 ```
 
 迁移相关命令读取数据库连接串的顺序为：
@@ -191,7 +195,7 @@ CREATE TABLE posts (
 执行迁移：
 
 ```bash
-go run . cli migrate
+go run . cli db:migrate
 ```
 
 ### 第 2 步：生成 model
