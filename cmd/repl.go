@@ -139,21 +139,21 @@ func (r repoREPL) printHelp() {
   exit
 
 Expressions:
-  repo.FindOne("users", pg.Eq("id", 1))
-  repo.FindOne[models.User](pg.Select("id").Where(pg.Eq("id", 1)))
+  repo.FindOne("users", cond.Eq("id", 1))
+  repo.FindOne[models.User](pg.Select("id").Where(cond.Eq("id", 1)))
   repo.Insert[models.User](pg.H{"id": 1234})
-  repo.FindOne[User](pg.Eq("id", 1))
-  repo.FindOne[struct{ ID int64; Email string }](pg.Select("id AS id, email AS email").From("users").Where(pg.Eq("id", 1)))
-	repo.Find("users", pg.Select("*").Where(pg.Eq("id", 1)))
-  repo.Find("users", pg.AllOf(pg.Eq("enabled", true), pg.Like("email", "%@example.com")))
+  repo.FindOne[User](cond.Eq("id", 1))
+  repo.FindOne[struct{ ID int64; Email string }](pg.Select("id AS id, email AS email").From("users").Where(cond.Eq("id", 1)))
+	repo.Find("users", pg.Select("*").Where(cond.Eq("id", 1)))
+  repo.Find("users", cond.AllOf(cond.Eq("enabled", true), cond.Like("email", "%@example.com")))
   repo.Insert("users", pg.H{"email": "dev@example.com", "enabled": true})
-  repo.Update("users", pg.H{"enabled": false}, pg.Eq("id", 1))
-  repo.Delete("users", pg.Eq("id", 1))
-  repo.Preview(pg.Select("*").From("users").Where(pg.Eq("id", 1)))
-  pg.Select("*").From("users").Where(pg.Eq("id", 1))
+  repo.Update("users", pg.H{"enabled": false}, cond.Eq("id", 1))
+  repo.Delete("users", cond.Eq("id", 1))
+  repo.Preview(pg.Select("*").From("users").Where(cond.Eq("id", 1)))
+  pg.Select("*").From("users").Where(cond.Eq("id", 1))
 
 Available namespaces:
-  repo, sql, pg, mysql, sqlite, models
+  repo, sql, pg, cond, mysql, sqlite, models
 
 Repo helpers:
   repo.Find(tableOrStmt, [cond])

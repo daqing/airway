@@ -14,6 +14,7 @@ import (
 	"github.com/daqing/airway/lib/repo"
 	reposql "github.com/daqing/airway/lib/sql"
 	mysqlsql "github.com/daqing/airway/lib/sql/mysql"
+	condsql "github.com/daqing/airway/lib/sql/cond"
 	pgsql "github.com/daqing/airway/lib/sql/pg"
 	sqlitesql "github.com/daqing/airway/lib/sql/sqlite"
 )
@@ -36,6 +37,7 @@ func newREPLEvaluator(db *repo.DB) *replEvaluator {
 	evaluator := &replEvaluator{db: db, symbols: map[string]any{}}
 	evaluator.symbols["repo"] = evaluator.newRepoNamespace()
 	evaluator.symbols["sql"] = newSQLNamespace()
+	evaluator.symbols["cond"] = newCondNamespace()
 	evaluator.symbols["pg"] = newPGNamespace()
 	evaluator.symbols["mysql"] = newMySQLNamespace()
 	evaluator.symbols["sqlite"] = newSQLiteNamespace()
@@ -757,6 +759,81 @@ func newSQLNamespace() replNamespace {
 			return reposql.UpdateTable(table), nil
 		}),
 	)
+}
+
+func newCondNamespace() replNamespace {
+	return replNamespace{
+		"Eq":           any(condsql.Eq),
+		"NotEq":        any(condsql.NotEq),
+		"Gt":           any(condsql.Gt),
+		"Gte":          any(condsql.Gte),
+		"Lt":           any(condsql.Lt),
+		"Lte":          any(condsql.Lte),
+		"Like":         any(condsql.Like),
+		"NotLike":      any(condsql.NotLike),
+		"ILike":        any(condsql.ILike),
+		"NotILike":     any(condsql.NotILike),
+		"AllOf":        any(condsql.AllOf),
+		"AnyOf":        any(condsql.AnyOf),
+		"Not":          any(condsql.Not),
+		"IsNull":       any(condsql.IsNull),
+		"IsNotNull":    any(condsql.IsNotNull),
+		"Between":      any(condsql.Between),
+		"NotBetween":   any(condsql.NotBetween),
+		"HCond":        any(condsql.HCond),
+		"Compare":      any(condsql.Compare),
+		"FieldEq":      any(condsql.FieldEq),
+		"FieldNotEq":   any(condsql.FieldNotEq),
+		"FieldGt":      any(condsql.FieldGt),
+		"FieldGte":     any(condsql.FieldGte),
+		"FieldLt":      any(condsql.FieldLt),
+		"FieldLte":     any(condsql.FieldLte),
+		"FieldLike":    any(condsql.FieldLike),
+		"FieldILike":   any(condsql.FieldILike),
+		"MatchFields":  any(condsql.MatchFields),
+		"HCondRef":     any(condsql.HCondRef),
+		"HCondTable":   any(condsql.HCondTable),
+		"MatchTable":   any(condsql.MatchTable),
+		"RawCondition": any(condsql.RawCondition),
+		"In":           replCallable(callCondInCondition),
+		"NotIn":        replCallable(callCondNotInCondition),
+	}
+}
+
+func callCondInCondition(args []any) (any, error) {
+	if len(args) != 2 {
+		return nil, fmt.Errorf("In expects 2 args")
+	}
+
+	column, err := coerceString(args[0])
+	if err != nil {
+		return nil, err
+	}
+
+	items, err := toAnySlice(args[1])
+	if err != nil {
+		return nil, err
+	}
+
+	return condsql.In(column, items), nil
+}
+
+func callCondNotInCondition(args []any) (any, error) {
+	if len(args) != 2 {
+		return nil, fmt.Errorf("NotIn expects 2 args")
+	}
+
+	column, err := coerceString(args[0])
+	if err != nil {
+		return nil, err
+	}
+
+	items, err := toAnySlice(args[1])
+	if err != nil {
+		return nil, err
+	}
+
+	return condsql.NotIn(column, items), nil
 }
 
 func newPGNamespace() replNamespace {

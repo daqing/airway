@@ -39,7 +39,7 @@ func TestRepoREPLExecutesGoStyleRepoCalls(t *testing.T) {
 		t.Fatalf("expected numeric id, got %#v", insertedRow["id"])
 	}
 
-	found := executeAndDecode(t, session, `repo.FindOne("users", pg.Eq("id", 1))`)
+	found := executeAndDecode(t, session, `repo.FindOne("users", cond.Eq("id", 1))`)
 	foundRow, ok := found.(map[string]any)
 	if !ok {
 		t.Fatalf("expected row object, got %#v", found)
@@ -49,39 +49,39 @@ func TestRepoREPLExecutesGoStyleRepoCalls(t *testing.T) {
 		t.Fatalf("unexpected row: %#v", foundRow)
 	}
 
-	foundByStmt := executeAndDecode(t, session, `repo.Find("users", pg.Select("*").Where(pg.Eq("id", 1)))`)
+	foundByStmt := executeAndDecode(t, session, `repo.Find("users", pg.Select("*").Where(cond.Eq("id", 1)))`)
 	foundRows, ok := foundByStmt.([]any)
 	if !ok || len(foundRows) != 1 {
 		t.Fatalf("expected one row from stmt-based find, got %#v", foundByStmt)
 	}
 
-	countByStmt := executeAndDecode(t, session, `repo.Count("users", pg.Select("count(*)").Where(pg.Eq("id", 1)))`)
+	countByStmt := executeAndDecode(t, session, `repo.Count("users", pg.Select("count(*)").Where(cond.Eq("id", 1)))`)
 	if countByStmt.(float64) != 1 {
 		t.Fatalf("unexpected stmt-based count result: %#v", countByStmt)
 	}
 
-	updated := executeAndDecode(t, session, `repo.Update("users", pg.H{"enabled": false}, pg.Eq("email", "alice@example.com"))`)
+	updated := executeAndDecode(t, session, `repo.Update("users", pg.H{"enabled": false}, cond.Eq("email", "alice@example.com"))`)
 	if updated.(float64) != 1 {
 		t.Fatalf("unexpected update result: %#v", updated)
 	}
 
-	count := executeAndDecode(t, session, `repo.Count("users", pg.Eq("enabled", false))`)
+	count := executeAndDecode(t, session, `repo.Count("users", cond.Eq("enabled", false))`)
 	if count.(float64) != 1 {
 		t.Fatalf("unexpected count result: %#v", count)
 	}
 
-	rows := executeAndDecode(t, session, `repo.Find("users", pg.In("id", []int{1, 2, 3}))`)
+	rows := executeAndDecode(t, session, `repo.Find("users", cond.In("id", []int{1, 2, 3}))`)
 	rowList, ok := rows.([]any)
 	if !ok || len(rowList) != 1 {
 		t.Fatalf("unexpected rows result: %#v", rows)
 	}
 
-	deleted := executeAndDecode(t, session, `repo.Delete("users", pg.Eq("email", "alice@example.com"))`)
+	deleted := executeAndDecode(t, session, `repo.Delete("users", cond.Eq("email", "alice@example.com"))`)
 	if deleted.(float64) != 1 {
 		t.Fatalf("unexpected delete result: %#v", deleted)
 	}
 
-	exists := executeAndDecode(t, session, `repo.Exists("users", pg.Eq("email", "alice@example.com"))`)
+	exists := executeAndDecode(t, session, `repo.Exists("users", cond.Eq("email", "alice@example.com"))`)
 	if exists.(bool) {
 		t.Fatalf("expected deleted row to be absent: %#v", exists)
 	}
@@ -90,7 +90,7 @@ func TestRepoREPLExecutesGoStyleRepoCalls(t *testing.T) {
 func TestRepoREPLPreviewsBuildersAndProtectsFullTableWrites(t *testing.T) {
 	session := newTestREPL(t)
 
-	preview := executeAndDecode(t, session, `pg.Select("*").From("users").Where(pg.Eq("id", 1))`)
+	preview := executeAndDecode(t, session, `pg.Select("*").From("users").Where(cond.Eq("id", 1))`)
 	previewMap, ok := preview.(map[string]any)
 	if !ok {
 		t.Fatalf("expected preview map, got %#v", preview)
@@ -123,7 +123,7 @@ func TestRepoREPLSupportsGenericRepoFindCalls(t *testing.T) {
 
 	executeAndDecode(t, session, `repo.Insert("users", pg.H{"email": "alice@example.com", "enabled": true})`)
 
-	inferred := executeAndDecode(t, session, `repo.FindOne[replUser](pg.Eq("id", 1))`)
+	inferred := executeAndDecode(t, session, `repo.FindOne[replUser](cond.Eq("id", 1))`)
 	inferredRow, ok := inferred.(map[string]any)
 	if !ok {
 		t.Fatalf("expected inferred typed row object, got %#v", inferred)
@@ -133,7 +133,7 @@ func TestRepoREPLSupportsGenericRepoFindCalls(t *testing.T) {
 		t.Fatalf("unexpected inferred typed row: %#v", inferredRow)
 	}
 
-	found := executeAndDecode(t, session, `repo.FindOne[struct{ ID int64 `+"`db:\"id\"`"+`; Email string `+"`db:\"email\"`"+`; Enabled bool `+"`db:\"enabled\"`"+` }]("users", pg.Select("id, email, enabled").Where(pg.Eq("id", 1)))`)
+	found := executeAndDecode(t, session, `repo.FindOne[struct{ ID int64 `+"`db:\"id\"`"+`; Email string `+"`db:\"email\"`"+`; Enabled bool `+"`db:\"enabled\"`"+` }]("users", pg.Select("id, email, enabled").Where(cond.Eq("id", 1)))`)
 	foundRow, ok := found.(map[string]any)
 	if !ok {
 		t.Fatalf("expected typed row object, got %#v", found)
@@ -143,7 +143,7 @@ func TestRepoREPLSupportsGenericRepoFindCalls(t *testing.T) {
 		t.Fatalf("unexpected typed row: %#v", foundRow)
 	}
 
-	rows := executeAndDecode(t, session, `repo.Find[struct{ ID int64 `+"`db:\"id\"`"+`; Email string `+"`db:\"email\"`"+` }](pg.Select("id, email").From("users").Where(pg.Eq("enabled", true)))`)
+	rows := executeAndDecode(t, session, `repo.Find[struct{ ID int64 `+"`db:\"id\"`"+`; Email string `+"`db:\"email\"`"+` }](pg.Select("id, email").From("users").Where(cond.Eq("enabled", true)))`)
 	rowList, ok := rows.([]any)
 	if !ok || len(rowList) != 1 {
 		t.Fatalf("expected typed rows result, got %#v", rows)
@@ -170,7 +170,7 @@ func TestRepoREPLExposesProjectModelsNamespace(t *testing.T) {
 
 	executeAndDecode(t, session, `repo.Insert("users", pg.H{"email": "alice@example.com", "enabled": true})`)
 
-	found := executeAndDecode(t, session, `repo.FindOne[models.User](pg.Select("id").Where(pg.Eq("id", 1)))`)
+	found := executeAndDecode(t, session, `repo.FindOne[models.User](pg.Select("id").Where(cond.Eq("id", 1)))`)
 	foundRow, ok := found.(map[string]any)
 	if !ok {
 		t.Fatalf("expected model row object, got %#v", found)
@@ -186,7 +186,7 @@ func TestRepoREPLExposesProjectModelsAsTopLevelTypes(t *testing.T) {
 
 	executeAndDecode(t, session, `repo.Insert("users", pg.H{"id": 7, "email": "top@example.com", "enabled": true})`)
 
-	found := executeAndDecode(t, session, `repo.FindOne[User](pg.Eq("id", 7))`)
+	found := executeAndDecode(t, session, `repo.FindOne[User](cond.Eq("id", 7))`)
 	foundRow, ok := found.(map[string]any)
 	if !ok {
 		t.Fatalf("expected top-level model row object, got %#v", found)
@@ -202,7 +202,7 @@ func TestRepoREPLSupportsGenericRepoDeleteCalls(t *testing.T) {
 
 	executeAndDecode(t, session, `repo.Insert("users", pg.H{"id": 333, "email": "delete@example.com", "enabled": true})`)
 
-	deleted := executeAndDecode(t, session, `repo.Delete[User](pg.Eq("id", 333))`)
+	deleted := executeAndDecode(t, session, `repo.Delete[User](cond.Eq("id", 333))`)
 	if deleted.(float64) != 1 {
 		t.Fatalf("unexpected typed delete result: %#v", deleted)
 	}

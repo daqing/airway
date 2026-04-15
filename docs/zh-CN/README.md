@@ -142,9 +142,9 @@ go run . cli generate model post
 go run . cli generate service post title:string published:bool
 go run . cli generate cmd post title published
 go run . cli generate migration create_posts
-go run . cli migrate
-go run . cli rollback 1
-go run . cli status
+go run . cli db:migrate
+go run . cli db:rollback 1
+go run . cli db:status
 go run . cli plugin install /path/to/project
 ```
 

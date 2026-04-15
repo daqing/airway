@@ -61,6 +61,12 @@ SQLite 项目：
 import sqlite "github.com/daqing/airway/lib/sql/sqlite"
 ```
 
+查询条件（通用，不绑定任何方言）：
+
+```go
+import "github.com/daqing/airway/lib/sql/cond"
+```
+
 只有在以下情况，才应该直接依赖 `lib/sql`：
 
 - 实现底层 SQL DSL 本身
@@ -168,7 +174,7 @@ users := pg.TableAlias("users", "u")
 
 b := pg.SelectFields(users.AllFields()).
     FromTable(users).
-    Where(pg.FieldEq(users.Field("enabled"), true))
+    Where(cond.FieldEq(users.Field("enabled"), true))
 ```
 
 
@@ -219,7 +225,7 @@ b := pg.SelectFields(users.AllFields()).
 所有 Builder 最终都通过 `ToSQL()` 导出 SQL 和命名参数：
 
 ```go
-b := pg.Select("*").From("users").Where(pg.Eq("enabled", true))
+b := pg.Select("*").From("users").Where(cond.Eq("enabled", true))
 
 query, args := b.ToSQL()
 ```
@@ -248,7 +254,7 @@ query, args := b.ToSQL()
 例如：
 
 ```go
-user, err := repo.FindOne[User](repo.CurrentDB(), pg.Select("*").From("users").Where(pg.Eq("id", 1)))
+user, err := repo.FindOne[User](repo.CurrentDB(), pg.Select("*").From("users").Where(cond.Eq("id", 1)))
 ```
 
 
@@ -509,7 +515,7 @@ cond := sql.MatchFields(users, sql.H{
 如果你的业务代码已经明确绑定某个数据库，推荐始终从方言包调用这些 helper，例如：
 
 ```go
-cond := pg.MatchFields(users, pg.H{
+cond := cond.MatchFields(users, pg.H{
     "email":  "dev@example.com",
     "status": "active",
 })
@@ -940,7 +946,7 @@ pg.Select("*")
 pg.Insert(...)
 pg.Update(...)
 pg.Delete()
-pg.FieldEq(...)
+cond.FieldEq(...)
 ```
 
 MySQL 和 SQLite 项目同理，只是前缀替换为 `mysql` 或 `sqlite`。

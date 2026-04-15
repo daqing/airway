@@ -384,6 +384,10 @@ func (b *Builder) ExceptAll(query *Builder) *Builder {
 }
 
 func (b *Builder) Page(page, perPage int) *Builder {
+	if page == 0 && perPage == 0 {
+		return b
+	}
+
 	if page < 1 {
 		page = 1
 	}
