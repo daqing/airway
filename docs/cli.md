@@ -26,6 +26,26 @@ airway cli generate [action|api|model|migration|service|cmd] [params]
 airway cli plugin install /path/to/project
 airway cli schema:dump
 airway cli schema:show
+airway cli upload /path/to/file
+```
+
+## Upload a file
+
+Upload a local file using the storage configuration from `.env`:
+
+```bash
+airway cli upload /tmp/foo.png
+```
+
+The source path becomes a root-relative storage key. In this example the key
+is `tmp/foo.png` (shown as `/tmp/foo.png` by the command). The content size is
+read from the file and its content type is determined from the extension or
+file contents.
+
+To choose the storage key explicitly, pass it before the local file path:
+
+```bash
+airway cli upload images/foo.png /tmp/foo.png
 ```
 
 ## Code Generators

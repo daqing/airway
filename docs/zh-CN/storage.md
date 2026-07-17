@@ -55,11 +55,14 @@ STORAGE_SECRET_KEY="..."
 
 ```bash
 STORAGE_DRIVER="r2"
-STORAGE_ENDPOINT="<account_id>.r2.cloudflarestorage.com"
+STORAGE_ENDPOINT="<account_id>"
 STORAGE_BUCKET="my-bucket"
 STORAGE_ACCESS_KEY="..."
 STORAGE_SECRET_KEY="..."
 ```
+
+R2 的 `STORAGE_ENDPOINT` 既可以填写 32 位 account ID，也可以填写完整的
+`<account_id>.r2.cloudflarestorage.com` endpoint。
 
 存储层在应用启动时自动初始化（见 `main.go`）。配置错误（例如缺少凭证）会导致启动失败并输出错误日志。
 

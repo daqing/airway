@@ -20,6 +20,7 @@ type Cloud struct {
 	endpoint  string
 	region    string
 	publicURL string
+	lookup    minio.BucketLookupType
 }
 
 func NewCloud(cfg Config) (*Cloud, error) {
@@ -36,10 +37,18 @@ func NewCloud(cfg Config) (*Cloud, error) {
 		return nil, err
 	}
 
+	lookup := minio.BucketLookupAuto
+	if cfg.Driver == DriverCOS {
+		// Tencent COS requires virtual-hosted style:
+		// https://<bucket>.cos.<region>.myqcloud.com/<key>.
+		lookup = minio.BucketLookupDNS
+	}
+
 	client, err := minio.New(endpoint, &minio.Options{
-		Creds:  credentials.NewStaticV4(cfg.AccessKey, cfg.SecretKey, ""),
-		Secure: true,
-		Region: region,
+		Creds:        credentials.NewStaticV4(cfg.AccessKey, cfg.SecretKey, ""),
+		Secure:       true,
+		Region:       region,
+		BucketLookup: lookup,
 	})
 	if err != nil {
 		return nil, err
@@ -51,6 +60,7 @@ func NewCloud(cfg Config) (*Cloud, error) {
 		endpoint:  endpoint,
 		region:    region,
 		publicURL: strings.TrimRight(cfg.PublicURL, "/"),
+		lookup:    lookup,
 	}, nil
 }
 
@@ -84,12 +94,29 @@ func cloudEndpoint(cfg Config) (endpoint, region string, err error) {
 	if cfg.Endpoint != "" {
 		endpoint = cfg.Endpoint
 	}
+	if cfg.Driver == DriverR2 && isR2AccountID(endpoint) {
+		endpoint += ".r2.cloudflarestorage.com"
+	}
 
 	if endpoint == "" {
 		return "", "", fmt.Errorf("STORAGE_ENDPOINT must be set for driver %q", cfg.Driver)
 	}
 
 	return endpoint, region, nil
+}
+
+func isR2AccountID(value string) bool {
+	if len(value) != 32 {
+		return false
+	}
+
+	for _, char := range value {
+		if (char < '0' || char > '9') && (char < 'a' || char > 'f') && (char < 'A' || char > 'F') {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (s *Cloud) Put(ctx context.Context, key string, obj Object) error {

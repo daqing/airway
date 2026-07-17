@@ -55,11 +55,14 @@ STORAGE_SECRET_KEY="..."
 
 ```bash
 STORAGE_DRIVER="r2"
-STORAGE_ENDPOINT="<account_id>.r2.cloudflarestorage.com"
+STORAGE_ENDPOINT="<account_id>"
 STORAGE_BUCKET="my-bucket"
 STORAGE_ACCESS_KEY="..."
 STORAGE_SECRET_KEY="..."
 ```
+
+For R2, `STORAGE_ENDPOINT` accepts either the 32-character account ID or the
+full `<account_id>.r2.cloudflarestorage.com` endpoint.
 
 The storage layer is initialized automatically at application boot (`main.go`). A bad configuration (e.g. missing credentials) aborts startup with an error.
 
