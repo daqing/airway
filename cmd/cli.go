@@ -40,6 +40,8 @@ func runCLI(args []string) error {
 		return runCLIDBCreate(xargs)
 	case "plugin", "plugin:install":
 		return runCLIPlugin(command, xargs)
+	case "upload":
+		return runUpload(xargs)
 	case "help", "-h", "--help":
 		printCLIUsage(os.Stdout)
 		return nil
@@ -93,6 +95,7 @@ func printCLIUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "  airway cli plugin install /path/to/project")
 	_, _ = fmt.Fprintln(w, "  airway cli schema:dump")
 	_, _ = fmt.Fprintln(w, "  airway cli schema:show")
+	_, _ = fmt.Fprintln(w, "  airway cli upload [key] /path/to/file")
 }
 
 func printCLIGenerateUsage(w io.Writer) {

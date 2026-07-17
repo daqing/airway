@@ -1,4 +1,4 @@
-package up_api
+package health_api
 
 import (
 	"fmt"
@@ -6,6 +6,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func UpAction(c *gin.Context) {
+func HealthAction(c *gin.Context) {
 	fmt.Fprintf(c.Writer, "UP\n")
 }
