@@ -463,14 +463,14 @@ Supported commands:
 Examples:
 
 ```text
-repo.FindOne("users", cond.Eq("id", 1))
-repo.Find("users", pg.Select("*").Where(cond.Eq("id", 1)))
-repo.Find("users", cond.AllOf(cond.Eq("enabled", true), cond.Like("email", "%@example.com")))
+repo.FindOne("users", sql.Eq("id", 1))
+repo.Find("users", pg.Select("*").Where(sql.Eq("id", 1)))
+repo.Find("users", sql.AllOf(sql.Eq("enabled", true), sql.Like("email", "%@example.com")))
 repo.Insert("users", pg.H{"email": "dev@example.com", "enabled": true})
-repo.Update("users", pg.H{"enabled": false}, cond.Eq("id", 1))
-repo.Delete("users", cond.Eq("id", 1))
-repo.Preview(pg.Select("*").From("users").Where(cond.Eq("id", 1)))
-pg.Select("*").From("users").Where(cond.Eq("id", 1))
+repo.Update("users", pg.H{"enabled": false}, sql.Eq("id", 1))
+repo.Delete("users", sql.Eq("id", 1))
+repo.Preview(pg.Select("*").From("users").Where(sql.Eq("id", 1)))
+pg.Select("*").From("users").Where(sql.Eq("id", 1))
 ```
 
 Available namespaces in the REPL are `repo`, `sql`, `pg`, `mysql`, and `sqlite`.
