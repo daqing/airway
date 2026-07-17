@@ -46,7 +46,11 @@ func (l *Local) path(key string) (string, error) {
 	return filepath.Join(l.root, cleaned), nil
 }
 
-func (l *Local) Put(_ context.Context, key string, r io.Reader, _ int64, _ string) error {
+func (l *Local) Put(_ context.Context, key string, obj Object) error {
+	if err := obj.validate(); err != nil {
+		return err
+	}
+
 	path, err := l.path(key)
 	if err != nil {
 		return err
@@ -64,10 +68,16 @@ func (l *Local) Put(_ context.Context, key string, r io.Reader, _ int64, _ strin
 		return err
 	}
 
-	if _, err := io.Copy(f, r); err != nil {
+	written, err := io.Copy(f, obj.Reader)
+	if err != nil {
 		_ = f.Close()
 		_ = os.Remove(tmp)
 		return err
+	}
+	if written != obj.Size {
+		_ = f.Close()
+		_ = os.Remove(tmp)
+		return fmt.Errorf("storage object size mismatch: expected %d bytes, got %d", obj.Size, written)
 	}
 
 	if err := f.Close(); err != nil {

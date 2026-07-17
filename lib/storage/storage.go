@@ -25,10 +25,31 @@ const (
 // DefaultRoot is used when STORAGE_ROOT is not set.
 const DefaultRoot = "./data/storage"
 
+// Object describes content to be stored. Size and ContentType must be known by
+// the caller; Put does not inspect or buffer Reader to infer them.
+type Object struct {
+	Reader      io.Reader
+	Size        int64
+	ContentType string
+}
+
+func (o Object) validate() error {
+	if o.Reader == nil {
+		return fmt.Errorf("storage object reader must not be nil")
+	}
+	if o.Size < 0 {
+		return fmt.Errorf("storage object size must not be negative")
+	}
+	if strings.TrimSpace(o.ContentType) == "" {
+		return fmt.Errorf("storage object content type must not be empty")
+	}
+
+	return nil
+}
+
 type Storage interface {
-	// Put stores the content read from r under key. size is the number of
-	// bytes to store; contentType is advisory (used by cloud backends).
-	Put(ctx context.Context, key string, r io.Reader, size int64, contentType string) error
+	// Put stores obj under key. The caller must provide its size and content type.
+	Put(ctx context.Context, key string, obj Object) error
 	// Get returns the content stored under key. The caller must close it.
 	Get(ctx context.Context, key string) (io.ReadCloser, error)
 	Delete(ctx context.Context, key string) error

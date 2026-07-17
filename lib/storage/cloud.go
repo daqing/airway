@@ -92,13 +92,13 @@ func cloudEndpoint(cfg Config) (endpoint, region string, err error) {
 	return endpoint, region, nil
 }
 
-func (s *Cloud) Put(ctx context.Context, key string, r io.Reader, size int64, contentType string) error {
-	if contentType == "" {
-		contentType = "application/octet-stream"
+func (s *Cloud) Put(ctx context.Context, key string, obj Object) error {
+	if err := obj.validate(); err != nil {
+		return err
 	}
 
-	_, err := s.client.PutObject(ctx, s.bucket, key, r, size, minio.PutObjectOptions{
-		ContentType: contentType,
+	_, err := s.client.PutObject(ctx, s.bucket, key, obj.Reader, obj.Size, minio.PutObjectOptions{
+		ContentType: obj.ContentType,
 	})
 
 	return err

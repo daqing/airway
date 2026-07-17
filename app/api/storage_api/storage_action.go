@@ -34,7 +34,12 @@ func UploadAction(c *gin.Context) {
 
 	store := storage.Current()
 
-	if err := store.Put(c.Request.Context(), key, src, file.Size, contentType); err != nil {
+	obj := storage.Object{
+		Reader:      src,
+		Size:        file.Size,
+		ContentType: contentType,
+	}
+	if err := store.Put(c.Request.Context(), key, obj); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
