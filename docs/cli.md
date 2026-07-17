@@ -261,7 +261,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/daqing/airway/app/api/post_api"
-	"github.com/daqing/airway/app/api/up_api"
+	"github.com/daqing/airway/app/api/health_api"
 	"github.com/daqing/airway/app/websocket"
 )
 ```
