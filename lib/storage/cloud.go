@@ -12,9 +12,9 @@ import (
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
-// S3 stores files in a cloud object storage service via the S3 protocol
+// Cloud stores files in a cloud object storage service via the S3 protocol
 // (Amazon S3, Cloudflare R2, Tencent COS). HTTPS is always used.
-type S3 struct {
+type Cloud struct {
 	client    *minio.Client
 	bucket    string
 	endpoint  string
@@ -22,7 +22,7 @@ type S3 struct {
 	publicURL string
 }
 
-func NewS3(cfg Config) (*S3, error) {
+func NewCloud(cfg Config) (*Cloud, error) {
 	if cfg.Bucket == "" {
 		return nil, fmt.Errorf("STORAGE_BUCKET must be set")
 	}
@@ -45,7 +45,7 @@ func NewS3(cfg Config) (*S3, error) {
 		return nil, err
 	}
 
-	return &S3{
+	return &Cloud{
 		client:    client,
 		bucket:    cfg.Bucket,
 		endpoint:  endpoint,
@@ -92,7 +92,7 @@ func cloudEndpoint(cfg Config) (endpoint, region string, err error) {
 	return endpoint, region, nil
 }
 
-func (s *S3) Put(ctx context.Context, key string, r io.Reader, size int64, contentType string) error {
+func (s *Cloud) Put(ctx context.Context, key string, r io.Reader, size int64, contentType string) error {
 	if contentType == "" {
 		contentType = "application/octet-stream"
 	}
@@ -104,15 +104,15 @@ func (s *S3) Put(ctx context.Context, key string, r io.Reader, size int64, conte
 	return err
 }
 
-func (s *S3) Get(ctx context.Context, key string) (io.ReadCloser, error) {
+func (s *Cloud) Get(ctx context.Context, key string) (io.ReadCloser, error) {
 	return s.client.GetObject(ctx, s.bucket, key, minio.GetObjectOptions{})
 }
 
-func (s *S3) Delete(ctx context.Context, key string) error {
+func (s *Cloud) Delete(ctx context.Context, key string) error {
 	return s.client.RemoveObject(ctx, s.bucket, key, minio.RemoveObjectOptions{})
 }
 
-func (s *S3) Exists(ctx context.Context, key string) (bool, error) {
+func (s *Cloud) Exists(ctx context.Context, key string) (bool, error) {
 	_, err := s.client.StatObject(ctx, s.bucket, key, minio.StatObjectOptions{})
 	if err == nil {
 		return true, nil
@@ -126,7 +126,7 @@ func (s *S3) Exists(ctx context.Context, key string) (bool, error) {
 	return false, err
 }
 
-func (s *S3) URL(ctx context.Context, key string, expires time.Duration) (string, error) {
+func (s *Cloud) URL(ctx context.Context, key string, expires time.Duration) (string, error) {
 	if s.publicURL != "" {
 		return s.publicURL + "/" + key, nil
 	}

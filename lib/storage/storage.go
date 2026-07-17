@@ -63,7 +63,7 @@ func Open(cfg Config) (Storage, error) {
 
 		return NewLocal(root)
 	case DriverS3, DriverR2, DriverCOS:
-		return NewS3(cfg)
+		return NewCloud(cfg)
 	default:
 		return nil, fmt.Errorf("unknown storage driver: %q", cfg.Driver)
 	}

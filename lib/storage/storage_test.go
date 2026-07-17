@@ -78,9 +78,9 @@ func TestS3EndpointDerivedFromRegion(t *testing.T) {
 	cfg := cloudConfig(DriverS3)
 	cfg.Region = "us-east-1"
 
-	s, err := NewS3(cfg)
+	s, err := NewCloud(cfg)
 	if err != nil {
-		t.Fatalf("NewS3: %v", err)
+		t.Fatalf("NewCloud: %v", err)
 	}
 
 	if s.endpoint != "s3.us-east-1.amazonaws.com" || s.region != "us-east-1" {
@@ -92,9 +92,9 @@ func TestCOSEndpointDerivedFromRegion(t *testing.T) {
 	cfg := cloudConfig(DriverCOS)
 	cfg.Region = "ap-guangzhou"
 
-	s, err := NewS3(cfg)
+	s, err := NewCloud(cfg)
 	if err != nil {
-		t.Fatalf("NewS3: %v", err)
+		t.Fatalf("NewCloud: %v", err)
 	}
 
 	if s.endpoint != "cos.ap-guangzhou.myqcloud.com" || s.region != "ap-guangzhou" {
@@ -103,16 +103,16 @@ func TestCOSEndpointDerivedFromRegion(t *testing.T) {
 }
 
 func TestR2RequiresEndpointAndDefaultsRegion(t *testing.T) {
-	if _, err := NewS3(cloudConfig(DriverR2)); err == nil {
+	if _, err := NewCloud(cloudConfig(DriverR2)); err == nil {
 		t.Fatalf("expected error when r2 endpoint is missing")
 	}
 
 	cfg := cloudConfig(DriverR2)
 	cfg.Endpoint = "abc123.r2.cloudflarestorage.com"
 
-	s, err := NewS3(cfg)
+	s, err := NewCloud(cfg)
 	if err != nil {
-		t.Fatalf("NewS3: %v", err)
+		t.Fatalf("NewCloud: %v", err)
 	}
 
 	if s.endpoint != "abc123.r2.cloudflarestorage.com" || s.region != "auto" {
@@ -125,9 +125,9 @@ func TestEndpointOverride(t *testing.T) {
 	cfg.Region = "us-east-1"
 	cfg.Endpoint = "s3.custom.example.com"
 
-	s, err := NewS3(cfg)
+	s, err := NewCloud(cfg)
 	if err != nil {
-		t.Fatalf("NewS3: %v", err)
+		t.Fatalf("NewCloud: %v", err)
 	}
 
 	if s.endpoint != "s3.custom.example.com" {
@@ -137,7 +137,7 @@ func TestEndpointOverride(t *testing.T) {
 
 func TestCloudRegionRequired(t *testing.T) {
 	for _, driver := range []string{DriverS3, DriverCOS} {
-		if _, err := NewS3(cloudConfig(driver)); err == nil {
+		if _, err := NewCloud(cloudConfig(driver)); err == nil {
 			t.Fatalf("expected error when region is missing for driver %q", driver)
 		}
 	}
@@ -151,7 +151,7 @@ func TestCloudCredentialsRequired(t *testing.T) {
 	}
 
 	for i, cfg := range cases {
-		if _, err := NewS3(cfg); err == nil {
+		if _, err := NewCloud(cfg); err == nil {
 			t.Fatalf("case %d: expected error for incomplete cloud config", i)
 		}
 	}
