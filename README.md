@@ -482,3 +482,61 @@ They also accept `table + stmt`; if the stmt has not bound a table yet, the REPL
 `repo.Update` and `repo.Delete` reject full-table writes unless the last argument is explicit `true`.
 
 If you enter a builder expression directly, the REPL prints the compiled SQL and bind args.
+
+File Storage
+============
+
+Airway ships a unified file storage layer (`lib/storage`) with two backends, selected purely by configuration. See [docs/storage.md](docs/storage.md) for the full guide ([中文文档](docs/zh-CN/storage.md)).
+
+- `local` — files are stored under a local root directory (default `./data/storage`)
+- `s3` — any S3-compatible object storage: Amazon S3, Tencent COS, Cloudflare R2, MinIO, ...
+
+## Configuration
+
+Set the driver and options in `.env`:
+
+```bash
+# Local backend
+STORAGE_DRIVER="local"
+STORAGE_ROOT="./data/storage"
+```
+
+```bash
+# S3-compatible backend
+STORAGE_DRIVER="s3"
+S3_ENDPOINT="s3.us-east-1.amazonaws.com"   # Tencent COS: cos.ap-guangzhou.myqcloud.com
+                                           # Cloudflare R2: <account_id>.r2.cloudflarestorage.com
+S3_REGION="us-east-1"                      # R2 uses "auto"
+S3_BUCKET="my-bucket"
+S3_ACCESS_KEY="..."
+S3_SECRET_KEY="..."
+S3_USE_SSL="true"                          # set false for plain-http MinIO
+S3_PATH_STYLE="false"                      # set true for MinIO
+# S3_PUBLIC_URL="https://cdn.example.com"  # optional CDN base URL; disables presigned URLs
+```
+
+## Usage in code
+
+```go
+store := storage.Current() // set up at boot from the config above
+
+err := store.Put(ctx, "docs/report.pdf", reader, size, "application/pdf")
+rc, err := store.Get(ctx, "docs/report.pdf")
+ok, err := store.Exists(ctx, "docs/report.pdf")
+url, err := store.URL(ctx, "docs/report.pdf", 24*time.Hour) // presigned (S3) or /api/v1/storage/... (local)
+err := store.Delete(ctx, "docs/report.pdf")
+```
+
+## HTTP API
+
+```bash
+# Upload (multipart form field "file", optional "dir" prefix)
+curl -F "file=@report.pdf" -F "dir=docs" http://127.0.0.1:1900/api/v1/storage
+# => {"key":"docs/202607/ab12cd....pdf","url":"/api/v1/storage/docs/202607/ab12cd....pdf","size":12345}
+
+# Download
+curl -O http://127.0.0.1:1900/api/v1/storage/docs/202607/ab12cd....pdf
+
+# Delete
+curl -X DELETE http://127.0.0.1:1900/api/v1/storage/docs/202607/ab12cd....pdf
+```

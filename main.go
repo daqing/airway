@@ -8,6 +8,7 @@ import (
 	"github.com/daqing/airway/cmd"
 	"github.com/daqing/airway/lib/redis_client"
 	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/storage"
 	"github.com/daqing/airway/lib/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -53,6 +54,11 @@ func main() {
 	redisURL, err := utils.GetEnv("AIRWAY_REDIS")
 	if err == nil {
 		redis_client.Setup(redisURL)
+	}
+
+	if _, err := storage.Setup(storage.FromEnv()); err != nil {
+		log.Printf("storage setup failed: %v", err)
+		os.Exit(4)
 	}
 
 	if len(args) > 0 {
