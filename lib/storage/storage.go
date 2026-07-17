@@ -1,8 +1,8 @@
 // Package storage provides a unified file storage layer.
 //
 // The backend is selected by configuration: local directory (driver "local")
-// or any S3-compatible object storage (driver "s3"), such as Amazon S3,
-// Tencent COS, Cloudflare R2 or MinIO.
+// or a cloud object storage service: Amazon S3 (driver "s3"),
+// Cloudflare R2 (driver "r2") or Tencent COS (driver "cos").
 package storage
 
 import (
@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -19,6 +18,8 @@ import (
 const (
 	DriverLocal = "local"
 	DriverS3    = "s3"
+	DriverR2    = "r2"
+	DriverCOS   = "cos"
 )
 
 // DefaultRoot is used when STORAGE_ROOT is not set.
@@ -26,30 +27,28 @@ const DefaultRoot = "./data/storage"
 
 type Storage interface {
 	// Put stores the content read from r under key. size is the number of
-	// bytes to store; contentType is advisory (used by the S3 backend).
+	// bytes to store; contentType is advisory (used by cloud backends).
 	Put(ctx context.Context, key string, r io.Reader, size int64, contentType string) error
 	// Get returns the content stored under key. The caller must close it.
 	Get(ctx context.Context, key string) (io.ReadCloser, error)
 	Delete(ctx context.Context, key string) error
 	Exists(ctx context.Context, key string) (bool, error)
 	// URL returns an address the file can be downloaded from. For the local
-	// backend it is the app's own download path; for S3 it is either
-	// PublicURL+key or a presigned URL valid for expires.
+	// backend it is the app's own download path; for cloud backends it is
+	// either PublicURL+key or a presigned URL valid for expires.
 	URL(ctx context.Context, key string, expires time.Duration) (string, error)
 }
 
 type Config struct {
-	Driver string // DriverLocal (default) or DriverS3
+	Driver string // DriverLocal (default), DriverS3, DriverR2 or DriverCOS
 	Root   string // local only, defaults to DefaultRoot
 
-	// s3 only
-	Endpoint  string // e.g. s3.us-east-1.amazonaws.com, cos.ap-guangzhou.myqcloud.com, <account>.r2.cloudflarestorage.com
-	Region    string
+	// cloud drivers only
+	Endpoint  string // optional override; derived from Region for s3/cos, required for r2
+	Region    string // required for s3/cos; r2 defaults to "auto"
 	Bucket    string
 	AccessKey string
 	SecretKey string
-	UseSSL    bool
-	PathStyle bool   // required by MinIO and some S3-compatible services
 	PublicURL string // optional CDN base URL; disables presigning when set
 }
 
@@ -63,7 +62,7 @@ func Open(cfg Config) (Storage, error) {
 		}
 
 		return NewLocal(root)
-	case DriverS3:
+	case DriverS3, DriverR2, DriverCOS:
 		return NewS3(cfg)
 	default:
 		return nil, fmt.Errorf("unknown storage driver: %q", cfg.Driver)
@@ -73,20 +72,18 @@ func Open(cfg Config) (Storage, error) {
 // FromEnv builds a Config from environment variables:
 //
 //	STORAGE_DRIVER, STORAGE_ROOT,
-//	S3_ENDPOINT, S3_REGION, S3_BUCKET, S3_ACCESS_KEY, S3_SECRET_KEY,
-//	S3_USE_SSL, S3_PATH_STYLE, S3_PUBLIC_URL
+//	STORAGE_ENDPOINT, STORAGE_REGION, STORAGE_BUCKET,
+//	STORAGE_ACCESS_KEY, STORAGE_SECRET_KEY, STORAGE_PUBLIC_URL
 func FromEnv() Config {
 	return Config{
 		Driver:    envOr("STORAGE_DRIVER", DriverLocal),
 		Root:      envOr("STORAGE_ROOT", DefaultRoot),
-		Endpoint:  os.Getenv("S3_ENDPOINT"),
-		Region:    os.Getenv("S3_REGION"),
-		Bucket:    os.Getenv("S3_BUCKET"),
-		AccessKey: os.Getenv("S3_ACCESS_KEY"),
-		SecretKey: os.Getenv("S3_SECRET_KEY"),
-		UseSSL:    envBool("S3_USE_SSL", true),
-		PathStyle: envBool("S3_PATH_STYLE", false),
-		PublicURL: strings.TrimRight(os.Getenv("S3_PUBLIC_URL"), "/"),
+		Endpoint:  os.Getenv("STORAGE_ENDPOINT"),
+		Region:    os.Getenv("STORAGE_REGION"),
+		Bucket:    os.Getenv("STORAGE_BUCKET"),
+		AccessKey: os.Getenv("STORAGE_ACCESS_KEY"),
+		SecretKey: os.Getenv("STORAGE_SECRET_KEY"),
+		PublicURL: strings.TrimRight(os.Getenv("STORAGE_PUBLIC_URL"), "/"),
 	}
 }
 
@@ -118,18 +115,4 @@ func envOr(key, fallback string) string {
 	}
 
 	return fallback
-}
-
-func envBool(key string, fallback bool) bool {
-	v := strings.TrimSpace(os.Getenv(key))
-	if v == "" {
-		return fallback
-	}
-
-	parsed, err := strconv.ParseBool(v)
-	if err != nil {
-		return fallback
-	}
-
-	return parsed
 }

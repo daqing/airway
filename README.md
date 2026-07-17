@@ -486,10 +486,10 @@ If you enter a builder expression directly, the REPL prints the compiled SQL and
 File Storage
 ============
 
-Airway ships a unified file storage layer (`lib/storage`) with two backends, selected purely by configuration. See [docs/storage.md](docs/storage.md) for the full guide ([中文文档](docs/zh-CN/storage.md)).
+Airway ships a unified file storage layer (`lib/storage`) with two kinds of backends, selected purely by configuration. See [docs/storage.md](docs/storage.md) for the full guide ([中文文档](docs/zh-CN/storage.md)).
 
 - `local` — files are stored under a local root directory (default `./data/storage`)
-- `s3` — any S3-compatible object storage: Amazon S3, Tencent COS, Cloudflare R2, MinIO, ...
+- cloud object storage — Amazon S3 (`s3`), Cloudflare R2 (`r2`) or Tencent COS (`cos`)
 
 ## Configuration
 
@@ -502,17 +502,23 @@ STORAGE_ROOT="./data/storage"
 ```
 
 ```bash
-# S3-compatible backend
+# Amazon S3 (endpoint is derived from the region)
 STORAGE_DRIVER="s3"
-S3_ENDPOINT="s3.us-east-1.amazonaws.com"   # Tencent COS: cos.ap-guangzhou.myqcloud.com
-                                           # Cloudflare R2: <account_id>.r2.cloudflarestorage.com
-S3_REGION="us-east-1"                      # R2 uses "auto"
-S3_BUCKET="my-bucket"
-S3_ACCESS_KEY="..."
-S3_SECRET_KEY="..."
-S3_USE_SSL="true"                          # set false for plain-http MinIO
-S3_PATH_STYLE="false"                      # set true for MinIO
-# S3_PUBLIC_URL="https://cdn.example.com"  # optional CDN base URL; disables presigned URLs
+STORAGE_REGION="us-east-1"
+
+# Tencent COS
+STORAGE_DRIVER="cos"
+STORAGE_REGION="ap-guangzhou"
+
+# Cloudflare R2 (endpoint carries your account ID)
+STORAGE_DRIVER="r2"
+STORAGE_ENDPOINT="<account_id>.r2.cloudflarestorage.com"
+
+# plus, for every cloud driver:
+STORAGE_BUCKET="my-bucket"
+STORAGE_ACCESS_KEY="..."
+STORAGE_SECRET_KEY="..."
+# STORAGE_PUBLIC_URL="https://cdn.example.com"  # optional CDN base URL; disables presigned URLs
 ```
 
 ## Usage in code

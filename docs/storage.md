@@ -3,7 +3,7 @@
 Airway provides a unified file storage layer in `lib/storage`. The backend is selected entirely through configuration:
 
 - `local` — files are stored under a local root directory (default `./data/storage`)
-- `s3` — any S3-compatible object storage: Amazon S3, Tencent COS, Cloudflare R2, MinIO, ...
+- cloud object storage — Amazon S3 (`s3`), Cloudflare R2 (`r2`) or Tencent COS (`cos`)
 
 Business code only talks to the `storage.Storage` interface; switching between local disk and cloud storage requires no code changes.
 
@@ -13,16 +13,16 @@ All options are environment variables (set them in `.env` for local development)
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `STORAGE_DRIVER` | `local` | Backend driver: `local` or `s3` |
+| `STORAGE_DRIVER` | `local` | Backend driver: `local`, `s3`, `r2` or `cos` |
 | `STORAGE_ROOT` | `./data/storage` | Root directory for the `local` driver |
-| `S3_ENDPOINT` | — | Endpoint host of the S3-compatible service |
-| `S3_REGION` | — | Region; use `auto` for Cloudflare R2 |
-| `S3_BUCKET` | — | Bucket name |
-| `S3_ACCESS_KEY` | — | Access key ID |
-| `S3_SECRET_KEY` | — | Secret access key |
-| `S3_USE_SSL` | `true` | Set to `false` for plain-HTTP endpoints (e.g. local MinIO) |
-| `S3_PATH_STYLE` | `false` | Set to `true` for services that require path-style addressing (e.g. MinIO) |
-| `S3_PUBLIC_URL` | — | Public base URL (e.g. a CDN domain). When set, file URLs are built from it instead of presigned URLs |
+| `STORAGE_REGION` | — | Region. Required for `s3` and `cos`; the endpoint is derived from it. `r2` defaults to `auto` |
+| `STORAGE_ENDPOINT` | derived | Optional endpoint override. Required for `r2` (it carries the account ID) |
+| `STORAGE_BUCKET` | — | Bucket name |
+| `STORAGE_ACCESS_KEY` | — | Access key ID |
+| `STORAGE_SECRET_KEY` | — | Secret access key |
+| `STORAGE_PUBLIC_URL` | — | Public base URL (e.g. a CDN domain). When set, file URLs are built from it instead of presigned URLs |
+
+Cloud backends always use HTTPS.
 
 ### Local backend
 
@@ -35,48 +35,33 @@ STORAGE_ROOT="./data/storage"
 
 ```bash
 STORAGE_DRIVER="s3"
-S3_ENDPOINT="s3.us-east-1.amazonaws.com"
-S3_REGION="us-east-1"
-S3_BUCKET="my-bucket"
-S3_ACCESS_KEY="AKIA..."
-S3_SECRET_KEY="..."
+STORAGE_REGION="us-east-1"
+STORAGE_BUCKET="my-bucket"
+STORAGE_ACCESS_KEY="AKIA..."
+STORAGE_SECRET_KEY="..."
 ```
 
 ### Tencent COS
 
 ```bash
-STORAGE_DRIVER="s3"
-S3_ENDPOINT="cos.ap-guangzhou.myqcloud.com"
-S3_REGION="ap-guangzhou"
-S3_BUCKET="my-app-1234567890"
-S3_ACCESS_KEY="AKID..."
-S3_SECRET_KEY="..."
+STORAGE_DRIVER="cos"
+STORAGE_REGION="ap-guangzhou"
+STORAGE_BUCKET="my-app-1234567890"
+STORAGE_ACCESS_KEY="AKID..."
+STORAGE_SECRET_KEY="..."
 ```
 
 ### Cloudflare R2
 
 ```bash
-STORAGE_DRIVER="s3"
-S3_ENDPOINT="<account_id>.r2.cloudflarestorage.com"
-S3_REGION="auto"
-S3_BUCKET="my-bucket"
-S3_ACCESS_KEY="..."
-S3_SECRET_KEY="..."
+STORAGE_DRIVER="r2"
+STORAGE_ENDPOINT="<account_id>.r2.cloudflarestorage.com"
+STORAGE_BUCKET="my-bucket"
+STORAGE_ACCESS_KEY="..."
+STORAGE_SECRET_KEY="..."
 ```
 
-### MinIO (self-hosted)
-
-```bash
-STORAGE_DRIVER="s3"
-S3_ENDPOINT="127.0.0.1:9000"
-S3_BUCKET="my-bucket"
-S3_ACCESS_KEY="minioadmin"
-S3_SECRET_KEY="minioadmin"
-S3_USE_SSL="false"
-S3_PATH_STYLE="true"
-```
-
-The storage layer is initialized automatically at application boot (`main.go`). A bad configuration (e.g. missing S3 credentials) aborts startup with an error.
+The storage layer is initialized automatically at application boot (`main.go`). A bad configuration (e.g. missing credentials) aborts startup with an error.
 
 ## 2. Usage in Go code
 
@@ -120,7 +105,7 @@ type Storage interface {
 Notes on behavior:
 
 - **Keys** are slash-separated relative paths, e.g. `docs/202607/report.pdf`. Empty keys, absolute paths and `..` segments are rejected, so user input cannot escape the storage root.
-- **URL()** behaves per backend: `local` returns the app's own download path (`/api/v1/storage/<key>`); `s3` returns `S3_PUBLIC_URL/<key>` when a public URL is configured, otherwise a presigned GET URL valid for `expires`.
+- **URL()** behaves per backend: `local` returns the app's own download path (`/api/v1/storage/<key>`); cloud backends return `STORAGE_PUBLIC_URL/<key>` when a public URL is configured, otherwise a presigned GET URL valid for `expires`.
 - **Delete** is idempotent: deleting a missing key succeeds.
 
 ## 3. HTTP API
@@ -150,7 +135,7 @@ Response `200 OK`:
 }
 ```
 
-With the `s3` driver, `url` is a presigned URL (or CDN URL when `S3_PUBLIC_URL` is set).
+With a cloud driver, `url` is a presigned URL (or CDN URL when `STORAGE_PUBLIC_URL` is set).
 
 ### Download — `GET /api/v1/storage/<key>`
 
@@ -175,4 +160,4 @@ Response `200 OK`:
 ## 4. Testing
 
 - `lib/storage` unit tests cover the local backend, key validation and env parsing; they run without any cloud credentials.
-- The S3 backend is not exercised against a real service in tests. Before going to production, verify once against your actual bucket with a real upload.
+- Cloud backends are not exercised against a real service in tests. Before going to production, verify once against your actual bucket with a real upload.

@@ -12,37 +12,34 @@ import (
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
-// S3 stores files in an S3-compatible object storage service
-// (Amazon S3, Tencent COS, Cloudflare R2, MinIO, ...).
+// S3 stores files in a cloud object storage service via the S3 protocol
+// (Amazon S3, Cloudflare R2, Tencent COS). HTTPS is always used.
 type S3 struct {
 	client    *minio.Client
 	bucket    string
+	endpoint  string
+	region    string
 	publicURL string
 }
 
 func NewS3(cfg Config) (*S3, error) {
-	if cfg.Endpoint == "" {
-		return nil, fmt.Errorf("S3_ENDPOINT must be set")
-	}
-
 	if cfg.Bucket == "" {
-		return nil, fmt.Errorf("S3_BUCKET must be set")
+		return nil, fmt.Errorf("STORAGE_BUCKET must be set")
 	}
 
 	if cfg.AccessKey == "" || cfg.SecretKey == "" {
-		return nil, fmt.Errorf("S3_ACCESS_KEY and S3_SECRET_KEY must be set")
+		return nil, fmt.Errorf("STORAGE_ACCESS_KEY and STORAGE_SECRET_KEY must be set")
 	}
 
-	lookup := minio.BucketLookupAuto
-	if cfg.PathStyle {
-		lookup = minio.BucketLookupPath
+	endpoint, region, err := cloudEndpoint(cfg)
+	if err != nil {
+		return nil, err
 	}
 
-	client, err := minio.New(cfg.Endpoint, &minio.Options{
-		Creds:        credentials.NewStaticV4(cfg.AccessKey, cfg.SecretKey, ""),
-		Secure:       cfg.UseSSL,
-		Region:       cfg.Region,
-		BucketLookup: lookup,
+	client, err := minio.New(endpoint, &minio.Options{
+		Creds:  credentials.NewStaticV4(cfg.AccessKey, cfg.SecretKey, ""),
+		Secure: true,
+		Region: region,
 	})
 	if err != nil {
 		return nil, err
@@ -51,8 +48,48 @@ func NewS3(cfg Config) (*S3, error) {
 	return &S3{
 		client:    client,
 		bucket:    cfg.Bucket,
+		endpoint:  endpoint,
+		region:    region,
 		publicURL: strings.TrimRight(cfg.PublicURL, "/"),
 	}, nil
+}
+
+// cloudEndpoint resolves the endpoint and signing region for a cloud driver.
+// STORAGE_ENDPOINT overrides the derived endpoint when set.
+func cloudEndpoint(cfg Config) (endpoint, region string, err error) {
+	region = cfg.Region
+
+	switch cfg.Driver {
+	case DriverS3:
+		if region == "" {
+			return "", "", fmt.Errorf("STORAGE_REGION must be set for driver %q", cfg.Driver)
+		}
+
+		endpoint = "s3." + region + ".amazonaws.com"
+	case DriverCOS:
+		if region == "" {
+			return "", "", fmt.Errorf("STORAGE_REGION must be set for driver %q", cfg.Driver)
+		}
+
+		endpoint = "cos." + region + ".myqcloud.com"
+	case DriverR2:
+		if region == "" {
+			region = "auto"
+		}
+		// R2 endpoints carry the account ID and cannot be derived.
+	default:
+		return "", "", fmt.Errorf("unknown storage driver: %q", cfg.Driver)
+	}
+
+	if cfg.Endpoint != "" {
+		endpoint = cfg.Endpoint
+	}
+
+	if endpoint == "" {
+		return "", "", fmt.Errorf("STORAGE_ENDPOINT must be set for driver %q", cfg.Driver)
+	}
+
+	return endpoint, region, nil
 }
 
 func (s *S3) Put(ctx context.Context, key string, r io.Reader, size int64, contentType string) error {
