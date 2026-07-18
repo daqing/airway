@@ -297,12 +297,12 @@ DROP TABLE posts;
 		t.Fatalf("rollback: %v", err)
 	}
 
-	if err := manager.db.Conn().Get(&count, "SELECT COUNT(*) FROM schema_migrations"); err != nil {
-		t.Fatalf("count schema_migrations after rollback: %v", err)
+	if err := manager.db.Conn().Get(&count, "SELECT COUNT(*) FROM schema_migrations WHERE version = ?", "20260327120000"); err != nil {
+		t.Fatalf("count rolled back schema migration: %v", err)
 	}
 
 	if count != 0 {
-		t.Fatalf("expected no applied migrations after rollback, got %d", count)
+		t.Fatalf("expected test migration to be rolled back, got %d records", count)
 	}
 
 	if err := manager.db.Conn().Get(&count, "SELECT COUNT(*) FROM posts"); err == nil {

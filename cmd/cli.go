@@ -20,6 +20,8 @@ func runCLI(args []string) error {
 	xargs := args[1:]
 
 	switch command {
+	case "admin:init":
+		return runCLIInitializeSuperAdmin(xargs)
 	case "generate", "g":
 		return runCLIGenerate(xargs)
 	case "db:migrate":
@@ -91,6 +93,7 @@ func printCLIUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "  airway cli db:migrate [version]")
 	_, _ = fmt.Fprintln(w, "  airway cli db:rollback [step]")
 	_, _ = fmt.Fprintln(w, "  airway cli db:status")
+	_, _ = fmt.Fprintln(w, "  airway cli admin:init")
 	_, _ = fmt.Fprintln(w, "  airway cli generate [action|api|model|migration|service|cmd] [params]")
 	_, _ = fmt.Fprintln(w, "  airway cli plugin install /path/to/project")
 	_, _ = fmt.Fprintln(w, "  airway cli schema:dump")

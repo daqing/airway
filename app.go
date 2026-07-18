@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/daqing/airway/config"
@@ -42,9 +44,16 @@ func (a *App) Run() {
 
 // Default CORS middleware
 func CORS() gin.HandlerFunc {
+	allowedOrigins := []string{"http://127.0.0.1:5173", "http://localhost:5173"}
+	if configured := strings.TrimSpace(os.Getenv("AIRWAY_CORS_ORIGINS")); configured != "" {
+		allowedOrigins = strings.Split(configured, ",")
+		for i := range allowedOrigins {
+			allowedOrigins[i] = strings.TrimSpace(allowedOrigins[i])
+		}
+	}
 	return cors.New(cors.Config{
-		AllowAllOrigins:  true,
-		AllowMethods:     []string{"GET", "POST", "OPTIONS"},
+		AllowOrigins:     allowedOrigins,
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
 		MaxAge:           12 * time.Hour,
