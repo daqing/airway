@@ -53,15 +53,17 @@ func setup(t *testing.T) (*gin.Engine, *repo.DB, string) {
 		t.Fatal(err)
 	}
 	resources := dynamicresource.NewService(db)
-	definition, err := resources.Create(context.Background(), "articles", "文章", "articles", dynamicresource.Schema{Fields: []dynamicresource.Field{{Code: "title", Name: "标题", Type: "string", Required: true, List: true}, {Code: "views", Name: "浏览量", Type: "integer", List: true}, {Code: "published", Name: "发布", Type: "boolean", Required: true, List: true}}, Permissions: dynamicresource.ActionPermissions{List: "articles:list", Read: "articles:read", Create: "articles:create", Update: "articles:update", Delete: "articles:delete"}})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err = resources.Validate(context.Background(), definition.ID); err != nil {
-		t.Fatal(err)
-	}
-	if _, err = resources.Publish(context.Background(), definition.ID, admin.ID); err != nil {
-		t.Fatal(err)
+	for _, example := range dynamicresource.Examples() {
+		definition, err := resources.Create(context.Background(), example.Code, example.Name, example.TableName, example.Schema)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err = resources.Validate(context.Background(), definition.ID); err != nil {
+			t.Fatal(err)
+		}
+		if _, err = resources.Publish(context.Background(), definition.ID, admin.ID); err != nil {
+			t.Fatal(err)
+		}
 	}
 	// Simulate a definition published by an older release which did not create
 	// the physical table. A fresh runtime service must repair it on first use.
@@ -93,7 +95,7 @@ func do(router *gin.Engine, method, path string, body any, token string) *httpte
 
 func TestGeneratedCRUDAPI(t *testing.T) {
 	router, _, token := setup(t)
-	created := do(router, http.MethodPost, "/api/v1/resources/articles/records", map[string]any{"title": "First article", "views": 10, "published": false}, token)
+	created := do(router, http.MethodPost, "/api/v1/resources/articles/records", map[string]any{"title": "First article", "body": "Article body", "views": 10, "published": false}, token)
 	if created.Code != 201 {
 		t.Fatalf("create expected 201, got %d: %s", created.Code, created.Body.String())
 	}
@@ -143,14 +145,14 @@ func TestGeneratedCRUDAPI(t *testing.T) {
 func TestFieldWhitelistPaginationConflictAndAudit(t *testing.T) {
 	router, db, token := setup(t)
 
-	unknown := do(router, http.MethodPost, "/api/v1/resources/articles/records", map[string]any{"title": "Invalid", "published": false, "unknown": "value"}, token)
+	unknown := do(router, http.MethodPost, "/api/v1/resources/articles/records", map[string]any{"title": "Invalid", "body": "Body", "published": false, "unknown": "value"}, token)
 	if unknown.Code != http.StatusUnprocessableEntity {
 		t.Fatalf("unknown field expected 422, got %d: %s", unknown.Code, unknown.Body.String())
 	}
 
 	now := time.Now().UTC()
 	for i := 0; i < 105; i++ {
-		if _, err := db.Conn().Exec(`INSERT INTO articles (title,views,published,lock_version,created_at,updated_at) VALUES (?,?,?,?,?,?)`, fmt.Sprintf("Article %d", i), i, false, 1, now, now); err != nil {
+		if _, err := db.Conn().Exec(`INSERT INTO articles (title,body,views,published,lock_version,created_at,updated_at) VALUES (?,?,?,?,?,?,?)`, fmt.Sprintf("Article %d", i), "Body", i, false, 1, now, now); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -178,7 +180,7 @@ func TestFieldWhitelistPaginationConflictAndAudit(t *testing.T) {
 		t.Fatalf("expected 5 records on second page, got %d", len(pagePayload.Data))
 	}
 
-	created := do(router, http.MethodPost, "/api/v1/resources/articles/records", map[string]any{"title": "Concurrent", "views": 1, "published": false}, token)
+	created := do(router, http.MethodPost, "/api/v1/resources/articles/records", map[string]any{"title": "Concurrent", "body": "Body", "views": 1, "published": false}, token)
 	var recordPayload struct {
 		Data map[string]any `json:"data"`
 	}
@@ -205,5 +207,39 @@ func TestFieldWhitelistPaginationConflictAndAudit(t *testing.T) {
 	want := []string{"resource.record_create", "resource.record_update", "resource.record_delete"}
 	if fmt.Sprint(actions) != fmt.Sprint(want) {
 		t.Fatalf("unexpected audit actions: %#v", actions)
+	}
+}
+
+func TestTwoDifferentExampleResourcesUseTheSameEngine(t *testing.T) {
+	router, _, token := setup(t)
+	examples := []struct {
+		code        string
+		input       map[string]any
+		assertField string
+		assertValue any
+	}{
+		{code: "articles", input: map[string]any{"title": "Generic article", "body": "Long-form content", "views": 7, "published": true}, assertField: "title", assertValue: "Generic article"},
+		{code: "products", input: map[string]any{"sku": "SKU-001", "name": "Generic product", "price_cents": 1299, "stock": 5, "metadata": map[string]any{"color": "blue"}}, assertField: "sku", assertValue: "SKU-001"},
+	}
+	for _, example := range examples {
+		t.Run(example.code, func(t *testing.T) {
+			created := do(router, http.MethodPost, "/api/v1/resources/"+example.code+"/records", example.input, token)
+			if created.Code != 201 {
+				t.Fatalf("create expected 201, got %d: %s", created.Code, created.Body.String())
+			}
+			listed := do(router, http.MethodGet, "/api/v1/resources/"+example.code+"/records", nil, token)
+			if listed.Code != 200 {
+				t.Fatalf("list expected 200, got %d: %s", listed.Code, listed.Body.String())
+			}
+			var payload struct {
+				Data []map[string]any `json:"data"`
+			}
+			if err := json.Unmarshal(listed.Body.Bytes(), &payload); err != nil {
+				t.Fatal(err)
+			}
+			if len(payload.Data) != 1 || payload.Data[0][example.assertField] != example.assertValue {
+				t.Fatalf("unexpected records: %#v", payload.Data)
+			}
+		})
 	}
 }

@@ -271,6 +271,13 @@ func normalizeRecord(values map[string]any, schema Schema) {
 				}
 			}
 			values[key] = string(data)
+			continue
+		}
+		if text, ok := value.(string); ok && types[key] == "json" {
+			var decoded any
+			if json.Unmarshal([]byte(text), &decoded) == nil {
+				values[key] = decoded
+			}
 		}
 	}
 }
