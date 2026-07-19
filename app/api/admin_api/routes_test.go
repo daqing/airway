@@ -185,3 +185,70 @@ func TestEveryManagementAPIRouteRequiresItsDeclaredPermission(t *testing.T) {
 		})
 	}
 }
+
+func TestPermissionChangesTakeEffectForTheCurrentSession(t *testing.T) {
+	router, service, actor, token, authRoleID, _ := setupPermissionTest(t)
+	permission, err := service.CreatePermission(context.Background(), "admins:read", "Read administrators")
+	if err != nil {
+		t.Fatalf("create permission: %v", err)
+	}
+
+	if err := service.AssignPermissions(context.Background(), authRoleID, []int64{permission.ID}); err != nil {
+		t.Fatalf("grant permission: %v", err)
+	}
+	response := performRequest(router, http.MethodGet, "/api/v1/admins", nil, token)
+	if response.Code != http.StatusOK {
+		t.Fatalf("after grant: expected 200, got %d: %s", response.Code, response.Body.String())
+	}
+
+	// Revoking a role permission must affect the already-issued session.
+	if err := service.AssignPermissions(context.Background(), authRoleID, nil); err != nil {
+		t.Fatalf("revoke permission: %v", err)
+	}
+	response = performRequest(router, http.MethodGet, "/api/v1/admins", nil, token)
+	if response.Code != http.StatusForbidden {
+		t.Fatalf("after permission revocation: expected 403, got %d: %s", response.Code, response.Body.String())
+	}
+
+	if err := service.AssignPermissions(context.Background(), authRoleID, []int64{permission.ID}); err != nil {
+		t.Fatalf("restore permission: %v", err)
+	}
+	response = performRequest(router, http.MethodGet, "/api/v1/admins", nil, token)
+	if response.Code != http.StatusOK {
+		t.Fatalf("after permission restoration: expected 200, got %d: %s", response.Code, response.Body.String())
+	}
+
+	// Removing the role itself must also affect the current session immediately.
+	if err := service.AssignRoles(context.Background(), actor.ID, nil); err != nil {
+		t.Fatalf("remove actor role: %v", err)
+	}
+	response = performRequest(router, http.MethodGet, "/api/v1/admins", nil, token)
+	if response.Code != http.StatusForbidden {
+		t.Fatalf("after role removal: expected 403, got %d: %s", response.Code, response.Body.String())
+	}
+}
+
+func TestDisablingAdminInvalidatesExistingSession(t *testing.T) {
+	router, service, actor, token, authRoleID, _ := setupPermissionTest(t)
+	permission, err := service.CreatePermission(context.Background(), "admins:read", "Read administrators")
+	if err != nil {
+		t.Fatalf("create permission: %v", err)
+	}
+	if err := service.AssignPermissions(context.Background(), authRoleID, []int64{permission.ID}); err != nil {
+		t.Fatalf("grant permission: %v", err)
+	}
+
+	response := performRequest(router, http.MethodGet, "/api/v1/admins", nil, token)
+	if response.Code != http.StatusOK {
+		t.Fatalf("before disable: expected 200, got %d: %s", response.Code, response.Body.String())
+	}
+	if _, err := service.UpdateAdmin(context.Background(), actor.ID, actor.Email, "disabled"); err != nil {
+		t.Fatalf("disable administrator: %v", err)
+	}
+
+	// Authentication rejects the old token before authorization is evaluated.
+	response = performRequest(router, http.MethodGet, "/api/v1/admins", nil, token)
+	if response.Code != http.StatusUnauthorized {
+		t.Fatalf("after disable: expected 401, got %d: %s", response.Code, response.Body.String())
+	}
+}
