@@ -1,6 +1,7 @@
 package config
 
 import (
+	"log"
 	"time"
 
 	"github.com/daqing/airway/app/api/admin_api"
@@ -12,6 +13,7 @@ import (
 	"github.com/daqing/airway/app/middleware"
 	"github.com/daqing/airway/app/modules/dynamicresource"
 	"github.com/daqing/airway/app/modules/identity"
+	"github.com/daqing/airway/app/modules/plugins"
 	"github.com/daqing/airway/app/modules/rbac"
 	"github.com/daqing/airway/app/websocket"
 	"github.com/daqing/airway/lib/repo"
@@ -40,6 +42,9 @@ func apiGroupRoutes(r *gin.Engine) {
 		admin_api.Routes(protected, rbacService)
 		resource_definition_api.Routes(protected, resourceService)
 		dynamic_resource_api.Routes(protected, resourceService, rbacService)
+		if err := plugins.NewRuntime(db, rbacService).Mount(protected); err != nil {
+			log.Printf("plugin registration failed: %v", err)
+		}
 
 		// Storage remains an elevated operation but now uses the same RBAC path.
 		protected.Use(middleware.RequirePermission(rbacService, "storage:manage"))
