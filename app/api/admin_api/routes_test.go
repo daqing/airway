@@ -36,7 +36,7 @@ type fixture struct {
 	targetPermissionID int64
 }
 
-func setupPermissionTest(t *testing.T) (*gin.Engine, *rbac.Service, identity.Admin, string, int64, fixture) {
+func setupPermissionTest(t *testing.T) (*gin.Engine, *repo.DB, *rbac.Service, identity.Admin, string, int64, fixture) {
 	t.Helper()
 	db, err := repo.SetupDB("sqlite://:memory:")
 	if err != nil {
@@ -93,7 +93,7 @@ func setupPermissionTest(t *testing.T) (*gin.Engine, *rbac.Service, identity.Adm
 	protected := router.Group("/api/v1")
 	protected.Use(middleware.Authenticate(identityService))
 	admin_api.Routes(protected, rbacService)
-	return router, rbacService, actor.Admin, token, authRole.ID, fixture{
+	return router, db, rbacService, actor.Admin, token, authRole.ID, fixture{
 		targetAdminID: target.ID, targetRoleID: targetRole.ID, targetPermissionID: targetPermission.ID,
 	}
 }
@@ -115,7 +115,7 @@ func performRequest(router *gin.Engine, method, path string, body any, token str
 }
 
 func TestEveryManagementAPIRouteRequiresItsDeclaredPermission(t *testing.T) {
-	router, service, _, token, authRoleID, f := setupPermissionTest(t)
+	router, _, service, _, token, authRoleID, f := setupPermissionTest(t)
 	cases := []permissionCase{
 		{name: "list admins", permission: "admins:read", method: http.MethodGet, path: func(f fixture) string { return "/api/v1/admins" }, wantStatus: 200},
 		{name: "create admin", permission: "admins:create", method: http.MethodPost, path: func(f fixture) string { return "/api/v1/admins" }, body: func(_ fixture, n int) any {
@@ -187,7 +187,7 @@ func TestEveryManagementAPIRouteRequiresItsDeclaredPermission(t *testing.T) {
 }
 
 func TestPermissionChangesTakeEffectForTheCurrentSession(t *testing.T) {
-	router, service, actor, token, authRoleID, _ := setupPermissionTest(t)
+	router, _, service, actor, token, authRoleID, _ := setupPermissionTest(t)
 	permission, err := service.CreatePermission(context.Background(), "admins:read", "Read administrators")
 	if err != nil {
 		t.Fatalf("create permission: %v", err)
@@ -229,7 +229,7 @@ func TestPermissionChangesTakeEffectForTheCurrentSession(t *testing.T) {
 }
 
 func TestDisablingAdminInvalidatesExistingSession(t *testing.T) {
-	router, service, actor, token, authRoleID, _ := setupPermissionTest(t)
+	router, _, service, actor, token, authRoleID, _ := setupPermissionTest(t)
 	permission, err := service.CreatePermission(context.Background(), "admins:read", "Read administrators")
 	if err != nil {
 		t.Fatalf("create permission: %v", err)
@@ -250,5 +250,43 @@ func TestDisablingAdminInvalidatesExistingSession(t *testing.T) {
 	response = performRequest(router, http.MethodGet, "/api/v1/admins", nil, token)
 	if response.Code != http.StatusUnauthorized {
 		t.Fatalf("after disable: expected 401, got %d: %s", response.Code, response.Body.String())
+	}
+}
+
+func TestLastActiveSuperAdminCannotBeDisabled(t *testing.T) {
+	router, db, _, actor, token, _, f := setupPermissionTest(t)
+	if _, err := db.Conn().Exec(db.Conn().Rebind(`UPDATE admins SET super_admin=? WHERE id=?`), true, actor.ID); err != nil {
+		t.Fatalf("promote actor: %v", err)
+	}
+	body := map[string]any{"email": actor.Email, "status": "disabled"}
+	path := fmt.Sprintf("/api/v1/admins/%d", actor.ID)
+
+	response := performRequest(router, http.MethodPatch, path, body, token)
+	if response.Code != http.StatusConflict {
+		t.Fatalf("last super administrator: expected 409, got %d: %s", response.Code, response.Body.String())
+	}
+	var payload struct {
+		Error struct {
+			Code string `json:"code"`
+		} `json:"error"`
+	}
+	if err := json.Unmarshal(response.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if payload.Error.Code != "last_super_admin" {
+		t.Fatalf("expected last_super_admin error, got %q", payload.Error.Code)
+	}
+	var status string
+	if err := db.Conn().Get(&status, db.Conn().Rebind(`SELECT status FROM admins WHERE id=?`), actor.ID); err != nil || status != "active" {
+		t.Fatalf("protected administrator status=%q err=%v", status, err)
+	}
+
+	// Once another active super administrator exists, disabling this one is safe.
+	if _, err := db.Conn().Exec(db.Conn().Rebind(`UPDATE admins SET super_admin=? WHERE id=?`), true, f.targetAdminID); err != nil {
+		t.Fatalf("promote second super administrator: %v", err)
+	}
+	response = performRequest(router, http.MethodPatch, path, body, token)
+	if response.Code != http.StatusOK {
+		t.Fatalf("with second super administrator: expected 200, got %d: %s", response.Code, response.Body.String())
 	}
 }

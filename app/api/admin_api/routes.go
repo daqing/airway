@@ -191,6 +191,8 @@ func respond(c *gin.Context, data any, err error, status int) {
 		return
 	}
 	switch {
+	case errors.Is(err, rbac.ErrLastSuperAdmin):
+		fail(c, 409, "last_super_admin", err.Error())
 	case errors.Is(err, rbac.ErrValidation):
 		fail(c, 422, "validation_failed", err.Error())
 	case errors.Is(err, rbac.ErrConflict), errors.Is(err, rbac.ErrAdminConflict):

@@ -14,10 +14,11 @@ import (
 )
 
 var (
-	ErrNotFound      = errors.New("record not found")
-	ErrConflict      = errors.New("record already exists")
-	ErrAdminConflict = errors.New("login or email already exists")
-	ErrValidation    = errors.New("invalid input")
+	ErrNotFound       = errors.New("record not found")
+	ErrConflict       = errors.New("record already exists")
+	ErrAdminConflict  = errors.New("login or email already exists")
+	ErrLastSuperAdmin = errors.New("the last active super administrator cannot be disabled")
+	ErrValidation     = errors.New("invalid input")
 )
 
 type Role struct {
@@ -98,12 +99,41 @@ func (s *Service) UpdateAdmin(ctx context.Context, id int64, email, status strin
 	if email == "" || (status != "active" && status != "disabled") {
 		return AdminDetails{}, ErrValidation
 	}
-	res, err := s.db.Conn().ExecContext(ctx, s.db.Conn().Rebind(`UPDATE admins SET email=?,status=?,auth_version=auth_version+1,updated_at=? WHERE id=?`), email, status, time.Now().UTC(), id)
+	err := repo.Tx(s.db, func(tx *sqlx.Tx) error {
+		var target struct {
+			Status     string `db:"status"`
+			SuperAdmin bool   `db:"super_admin"`
+		}
+		if err := tx.GetContext(ctx, &target, tx.Rebind(`SELECT status,super_admin FROM admins WHERE id=?`), id); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return ErrNotFound
+			}
+			return err
+		}
+		if target.SuperAdmin && target.Status == "active" && status == "disabled" {
+			var activeSuperAdminIDs []int64
+			query := `SELECT id FROM admins WHERE super_admin=? AND status=? ORDER BY id`
+			if s.db.Driver() != repo.DriverSQLite {
+				query += ` FOR UPDATE`
+			}
+			if err := tx.SelectContext(ctx, &activeSuperAdminIDs, tx.Rebind(query), true, "active"); err != nil {
+				return err
+			}
+			if len(activeSuperAdminIDs) <= 1 {
+				return ErrLastSuperAdmin
+			}
+		}
+		res, err := tx.ExecContext(ctx, tx.Rebind(`UPDATE admins SET email=?,status=?,auth_version=auth_version+1,updated_at=? WHERE id=?`), email, status, time.Now().UTC(), id)
+		if err != nil {
+			return err
+		}
+		if n, _ := res.RowsAffected(); n == 0 {
+			return ErrNotFound
+		}
+		return nil
+	})
 	if err != nil {
 		return AdminDetails{}, err
-	}
-	if n, _ := res.RowsAffected(); n == 0 {
-		return AdminDetails{}, ErrNotFound
 	}
 	return s.Admin(ctx, id)
 }
