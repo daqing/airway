@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/daqing/airway/app/api/admin_api"
+	"github.com/daqing/airway/app/api/dynamic_resource_api"
 	"github.com/daqing/airway/app/api/health_api"
 	"github.com/daqing/airway/app/api/resource_definition_api"
 	"github.com/daqing/airway/app/api/session_api"
@@ -38,6 +39,7 @@ func apiGroupRoutes(r *gin.Engine) {
 		protected.Use(middleware.Authenticate(service))
 		admin_api.Routes(protected, rbacService)
 		resource_definition_api.Routes(protected, resourceService)
+		dynamic_resource_api.Routes(protected, resourceService, rbacService)
 
 		// Storage remains an elevated operation but now uses the same RBAC path.
 		protected.Use(middleware.RequirePermission(rbacService, "storage:manage"))

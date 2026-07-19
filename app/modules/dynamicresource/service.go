@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/daqing/airway/lib/repo"
@@ -72,7 +73,10 @@ type Version struct {
 	PublishedBy          int64     `db:"published_by" json:"published_by"`
 }
 
-type Service struct{ db *repo.DB }
+type Service struct {
+	db          *repo.DB
+	provisioned sync.Map
+}
 
 func NewService(db *repo.DB) *Service { return &Service{db: db} }
 
@@ -163,6 +167,10 @@ func (s *Service) Publish(ctx context.Context, id, actorID int64) (Definition, e
 	if validationErrors := validate(item); len(validationErrors) > 0 {
 		return item, validationErrors
 	}
+	if err := s.Provision(ctx, item); err != nil {
+		return item, err
+	}
+	s.provisioned.Store(item.Code, true)
 	schemaData, _ := json.Marshal(item.Schema)
 	sum := sha256.Sum256(schemaData)
 	checksum := hex.EncodeToString(sum[:])
