@@ -172,14 +172,14 @@ func (s *Service) CreateRole(ctx context.Context, code, name string) (Role, erro
 	}
 	return Role{ID: id, Code: code, Name: name, Version: 1}, err
 }
-func (s *Service) UpdateRole(ctx context.Context, id int64, name string) (Role, error) {
-	name = strings.TrimSpace(name)
-	if name == "" {
+func (s *Service) UpdateRole(ctx context.Context, id int64, code, name string) (Role, error) {
+	code, name = strings.TrimSpace(code), strings.TrimSpace(name)
+	if code == "" || name == "" {
 		return Role{}, ErrValidation
 	}
-	res, err := s.db.Conn().ExecContext(ctx, s.db.Conn().Rebind(`UPDATE roles SET name=?,version=version+1,updated_at=? WHERE id=?`), name, time.Now().UTC(), id)
+	res, err := s.db.Conn().ExecContext(ctx, s.db.Conn().Rebind(`UPDATE roles SET code=?,name=?,version=version+1,updated_at=? WHERE id=?`), code, name, time.Now().UTC(), id)
 	if err != nil {
-		return Role{}, err
+		return Role{}, ErrConflict
 	}
 	if n, _ := res.RowsAffected(); n == 0 {
 		return Role{}, ErrNotFound
@@ -210,14 +210,14 @@ func (s *Service) CreatePermission(ctx context.Context, code, name string) (Perm
 	}
 	return Permission{ID: id, Code: code, Name: name, Source: "custom"}, err
 }
-func (s *Service) UpdatePermission(ctx context.Context, id int64, name string) (Permission, error) {
-	name = strings.TrimSpace(name)
-	if name == "" {
+func (s *Service) UpdatePermission(ctx context.Context, id int64, code, name string) (Permission, error) {
+	code, name = strings.TrimSpace(code), strings.TrimSpace(name)
+	if code == "" || name == "" || !strings.Contains(code, ":") {
 		return Permission{}, ErrValidation
 	}
-	res, err := s.db.Conn().ExecContext(ctx, s.db.Conn().Rebind(`UPDATE permissions SET name=?,updated_at=? WHERE id=?`), name, time.Now().UTC(), id)
+	res, err := s.db.Conn().ExecContext(ctx, s.db.Conn().Rebind(`UPDATE permissions SET code=?,name=?,updated_at=? WHERE id=?`), code, name, time.Now().UTC(), id)
 	if err != nil {
-		return Permission{}, err
+		return Permission{}, ErrConflict
 	}
 	if n, _ := res.RowsAffected(); n == 0 {
 		return Permission{}, ErrNotFound

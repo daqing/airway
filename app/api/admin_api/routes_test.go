@@ -130,14 +130,12 @@ func TestEveryManagementAPIRouteRequiresItsDeclaredPermission(t *testing.T) {
 		{name: "create role", permission: "roles:create", method: http.MethodPost, path: func(f fixture) string { return "/api/v1/roles" }, body: func(_ fixture, n int) any {
 			return map[string]any{"code": fmt.Sprintf("created-role-%d", n), "name": "Created role"}
 		}, wantStatus: 201},
-		{name: "update role", permission: "roles:update", method: http.MethodPatch, path: func(f fixture) string { return fmt.Sprintf("/api/v1/roles/%d", f.targetRoleID) }, body: func(_ fixture, _ int) any { return map[string]any{"name": "Updated target role"} }, wantStatus: 200},
 		{name: "list role permissions", permission: "roles:read", method: http.MethodGet, path: func(f fixture) string { return fmt.Sprintf("/api/v1/roles/%d/permissions", f.targetRoleID) }, wantStatus: 200},
 		{name: "assign role permissions", permission: "roles:assign_permissions", method: http.MethodPut, path: func(f fixture) string { return fmt.Sprintf("/api/v1/roles/%d/permissions", f.targetRoleID) }, body: func(f fixture, _ int) any { return map[string]any{"permission_ids": []int64{f.targetPermissionID}} }, wantStatus: 200},
 		{name: "list permissions", permission: "permissions:read", method: http.MethodGet, path: func(f fixture) string { return "/api/v1/permissions" }, wantStatus: 200},
 		{name: "create permission", permission: "permissions:create", method: http.MethodPost, path: func(f fixture) string { return "/api/v1/permissions" }, body: func(_ fixture, n int) any {
 			return map[string]any{"code": fmt.Sprintf("created-%d:action", n), "name": "Created permission"}
 		}, wantStatus: 201},
-		{name: "update permission", permission: "permissions:update", method: http.MethodPatch, path: func(f fixture) string { return fmt.Sprintf("/api/v1/permissions/%d", f.targetPermissionID) }, body: func(_ fixture, _ int) any { return map[string]any{"name": "Updated target permission"} }, wantStatus: 200},
 	}
 
 	for i, tc := range cases {
@@ -288,5 +286,75 @@ func TestLastActiveSuperAdminCannotBeDisabled(t *testing.T) {
 	response = performRequest(router, http.MethodPatch, path, body, token)
 	if response.Code != http.StatusOK {
 		t.Fatalf("with second super administrator: expected 200, got %d: %s", response.Code, response.Body.String())
+	}
+}
+
+func TestOnlySuperAdminCanEditRoleNameAndCode(t *testing.T) {
+	router, db, service, actor, token, authRoleID, f := setupPermissionTest(t)
+	permission, err := service.CreatePermission(context.Background(), "roles:update", "Update roles")
+	if err != nil {
+		t.Fatalf("create roles:update permission: %v", err)
+	}
+	if err := service.AssignPermissions(context.Background(), authRoleID, []int64{permission.ID}); err != nil {
+		t.Fatalf("grant roles:update: %v", err)
+	}
+	path := fmt.Sprintf("/api/v1/roles/%d", f.targetRoleID)
+	body := map[string]any{"code": "reviewer", "name": "Reviewer"}
+
+	response := performRequest(router, http.MethodPatch, path, body, token)
+	if response.Code != http.StatusForbidden {
+		t.Fatalf("regular administrator with roles:update: expected 403, got %d: %s", response.Code, response.Body.String())
+	}
+
+	if _, err := db.Conn().Exec(db.Conn().Rebind(`UPDATE admins SET super_admin=? WHERE id=?`), true, actor.ID); err != nil {
+		t.Fatalf("promote actor: %v", err)
+	}
+	response = performRequest(router, http.MethodPatch, path, body, token)
+	if response.Code != http.StatusOK {
+		t.Fatalf("super administrator: expected 200, got %d: %s", response.Code, response.Body.String())
+	}
+	var role rbac.Role
+	if err := json.Unmarshal(response.Body.Bytes(), &struct {
+		Data *rbac.Role `json:"data"`
+	}{Data: &role}); err != nil {
+		t.Fatalf("decode updated role: %v", err)
+	}
+	if role.Code != "reviewer" || role.Name != "Reviewer" {
+		t.Fatalf("unexpected updated role: %#v", role)
+	}
+}
+
+func TestOnlySuperAdminCanEditPermissionNameAndCode(t *testing.T) {
+	router, db, service, actor, token, authRoleID, f := setupPermissionTest(t)
+	permission, err := service.CreatePermission(context.Background(), "permissions:update", "Update permissions")
+	if err != nil {
+		t.Fatalf("create permissions:update permission: %v", err)
+	}
+	if err := service.AssignPermissions(context.Background(), authRoleID, []int64{permission.ID}); err != nil {
+		t.Fatalf("grant permissions:update: %v", err)
+	}
+	path := fmt.Sprintf("/api/v1/permissions/%d", f.targetPermissionID)
+	body := map[string]any{"code": "reviews:approve", "name": "Approve reviews"}
+
+	response := performRequest(router, http.MethodPatch, path, body, token)
+	if response.Code != http.StatusForbidden {
+		t.Fatalf("regular administrator with permissions:update: expected 403, got %d: %s", response.Code, response.Body.String())
+	}
+
+	if _, err := db.Conn().Exec(db.Conn().Rebind(`UPDATE admins SET super_admin=? WHERE id=?`), true, actor.ID); err != nil {
+		t.Fatalf("promote actor: %v", err)
+	}
+	response = performRequest(router, http.MethodPatch, path, body, token)
+	if response.Code != http.StatusOK {
+		t.Fatalf("super administrator: expected 200, got %d: %s", response.Code, response.Body.String())
+	}
+	var payload struct {
+		Data rbac.Permission `json:"data"`
+	}
+	if err := json.Unmarshal(response.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("decode updated permission: %v", err)
+	}
+	if payload.Data.Code != "reviews:approve" || payload.Data.Name != "Approve reviews" {
+		t.Fatalf("unexpected updated permission: %#v", payload.Data)
 	}
 }

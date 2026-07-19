@@ -21,12 +21,12 @@ func Routes(r *gin.RouterGroup, service *rbac.Service) {
 	r.PUT("/admins/:id/roles", middleware.RequirePermission(service, "admins:assign_roles"), a.assignRoles)
 	r.GET("/roles", middleware.RequirePermission(service, "roles:read"), a.listRoles)
 	r.POST("/roles", middleware.RequirePermission(service, "roles:create"), a.createRole)
-	r.PATCH("/roles/:id", middleware.RequirePermission(service, "roles:update"), a.updateRole)
+	r.PATCH("/roles/:id", middleware.RequireSuperAdmin(), a.updateRole)
 	r.GET("/roles/:id/permissions", middleware.RequirePermission(service, "roles:read"), a.rolePermissions)
 	r.PUT("/roles/:id/permissions", middleware.RequirePermission(service, "roles:assign_permissions"), a.assignPermissions)
 	r.GET("/permissions", middleware.RequirePermission(service, "permissions:read"), a.listPermissions)
 	r.POST("/permissions", middleware.RequirePermission(service, "permissions:create"), a.createPermission)
-	r.PATCH("/permissions/:id", middleware.RequirePermission(service, "permissions:update"), a.updatePermission)
+	r.PATCH("/permissions/:id", middleware.RequireSuperAdmin(), a.updatePermission)
 }
 
 func (a *API) listAdmins(c *gin.Context) {
@@ -109,13 +109,14 @@ func (a *API) updateRole(c *gin.Context) {
 		return
 	}
 	var b struct {
+		Code string `json:"code"`
 		Name string `json:"name"`
 	}
 	if c.ShouldBindJSON(&b) != nil {
 		fail(c, 400, "invalid_request", "invalid JSON body")
 		return
 	}
-	v, e := a.service.UpdateRole(c, id, b.Name)
+	v, e := a.service.UpdateRole(c, id, b.Code, b.Name)
 	respond(c, v, e, 200)
 }
 func (a *API) rolePermissions(c *gin.Context) {
@@ -168,13 +169,14 @@ func (a *API) updatePermission(c *gin.Context) {
 		return
 	}
 	var b struct {
+		Code string `json:"code"`
 		Name string `json:"name"`
 	}
 	if c.ShouldBindJSON(&b) != nil {
 		fail(c, 400, "invalid_request", "invalid JSON body")
 		return
 	}
-	v, e := a.service.UpdatePermission(c, id, b.Name)
+	v, e := a.service.UpdatePermission(c, id, b.Code, b.Name)
 	respond(c, v, e, 200)
 }
 func idParam(c *gin.Context) (int64, bool) {
