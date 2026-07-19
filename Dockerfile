@@ -7,6 +7,7 @@ RUN go build -o ./bin/airway .
 FROM alpine
 WORKDIR /app
 COPY --from=builder /app/bin/airway /app
+COPY --from=builder /app/db /app/db
 
 ENV AIRWAY_ENV=production
 ENV AIRWAY_PORT=1900
