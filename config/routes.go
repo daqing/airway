@@ -4,11 +4,14 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/daqing/airway/app/api/health_api"
+	"github.com/daqing/airway/app/api/home_api"
 	"github.com/daqing/airway/app/api/storage_api"
 	"github.com/daqing/airway/app/websocket"
 )
 
 func Routes(r *gin.Engine) {
+	r.GET("/", home_api.IndexAction)
+
 	health_api.Routes(r)
 
 	websocketRoutes(r)
