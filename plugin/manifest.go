@@ -3,6 +3,8 @@
 package plugin
 
 import (
+	"context"
+	"database/sql"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -42,6 +44,13 @@ type Menu struct {
 	Path       string `json:"path"`
 	Permission string `json:"permission,omitempty"`
 }
+type Executor interface {
+	ExecContext(context.Context, string, ...any) (sql.Result, error)
+}
+type Migration struct {
+	Name string
+	Up   func(context.Context, Executor) error
+}
 
 // ParseManifest decodes JSON or YAML and validates it against the current
 // versioned plugin contract and core compatibility range.
@@ -67,6 +76,7 @@ type Context interface {
 	Handle(method, path, permission string, handler gin.HandlerFunc) error
 	AddPermission(permission Permission) error
 	AddMenu(menu Menu) error
+	AddMigration(migration Migration) error
 }
 
 var namePattern = regexp.MustCompile(`^[a-z][a-z0-9-]*$`)
@@ -74,6 +84,22 @@ var codePattern = regexp.MustCompile(`^[a-z][a-z0-9_.]*:[a-z][a-z0-9_]*$`)
 var semverPattern = regexp.MustCompile(`^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?$`)
 
 func (m Manifest) Validate(coreVersion string) error {
+	if err := m.ValidateContract(); err != nil {
+		return err
+	}
+	compatible, err := Satisfies(coreVersion, m.Core)
+	if err != nil {
+		return fmt.Errorf("invalid core version constraint: %w", err)
+	}
+	if !compatible {
+		return fmt.Errorf("plugin %s %s is incompatible with core %s", m.Name, m.Version, coreVersion)
+	}
+	return nil
+}
+
+// ValidateContract checks the manifest structure without enforcing the running
+// core version, allowing incompatible plugins to be registered and reported.
+func (m Manifest) ValidateContract() error {
 	if m.APIVersion != APIVersion {
 		return fmt.Errorf("unsupported manifest api_version %q", m.APIVersion)
 	}
@@ -86,12 +112,8 @@ func (m Manifest) Validate(coreVersion string) error {
 	if strings.TrimSpace(m.Entry) == "" {
 		return fmt.Errorf("plugin entry is required")
 	}
-	compatible, err := matchesRange(coreVersion, m.Core)
-	if err != nil {
+	if _, err := Satisfies("0.0.0", m.Core); err != nil {
 		return fmt.Errorf("invalid core version constraint: %w", err)
-	}
-	if !compatible {
-		return fmt.Errorf("plugin %s %s is incompatible with core %s", m.Name, m.Version, coreVersion)
 	}
 	seenPermissions := map[string]bool{}
 	for _, permission := range m.Permissions {
@@ -118,7 +140,7 @@ func (m Manifest) Validate(coreVersion string) error {
 			return fmt.Errorf("duplicate dependency %q", dependency.Name)
 		}
 		seenDependencies[dependency.Name] = true
-		if _, err := matchesRange("0.0.0", dependency.Version); err != nil {
+		if _, err := Satisfies("0.0.0", dependency.Version); err != nil {
 			return fmt.Errorf("invalid dependency %s constraint: %w", dependency.Name, err)
 		}
 	}
@@ -149,7 +171,7 @@ func compare(a, b version) int {
 	}
 	return 0
 }
-func matchesRange(current, constraint string) (bool, error) {
+func Satisfies(current, constraint string) (bool, error) {
 	currentVersion, err := parseVersion(current)
 	if err != nil {
 		return false, err

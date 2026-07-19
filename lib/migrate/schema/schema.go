@@ -2,6 +2,7 @@ package schema
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"sync"
 )
@@ -698,6 +699,7 @@ func Definitions() []Definition {
 	for _, def := range registry {
 		defs = append(defs, def)
 	}
+	sort.Slice(defs, func(i, j int) bool { return defs[i].Version < defs[j].Version })
 
 	return defs
 }

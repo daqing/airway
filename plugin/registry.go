@@ -18,7 +18,7 @@ func Register(candidate Plugin) error {
 		return fmt.Errorf("plugin is nil")
 	}
 	manifest := candidate.Manifest()
-	if err := manifest.Validate(CoreVersion); err != nil {
+	if err := manifest.ValidateContract(); err != nil {
 		return err
 	}
 	registry.Lock()

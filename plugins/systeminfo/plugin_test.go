@@ -29,6 +29,7 @@ func (c *captureContext) AddMenu(menu pluginsdk.Menu) error {
 	c.menus = append(c.menus, menu)
 	return nil
 }
+func (c *captureContext) AddMigration(migration pluginsdk.Migration) error { return nil }
 
 func TestExamplePluginRegistersPermissionMenuAndAPI(t *testing.T) {
 	candidate := Plugin{}
