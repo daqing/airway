@@ -1,9 +1,13 @@
 package main
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/gin-gonic/gin"
 )
 
 func TestLoadCLIEnvLoadsDotEnvWhenPresent(t *testing.T) {
@@ -33,6 +37,27 @@ func TestLoadCLIEnvLoadsDotEnvWhenPresent(t *testing.T) {
 
 	if got := os.Getenv("AIRWAY_DB_DSN"); got != "sqlite://./tmp/test.db" {
 		t.Fatalf("expected AIRWAY_DB_DSN from .env, got %q", got)
+	}
+}
+
+func TestCORSAllowsViteFallbackPort(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	router.Use(CORS())
+	router.POST("/api/v1/admins", func(c *gin.Context) { c.Status(http.StatusCreated) })
+
+	req := httptest.NewRequest(http.MethodOptions, "/api/v1/admins", nil)
+	req.Header.Set("Origin", "http://127.0.0.1:5174")
+	req.Header.Set("Access-Control-Request-Method", http.MethodPost)
+	req.Header.Set("Access-Control-Request-Headers", "content-type")
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, req)
+
+	if response.Code != http.StatusNoContent {
+		t.Fatalf("preflight: expected 204, got %d", response.Code)
+	}
+	if origin := response.Header().Get("Access-Control-Allow-Origin"); origin != "http://127.0.0.1:5174" {
+		t.Fatalf("unexpected allowed origin: %q", origin)
 	}
 }
 

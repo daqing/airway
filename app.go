@@ -44,7 +44,14 @@ func (a *App) Run() {
 
 // Default CORS middleware
 func CORS() gin.HandlerFunc {
-	allowedOrigins := []string{"http://127.0.0.1:5173", "http://localhost:5173"}
+	// Vite moves to 5174 when its default port is already occupied. Keep both
+	// common local origins explicit so credentialed requests remain safe.
+	allowedOrigins := []string{
+		"http://127.0.0.1:5173",
+		"http://localhost:5173",
+		"http://127.0.0.1:5174",
+		"http://localhost:5174",
+	}
 	if configured := strings.TrimSpace(os.Getenv("AIRWAY_CORS_ORIGINS")); configured != "" {
 		allowedOrigins = strings.Split(configured, ",")
 		for i := range allowedOrigins {

@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/daqing/airway/app/modules/identity"
+	"github.com/daqing/airway/app/modules/rbac"
 	"github.com/gin-gonic/gin"
 )
 
@@ -32,6 +33,27 @@ func RequireSuperAdmin() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		admin, ok := CurrentAdmin(c)
 		if !ok || !admin.SuperAdmin {
+			abort(c, http.StatusForbidden, "forbidden", "permission denied")
+			return
+		}
+		c.Next()
+	}
+}
+
+// RequirePermission authorizes against the current database state on every request.
+func RequirePermission(service *rbac.Service, code string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		admin, ok := CurrentAdmin(c)
+		if !ok {
+			abort(c, http.StatusUnauthorized, "unauthenticated", "authentication required")
+			return
+		}
+		allowed, err := service.Allowed(c, admin, code)
+		if err != nil {
+			abort(c, http.StatusInternalServerError, "authorization_failed", "authorization check failed")
+			return
+		}
+		if !allowed {
 			abort(c, http.StatusForbidden, "forbidden", "permission denied")
 			return
 		}
