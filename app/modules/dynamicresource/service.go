@@ -212,6 +212,18 @@ func (s *Service) Versions(ctx context.Context, id int64) ([]Version, error) {
 	return items, err
 }
 
+func (s *Service) Audit(ctx context.Context, actorID int64, action string, item Definition, targetID, requestID, ip string) error {
+	_, err := s.db.Conn().ExecContext(ctx, s.db.Conn().Rebind(`INSERT INTO audit_logs (actor_id,action,target_type,target_id,result,request_id,ip_address,metadata_json,created_at) VALUES (?,?,?,?,?,?,?,?,?)`), actorID, action, item.Code, targetID, "success", nullableText(requestID), nullableText(ip), "null", time.Now().UTC())
+	return err
+}
+
+func nullableText(value string) any {
+	if strings.TrimSpace(value) == "" {
+		return nil
+	}
+	return value
+}
+
 var identifierPattern = regexp.MustCompile(`^[a-z][a-z0-9_]*$`)
 var permissionPattern = regexp.MustCompile(`^[a-z][a-z0-9_.]*:[a-z][a-z0-9_]*$`)
 var fieldTypes = map[string]bool{"string": true, "text": true, "integer": true, "bigint": true, "boolean": true, "datetime": true, "json": true}

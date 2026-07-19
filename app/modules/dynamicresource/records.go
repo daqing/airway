@@ -13,6 +13,7 @@ import (
 )
 
 var ErrRecordNotFound = errors.New("record not found")
+var ErrRecordConflict = errors.New("record was modified by another request")
 
 func (s *Service) Published(ctx context.Context, code string) (Definition, error) {
 	var item Definition
@@ -59,22 +60,28 @@ func (s *Service) Provision(ctx context.Context, item Definition) error {
 	return err
 }
 
-func (s *Service) ListRecords(ctx context.Context, item Definition) ([]map[string]any, error) {
-	rows, err := s.db.Conn().QueryxContext(ctx, "SELECT * FROM "+quoteIdentifier(s.db.Driver(), item.TableName)+" ORDER BY "+quoteIdentifier(s.db.Driver(), "id")+" DESC")
+func (s *Service) ListRecords(ctx context.Context, item Definition, page, pageSize int) ([]map[string]any, int64, error) {
+	var total int64
+	if err := s.db.Conn().GetContext(ctx, &total, "SELECT COUNT(*) FROM "+quoteIdentifier(s.db.Driver(), item.TableName)); err != nil {
+		return nil, 0, err
+	}
+	offset := (page - 1) * pageSize
+	query := "SELECT * FROM " + quoteIdentifier(s.db.Driver(), item.TableName) + " ORDER BY " + quoteIdentifier(s.db.Driver(), "id") + " DESC LIMIT ? OFFSET ?"
+	rows, err := s.db.Conn().QueryxContext(ctx, s.db.Conn().Rebind(query), pageSize, offset)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	defer rows.Close()
 	result := make([]map[string]any, 0)
 	for rows.Next() {
 		values := map[string]any{}
 		if err := rows.MapScan(values); err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		normalizeRecord(values, item.Schema)
 		result = append(result, values)
 	}
-	return result, rows.Err()
+	return result, total, rows.Err()
 }
 
 func (s *Service) GetRecord(ctx context.Context, item Definition, id int64) (map[string]any, error) {
@@ -168,7 +175,7 @@ func (s *Service) UpdateRecord(ctx context.Context, item Definition, id int64, i
 		if _, getErr := s.GetRecord(ctx, item, id); errors.Is(getErr, ErrRecordNotFound) {
 			return nil, ErrRecordNotFound
 		}
-		return nil, ErrConflict
+		return nil, ErrRecordConflict
 	}
 	return s.GetRecord(ctx, item, id)
 }

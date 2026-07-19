@@ -2,6 +2,7 @@ package dynamic_resource_api
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -60,8 +61,16 @@ func (a *API) list(c *gin.Context) {
 	if !ok {
 		return
 	}
-	v, e := a.resources.ListRecords(c, item)
-	respond(c, v, e, 200)
+	page, pageSize, ok := pagination(c)
+	if !ok {
+		return
+	}
+	v, total, e := a.resources.ListRecords(c, item, page, pageSize)
+	if e != nil {
+		respond(c, nil, e, 200)
+		return
+	}
+	c.JSON(200, gin.H{"data": v, "meta": gin.H{"page": page, "page_size": pageSize, "total": total}, "error": nil})
 }
 func (a *API) get(c *gin.Context) {
 	item, ok := a.definition(c, "read")
@@ -86,6 +95,9 @@ func (a *API) create(c *gin.Context) {
 		return
 	}
 	v, e := a.resources.CreateRecord(c, item, body)
+	if e == nil {
+		audit(c, a.resources, "resource.record_create", item, fmt.Sprint(v["id"]))
+	}
 	respond(c, v, e, 201)
 }
 func (a *API) update(c *gin.Context) {
@@ -103,6 +115,9 @@ func (a *API) update(c *gin.Context) {
 		return
 	}
 	v, e := a.resources.UpdateRecord(c, item, id, body)
+	if e == nil {
+		audit(c, a.resources, "resource.record_update", item, strconv.FormatInt(id, 10))
+	}
 	respond(c, v, e, 200)
 }
 func (a *API) delete(c *gin.Context) {
@@ -116,6 +131,7 @@ func (a *API) delete(c *gin.Context) {
 	}
 	e := a.resources.DeleteRecord(c, item, id)
 	if e == nil {
+		audit(c, a.resources, "resource.record_delete", item, strconv.FormatInt(id, 10))
 		c.Status(http.StatusNoContent)
 		return
 	}
@@ -140,11 +156,41 @@ func respond(c *gin.Context, data any, err error, status int) {
 		fail(c, 422, "validation_failed", err.Error(), validation)
 	case errors.Is(err, dynamicresource.ErrRecordNotFound), errors.Is(err, dynamicresource.ErrNotFound):
 		fail(c, 404, "not_found", err.Error(), nil)
-	case errors.Is(err, dynamicresource.ErrConflict):
+	case errors.Is(err, dynamicresource.ErrConflict), errors.Is(err, dynamicresource.ErrRecordConflict):
 		fail(c, 409, "conflict", err.Error(), nil)
 	default:
 		fail(c, 500, "internal_error", "internal server error", nil)
 	}
+}
+
+func pagination(c *gin.Context) (int, int, bool) {
+	page, pageSize := 1, 20
+	var err error
+	if raw := c.Query("page"); raw != "" {
+		page, err = strconv.Atoi(raw)
+		if err != nil || page < 1 {
+			fail(c, 400, "invalid_pagination", "page must be a positive integer", nil)
+			return 0, 0, false
+		}
+	}
+	if raw := c.Query("page_size"); raw != "" {
+		pageSize, err = strconv.Atoi(raw)
+		if err != nil || pageSize < 1 {
+			fail(c, 400, "invalid_pagination", "page_size must be a positive integer", nil)
+			return 0, 0, false
+		}
+	}
+	if pageSize > 100 {
+		pageSize = 100
+	}
+	return page, pageSize, true
+}
+func audit(c *gin.Context, service *dynamicresource.Service, action string, item dynamicresource.Definition, targetID string) {
+	admin, ok := middleware.CurrentAdmin(c)
+	if !ok {
+		return
+	}
+	_ = service.Audit(c, admin.ID, action, item, targetID, c.GetHeader("X-Request-ID"), c.ClientIP())
 }
 func fail(c *gin.Context, status int, code, message string, details any) {
 	body := gin.H{"code": code, "message": message, "request_id": c.GetHeader("X-Request-ID")}

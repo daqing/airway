@@ -22,7 +22,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func setup(t *testing.T) (*gin.Engine, string) {
+func setup(t *testing.T) (*gin.Engine, *repo.DB, string) {
 	t.Helper()
 	db, err := repo.SetupDB("sqlite://:memory:")
 	if err != nil {
@@ -74,7 +74,7 @@ func setup(t *testing.T) (*gin.Engine, string) {
 	group := router.Group("/api/v1")
 	group.Use(middleware.Authenticate(identities))
 	dynamic_resource_api.Routes(group, runtimeResources, rbac.NewService(db))
-	return router, token
+	return router, db, token
 }
 func do(router *gin.Engine, method, path string, body any, token string) *httptest.ResponseRecorder {
 	var data []byte
@@ -92,7 +92,7 @@ func do(router *gin.Engine, method, path string, body any, token string) *httpte
 }
 
 func TestGeneratedCRUDAPI(t *testing.T) {
-	router, token := setup(t)
+	router, _, token := setup(t)
 	created := do(router, http.MethodPost, "/api/v1/resources/articles/records", map[string]any{"title": "First article", "views": 10, "published": false}, token)
 	if created.Code != 201 {
 		t.Fatalf("create expected 201, got %d: %s", created.Code, created.Body.String())
@@ -137,5 +137,73 @@ func TestGeneratedCRUDAPI(t *testing.T) {
 	missing := do(router, http.MethodGet, fmt.Sprintf("/api/v1/resources/articles/records/%d", id), nil, token)
 	if missing.Code != 404 {
 		t.Fatalf("deleted detail expected 404, got %d", missing.Code)
+	}
+}
+
+func TestFieldWhitelistPaginationConflictAndAudit(t *testing.T) {
+	router, db, token := setup(t)
+
+	unknown := do(router, http.MethodPost, "/api/v1/resources/articles/records", map[string]any{"title": "Invalid", "published": false, "unknown": "value"}, token)
+	if unknown.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("unknown field expected 422, got %d: %s", unknown.Code, unknown.Body.String())
+	}
+
+	now := time.Now().UTC()
+	for i := 0; i < 105; i++ {
+		if _, err := db.Conn().Exec(`INSERT INTO articles (title,views,published,lock_version,created_at,updated_at) VALUES (?,?,?,?,?,?)`, fmt.Sprintf("Article %d", i), i, false, 1, now, now); err != nil {
+			t.Fatal(err)
+		}
+	}
+	pageOne := do(router, http.MethodGet, "/api/v1/resources/articles/records?page_size=1000", nil, token)
+	if pageOne.Code != 200 {
+		t.Fatalf("page one: %d %s", pageOne.Code, pageOne.Body.String())
+	}
+	var pagePayload struct {
+		Data []map[string]any `json:"data"`
+		Meta struct {
+			Page     int `json:"page"`
+			PageSize int `json:"page_size"`
+			Total    int `json:"total"`
+		} `json:"meta"`
+	}
+	if err := json.Unmarshal(pageOne.Body.Bytes(), &pagePayload); err != nil {
+		t.Fatal(err)
+	}
+	if len(pagePayload.Data) != 100 || pagePayload.Meta.PageSize != 100 || pagePayload.Meta.Total != 105 {
+		t.Fatalf("unexpected capped page: len=%d meta=%#v", len(pagePayload.Data), pagePayload.Meta)
+	}
+	pageTwo := do(router, http.MethodGet, "/api/v1/resources/articles/records?page=2&page_size=100", nil, token)
+	_ = json.Unmarshal(pageTwo.Body.Bytes(), &pagePayload)
+	if len(pagePayload.Data) != 5 {
+		t.Fatalf("expected 5 records on second page, got %d", len(pagePayload.Data))
+	}
+
+	created := do(router, http.MethodPost, "/api/v1/resources/articles/records", map[string]any{"title": "Concurrent", "views": 1, "published": false}, token)
+	var recordPayload struct {
+		Data map[string]any `json:"data"`
+	}
+	_ = json.Unmarshal(created.Body.Bytes(), &recordPayload)
+	id := int64(recordPayload.Data["id"].(float64))
+	version := recordPayload.Data["lock_version"]
+	first := do(router, http.MethodPatch, fmt.Sprintf("/api/v1/resources/articles/records/%d", id), map[string]any{"title": "First update", "lock_version": version}, token)
+	if first.Code != 200 {
+		t.Fatalf("first update: %d %s", first.Code, first.Body.String())
+	}
+	stale := do(router, http.MethodPatch, fmt.Sprintf("/api/v1/resources/articles/records/%d", id), map[string]any{"title": "Stale update", "lock_version": version}, token)
+	if stale.Code != 409 {
+		t.Fatalf("stale update expected 409, got %d: %s", stale.Code, stale.Body.String())
+	}
+	deleted := do(router, http.MethodDelete, fmt.Sprintf("/api/v1/resources/articles/records/%d", id), nil, token)
+	if deleted.Code != 204 {
+		t.Fatalf("delete: %d", deleted.Code)
+	}
+
+	var actions []string
+	if err := db.Conn().Select(&actions, `SELECT action FROM audit_logs WHERE target_type='articles' ORDER BY id`); err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"resource.record_create", "resource.record_update", "resource.record_delete"}
+	if fmt.Sprint(actions) != fmt.Sprint(want) {
+		t.Fatalf("unexpected audit actions: %#v", actions)
 	}
 }
