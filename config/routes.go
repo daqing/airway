@@ -17,6 +17,7 @@ import (
 	"github.com/daqing/airway/app/modules/rbac"
 	"github.com/daqing/airway/app/websocket"
 	"github.com/daqing/airway/lib/repo"
+	_ "github.com/daqing/airway/plugins/systeminfo"
 	"github.com/gin-gonic/gin"
 )
 

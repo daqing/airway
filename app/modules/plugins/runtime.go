@@ -50,12 +50,37 @@ func (r *Runtime) Mount(parent *gin.RouterGroup) error {
 			return fmt.Errorf("persist plugin %s: %w", manifest.Name, err)
 		}
 	}
+	parent.GET("/plugin-menus", r.menuHandler)
 	return nil
 }
 func (r *Runtime) Menus() []pluginsdk.Menu {
 	r.menusMu.RLock()
 	defer r.menusMu.RUnlock()
 	return append([]pluginsdk.Menu{}, r.menus...)
+}
+
+func (r *Runtime) menuHandler(c *gin.Context) {
+	admin, ok := middleware.CurrentAdmin(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"data": nil, "error": gin.H{"code": "unauthenticated", "message": "authentication required"}})
+		return
+	}
+	menus := make([]pluginsdk.Menu, 0)
+	for _, menu := range r.Menus() {
+		if menu.Permission == "" {
+			menus = append(menus, menu)
+			continue
+		}
+		allowed, err := r.authorization.Allowed(c, admin, menu.Permission)
+		if err != nil {
+			c.JSON(500, gin.H{"data": nil, "error": gin.H{"code": "authorization_failed", "message": "authorization check failed"}})
+			return
+		}
+		if allowed {
+			menus = append(menus, menu)
+		}
+	}
+	c.JSON(http.StatusOK, gin.H{"data": menus, "error": nil})
 }
 
 func (r *Runtime) persist(ctx context.Context, manifest pluginsdk.Manifest) error {
