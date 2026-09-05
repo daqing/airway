@@ -29,6 +29,8 @@ Airway is both a **framework/library** and a **runnable application skeleton**:
   Cloudflare R2 or Tencent COS — selected purely by configuration, exposed via
   an HTTP upload/download API.
 - **Gin web server + WebSocket** pub/sub.
+- **HTML views with [templ](https://templ.guide/)**: pages as `.templ`
+  templates under `app/views/`, rendered from actions via `lib/render.HTML`.
 - **Scaffolding CLI** (`airway cli generate ...`, `db:migrate`, ...).
 - **Repo REPL** with typed scan and Go-expression evaluation.
 - **Optional sub-path prefix** (`URL_PREFIX`) for deploying behind a reverse
@@ -67,8 +69,8 @@ Or start the local dev server with live reload:
 just dev
 ```
 
-The app listens on `http://127.0.0.1:1900` (`GET /` returns `Hello, Airway!`,
-`GET /health` returns `UP`).
+The app listens on `http://127.0.0.1:1900` (`GET /` serves an HTML page
+rendered with templ, `GET /health` returns `UP`).
 
 ## Configuration
 
@@ -117,7 +119,7 @@ Registered in `config/routes.go`:
 
 | Method | Path | Description |
 | --- | --- | --- |
-| GET | `/` | Home page (plain text). |
+| GET | `/` | Home page (HTML, rendered from a templ view). |
 | GET | `/health` | Health check. |
 | GET | `/ws` | WebSocket connection. |
 | POST | `/ws/publish` | Publish a message to connected clients (form field `message`). |
@@ -136,6 +138,28 @@ curl -F "file=@report.pdf" http://127.0.0.1:1900/airway/api/v1/storage
 Clients — including WebSocket connections — must include the prefix
 (`ws://host:1900/airway/ws`). Local storage URLs returned by the API are
 prefixed accordingly; cloud/CDN URLs are untouched.
+
+## HTML views (templ)
+
+Pages are [templ](https://templ.guide/) templates under `app/views/`, one
+folder per API module — the folder name drops the `_api` suffix, so `home_api`
+renders `app/views/home/index.templ`. Each folder is its own package; a shared
+document shell lives in `app/views/layouts/base.templ`. Actions serve a
+component with the `lib/render` HTML helper:
+
+```go
+// app/api/home_api/index_action.go
+render.HTML(c, home.Index())
+```
+
+After editing any `.templ` file, regenerate the Go code and keep it committed:
+
+```bash
+go generate ./...   # or: just generate
+```
+
+The generated `*_templ.go` files are committed, so building and testing never
+require the templ CLI.
 
 ## CLI
 
@@ -381,5 +405,6 @@ set `URL_PREFIX` (e.g. `/airway`) — see [HTTP endpoints](#http-endpoints).
 ## Guides
 
 - [CLI scaffolding guide](docs/cli.md) · [文件存储指南](docs/storage.md)
+- [templ views guide](docs/template.md)
 - [SQL Builder DSL 指南（中文）](docs/zh-CN/sql-builder.md)
 - [中文文档](docs/zh-CN/README.md)

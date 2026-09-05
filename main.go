@@ -42,7 +42,7 @@ func main() {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	dsn := utils.GetEnvOr("AIRWAY_DSN", "DSN")
+	dsn := utils.GetEnvMulti("AIRWAY_DSN", "DSN")
 
 	if len(dsn) > 0 {
 		if _, setupErr := repo.SetupDB(dsn); setupErr != nil {
@@ -51,7 +51,7 @@ func main() {
 		}
 	}
 
-	redisURL := utils.GetEnvOr("AIRWAY_REDIS", "REDIS")
+	redisURL := utils.GetEnvMulti("AIRWAY_REDIS", "REDIS")
 	if len(redisURL) > 0 {
 		redis_client.Setup(redisURL)
 	}
