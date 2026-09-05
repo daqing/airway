@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -261,7 +262,7 @@ DROP TABLE posts;
 `)
 
 	makeDirs(t, filepath.Join(wd, "tmp"))
-	t.Setenv("AIRWAY_DB_DSN", "sqlite://./tmp/test.sqlite3")
+	t.Setenv("AIRWAY_DB_DSN", "sqlite://./tmp/test.sqlite")
 	t.Setenv("AIRWAY_PG", "")
 
 	manager, err := newMigrationManagerFromEnv()
@@ -275,7 +276,7 @@ DROP TABLE posts;
 	}
 
 	var count int
-	if err := manager.db.Conn().Get(&count, "SELECT COUNT(*) FROM posts"); err != nil {
+	if err := manager.db.Conn().QueryRowContext(context.Background(), "SELECT COUNT(*) FROM posts").Scan(&count); err != nil {
 		t.Fatalf("count posts after migrate: %v", err)
 	}
 
@@ -297,7 +298,7 @@ DROP TABLE posts;
 		t.Fatalf("rollback: %v", err)
 	}
 
-	if err := manager.db.Conn().Get(&count, "SELECT COUNT(*) FROM schema_migrations"); err != nil {
+	if err := manager.db.Conn().QueryRowContext(context.Background(), "SELECT COUNT(*) FROM schema_migrations").Scan(&count); err != nil {
 		t.Fatalf("count schema_migrations after rollback: %v", err)
 	}
 
@@ -305,7 +306,7 @@ DROP TABLE posts;
 		t.Fatalf("expected no applied migrations after rollback, got %d", count)
 	}
 
-	if err := manager.db.Conn().Get(&count, "SELECT COUNT(*) FROM posts"); err == nil {
+	if err := manager.db.Conn().QueryRowContext(context.Background(), "SELECT COUNT(*) FROM posts").Scan(&count); err == nil {
 		t.Fatal("expected posts table to be removed after rollback")
 	}
 }
@@ -328,7 +329,7 @@ func TestMigrationManagerSupportsDSLMigrationOnSQLite(t *testing.T) {
 		})
 	})
 
-	t.Setenv("AIRWAY_DB_DSN", "sqlite://./tmp/dsl.sqlite3")
+	t.Setenv("AIRWAY_DB_DSN", "sqlite://./tmp/dsl.sqlite")
 	t.Setenv("AIRWAY_PG", "")
 
 	manager, err := newMigrationManagerFromEnv()
@@ -342,7 +343,7 @@ func TestMigrationManagerSupportsDSLMigrationOnSQLite(t *testing.T) {
 	}
 
 	var count int
-	if err := manager.db.Conn().Get(&count, "SELECT COUNT(*) FROM schema_migrations WHERE version = ?", "20260327130000"); err != nil {
+	if err := manager.db.Conn().QueryRowContext(context.Background(), "SELECT COUNT(*) FROM schema_migrations WHERE version = ?", "20260327130000").Scan(&count); err != nil {
 		t.Fatalf("check schema_migrations: %v", err)
 	}
 	if count != 1 {
@@ -357,7 +358,7 @@ func TestMigrationManagerSupportsDSLMigrationOnSQLite(t *testing.T) {
 		t.Fatalf("rollback dsl migration: %v", err)
 	}
 
-	if err := manager.db.Conn().Get(&count, "SELECT COUNT(*) FROM widgets"); err == nil {
+	if err := manager.db.Conn().QueryRowContext(context.Background(), "SELECT COUNT(*) FROM widgets").Scan(&count); err == nil {
 		t.Fatal("expected widgets table to be removed after DSL rollback")
 	}
 }
@@ -386,7 +387,7 @@ func TestMigrationManagerSupportsReferencesAndForeignKeysOnSQLite(t *testing.T) 
 		})
 	})
 
-	t.Setenv("AIRWAY_DB_DSN", "sqlite://./tmp/refs.sqlite3")
+	t.Setenv("AIRWAY_DB_DSN", "sqlite://./tmp/refs.sqlite")
 	t.Setenv("AIRWAY_PG", "")
 
 	manager, err := newMigrationManagerFromEnv()
@@ -400,7 +401,7 @@ func TestMigrationManagerSupportsReferencesAndForeignKeysOnSQLite(t *testing.T) 
 	}
 
 	var createSQL string
-	if err := manager.db.Conn().Get(&createSQL, `SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'users'`); err != nil {
+	if err := manager.db.Conn().QueryRowContext(context.Background(), `SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'users'`).Scan(&createSQL); err != nil {
 		t.Fatalf("read users table sql: %v", err)
 	}
 
@@ -409,7 +410,7 @@ func TestMigrationManagerSupportsReferencesAndForeignKeysOnSQLite(t *testing.T) 
 	}
 
 	var indexSQL string
-	if err := manager.db.Conn().Get(&indexSQL, `SELECT sql FROM sqlite_master WHERE type = 'index' AND name = 'idx_users_account_id'`); err != nil {
+	if err := manager.db.Conn().QueryRowContext(context.Background(), `SELECT sql FROM sqlite_master WHERE type = 'index' AND name = 'idx_users_account_id'`).Scan(&indexSQL); err != nil {
 		t.Fatalf("read users index sql: %v", err)
 	}
 
@@ -441,7 +442,7 @@ func TestMigrationManagerSupportsRenameAndStandaloneIndexesOnSQLite(t *testing.T
 		m.AddIndex("members", "login_email").Unique().Name("members_login_email_unique_idx")
 	})
 
-	t.Setenv("AIRWAY_DB_DSN", "sqlite://./tmp/rename.sqlite3")
+	t.Setenv("AIRWAY_DB_DSN", "sqlite://./tmp/rename.sqlite")
 	t.Setenv("AIRWAY_PG", "")
 
 	manager, err := newMigrationManagerFromEnv()
@@ -455,7 +456,7 @@ func TestMigrationManagerSupportsRenameAndStandaloneIndexesOnSQLite(t *testing.T
 	}
 
 	var createSQL string
-	if err := manager.db.Conn().Get(&createSQL, `SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'members'`); err != nil {
+	if err := manager.db.Conn().QueryRowContext(context.Background(), `SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'members'`).Scan(&createSQL); err != nil {
 		t.Fatalf("read members table sql: %v", err)
 	}
 	if !strings.Contains(createSQL, `"login_email" TEXT NOT NULL`) {
@@ -463,7 +464,7 @@ func TestMigrationManagerSupportsRenameAndStandaloneIndexesOnSQLite(t *testing.T
 	}
 
 	var indexCount int
-	if err := manager.db.Conn().Get(&indexCount, `SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name = 'members_login_email_unique_idx'`); err != nil {
+	if err := manager.db.Conn().QueryRowContext(context.Background(), `SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name = 'members_login_email_unique_idx'`).Scan(&indexCount); err != nil {
 		t.Fatalf("read renamed index count: %v", err)
 	}
 	if indexCount != 1 {
@@ -500,7 +501,7 @@ func TestMigrationManagerSupportsSQLiteRemoveColumnViaRebuild(t *testing.T) {
 		},
 	)
 
-	t.Setenv("AIRWAY_DB_DSN", "sqlite://./tmp/remove-column.sqlite3")
+	t.Setenv("AIRWAY_DB_DSN", "sqlite://./tmp/remove-column.sqlite")
 	t.Setenv("AIRWAY_PG", "")
 
 	manager, err := newMigrationManagerFromEnv()
@@ -514,7 +515,7 @@ func TestMigrationManagerSupportsSQLiteRemoveColumnViaRebuild(t *testing.T) {
 	}
 
 	var createSQL string
-	if err := manager.db.Conn().Get(&createSQL, `SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'profiles'`); err != nil {
+	if err := manager.db.Conn().QueryRowContext(context.Background(), `SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'profiles'`).Scan(&createSQL); err != nil {
 		t.Fatalf("read profiles table sql: %v", err)
 	}
 	if strings.Contains(createSQL, `"nickname"`) {
@@ -525,7 +526,7 @@ func TestMigrationManagerSupportsSQLiteRemoveColumnViaRebuild(t *testing.T) {
 		t.Fatalf("rollback remove column DSL: %v", err)
 	}
 
-	if err := manager.db.Conn().Get(&createSQL, `SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'profiles'`); err != nil {
+	if err := manager.db.Conn().QueryRowContext(context.Background(), `SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'profiles'`).Scan(&createSQL); err != nil {
 		t.Fatalf("read profiles table sql after rollback: %v", err)
 	}
 	if !strings.Contains(createSQL, `"nickname" TEXT`) {
@@ -566,7 +567,7 @@ func TestMigrationManagerSupportsSQLiteAddAndRemoveForeignKeyViaRebuild(t *testi
 		},
 	)
 
-	t.Setenv("AIRWAY_DB_DSN", "sqlite://./tmp/fk-rebuild.sqlite3")
+	t.Setenv("AIRWAY_DB_DSN", "sqlite://./tmp/fk-rebuild.sqlite")
 	t.Setenv("AIRWAY_PG", "")
 
 	manager, err := newMigrationManagerFromEnv()
@@ -580,7 +581,7 @@ func TestMigrationManagerSupportsSQLiteAddAndRemoveForeignKeyViaRebuild(t *testi
 	}
 
 	var createSQL string
-	if err := manager.db.Conn().Get(&createSQL, `SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'users'`); err != nil {
+	if err := manager.db.Conn().QueryRowContext(context.Background(), `SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'users'`).Scan(&createSQL); err != nil {
 		t.Fatalf("read users table sql after fk add: %v", err)
 	}
 	if !strings.Contains(createSQL, `CONSTRAINT "users_account_fk" FOREIGN KEY ("account_id") REFERENCES "accounts" ("id") ON DELETE CASCADE`) &&
@@ -592,7 +593,7 @@ func TestMigrationManagerSupportsSQLiteAddAndRemoveForeignKeyViaRebuild(t *testi
 		t.Fatalf("rollback add foreign key DSL: %v", err)
 	}
 
-	if err := manager.db.Conn().Get(&createSQL, `SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'users'`); err != nil {
+	if err := manager.db.Conn().QueryRowContext(context.Background(), `SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'users'`).Scan(&createSQL); err != nil {
 		t.Fatalf("read users table sql after fk rollback: %v", err)
 	}
 	if strings.Contains(createSQL, `FOREIGN KEY ("account_id") REFERENCES "accounts" ("id")`) {
@@ -627,7 +628,7 @@ func TestMigrationManagerSupportsSQLiteSetNullAndDefaultViaRebuild(t *testing.T)
 		},
 	)
 
-	t.Setenv("AIRWAY_DB_DSN", "sqlite://./tmp/set-null-default.sqlite3")
+	t.Setenv("AIRWAY_DB_DSN", "sqlite://./tmp/set-null-default.sqlite")
 	t.Setenv("AIRWAY_PG", "")
 
 	manager, err := newMigrationManagerFromEnv()
@@ -641,7 +642,7 @@ func TestMigrationManagerSupportsSQLiteSetNullAndDefaultViaRebuild(t *testing.T)
 	}
 
 	var createSQL string
-	if err := manager.db.Conn().Get(&createSQL, `SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'settings'`); err != nil {
+	if err := manager.db.Conn().QueryRowContext(context.Background(), `SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'settings'`).Scan(&createSQL); err != nil {
 		t.Fatalf("read settings table sql: %v", err)
 	}
 	if !strings.Contains(createSQL, `"name" TEXT NOT NULL`) {
@@ -655,7 +656,7 @@ func TestMigrationManagerSupportsSQLiteSetNullAndDefaultViaRebuild(t *testing.T)
 		t.Fatalf("rollback set null/default DSL: %v", err)
 	}
 
-	if err := manager.db.Conn().Get(&createSQL, `SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'settings'`); err != nil {
+	if err := manager.db.Conn().QueryRowContext(context.Background(), `SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'settings'`).Scan(&createSQL); err != nil {
 		t.Fatalf("read settings table sql after rollback: %v", err)
 	}
 	if strings.Contains(createSQL, `"name" TEXT NOT NULL`) {
@@ -681,7 +682,7 @@ func TestMigrationManagerWritesSchemaSnapshotAfterDSLMigrateAndRollback(t *testi
 		})
 	})
 
-	t.Setenv("AIRWAY_DB_DSN", "sqlite://./tmp/snapshot.sqlite3")
+	t.Setenv("AIRWAY_DB_DSN", "sqlite://./tmp/snapshot.sqlite")
 	t.Setenv("AIRWAY_PG", "")
 
 	manager, err := newMigrationManagerFromEnv()
@@ -717,10 +718,10 @@ func TestCLISchemaDumpUsesCurrentDatabaseSchema(t *testing.T) {
 	makeDirs(t, filepath.Join(wd, "tmp"))
 	makeDirs(t, filepath.Join(wd, "db"))
 
-	t.Setenv("AIRWAY_DB_DSN", "sqlite://./tmp/live-schema.sqlite3")
+	t.Setenv("AIRWAY_DB_DSN", "sqlite://./tmp/live-schema.sqlite")
 	t.Setenv("AIRWAY_PG", "")
 
-	db, err := repo.NewDB("sqlite://./tmp/live-schema.sqlite3")
+	db, err := repo.NewDB("sqlite://./tmp/live-schema.sqlite")
 	if err != nil {
 		t.Fatalf("new db: %v", err)
 	}

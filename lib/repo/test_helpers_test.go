@@ -130,7 +130,7 @@ func insertTodoRow(t *testing.T, db *DB, tableName string, title string, complet
 	}
 
 	var id int64
-	if err := db.conn.QueryRowxContext(context.Background(), query, title, completed).Scan(&id); err != nil {
+	if err := db.conn.QueryRowContext(context.Background(), query, title, completed).Scan(&id); err != nil {
 		t.Fatalf("insert seed row: %v", err)
 	}
 
@@ -142,7 +142,7 @@ func countRows(t *testing.T, db *DB, tableName string) int {
 
 	query := fmt.Sprintf("SELECT COUNT(*) FROM %s", quoteTestIdentifierForDriver(db.Driver(), tableName))
 	var count int
-	if err := db.conn.QueryRowxContext(context.Background(), query).Scan(&count); err != nil {
+	if err := db.conn.QueryRowContext(context.Background(), query).Scan(&count); err != nil {
 		t.Fatalf("count rows: %v", err)
 	}
 
@@ -180,7 +180,7 @@ func requirePostgresTestDB(t *testing.T) *DB {
 func requireSQLiteTestDB(t *testing.T) *DB {
 	t.Helper()
 
-	db, err := NewDBWithDriver("sqlite3", ":memory:")
+	db, err := NewDBWithDriver("sqlite", ":memory:")
 	if err != nil {
 		t.Fatalf("create sqlite test db: %v", err)
 	}

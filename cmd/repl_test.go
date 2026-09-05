@@ -211,8 +211,8 @@ func TestRepoREPLSupportsGenericRepoDeleteCalls(t *testing.T) {
 func newTestREPL(t *testing.T) *repoREPL {
 	t.Helper()
 
-	dbPath := filepath.Join(t.TempDir(), "repo-repl.sqlite3")
-	setupDB, err := sql.Open("sqlite3", dbPath)
+	dbPath := filepath.Join(t.TempDir(), "repo-repl.sqlite")
+	setupDB, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		t.Fatalf("open setup db: %v", err)
 	}
@@ -233,7 +233,7 @@ CREATE TABLE users (
 		t.Fatalf("create table: %v", err)
 	}
 
-	repoDB, err := repo.NewDBWithDriver("sqlite3", dbPath)
+	repoDB, err := repo.NewDBWithDriver("sqlite", dbPath)
 	if err != nil {
 		t.Fatalf("open repo db: %v", err)
 	}

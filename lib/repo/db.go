@@ -2,6 +2,7 @@ package repo
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"net/url"
 	"strings"
@@ -9,8 +10,8 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/jmoiron/sqlx"
-	_ "github.com/mattn/go-sqlite3"
+
+	_ "modernc.org/sqlite"
 )
 
 type Driver string
@@ -18,12 +19,12 @@ type Driver string
 const (
 	DriverPostgres Driver = "pgx"
 	DriverMySQL    Driver = "mysql"
-	DriverSQLite   Driver = "sqlite3"
+	DriverSQLite   Driver = "sqlite"
 )
 
 type DB struct {
 	driver Driver
-	conn   *sqlx.DB
+	conn   *sql.DB
 }
 
 func NewDB(dsn string) (*DB, error) {
@@ -36,7 +37,7 @@ func NewDBWithDriver(driverName string, dsn string) (*DB, error) {
 		return nil, err
 	}
 
-	conn, err := sqlx.Open(string(driver), normalizedDSN)
+	conn, err := sql.Open(string(driver), normalizedDSN)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +71,7 @@ func (db *DB) Close() error {
 	return db.conn.Close()
 }
 
-func (db *DB) Conn() *sqlx.DB {
+func (db *DB) Conn() *sql.DB {
 	if db == nil {
 		return nil
 	}
@@ -78,7 +79,7 @@ func (db *DB) Conn() *sqlx.DB {
 	return db.conn
 }
 
-func configurePool(driver Driver, conn *sqlx.DB) {
+func configurePool(driver Driver, conn *sql.DB) {
 	switch driver {
 	case DriverSQLite:
 		conn.SetMaxOpenConns(1)
@@ -122,7 +123,7 @@ func normalizeDriver(driverName string) (Driver, error) {
 		return DriverPostgres, nil
 	case "mysql", "mysql8", "mysql8.4":
 		return DriverMySQL, nil
-	case "sqlite", "sqlite3":
+	case "sqlite":
 		return DriverSQLite, nil
 	default:
 		return "", fmt.Errorf("unsupported database driver: %s", driverName)
@@ -137,13 +138,13 @@ func detectDriverFromDSN(dsn string) Driver {
 		return DriverPostgres
 	case strings.HasPrefix(lowerDSN, "mysql://"):
 		return DriverMySQL
-	case strings.HasPrefix(lowerDSN, "sqlite://"), strings.HasPrefix(lowerDSN, "sqlite3://"):
+	case strings.HasPrefix(lowerDSN, "sqlite://"):
 		return DriverSQLite
 	case strings.HasPrefix(lowerDSN, "file:"), lowerDSN == ":memory:":
 		return DriverSQLite
 	case strings.Contains(lowerDSN, "@tcp("), strings.Contains(lowerDSN, "@unix("), strings.Contains(lowerDSN, ")/"):
 		return DriverMySQL
-	case strings.HasSuffix(lowerDSN, ".db"), strings.HasSuffix(lowerDSN, ".sqlite"), strings.HasSuffix(lowerDSN, ".sqlite3"):
+	case strings.HasSuffix(lowerDSN, ".db"), strings.HasSuffix(lowerDSN, ".sqlite"):
 		return DriverSQLite
 	case strings.Contains(lowerDSN, "host="), strings.Contains(lowerDSN, "user="), strings.Contains(lowerDSN, "dbname="):
 		return DriverPostgres
@@ -167,8 +168,6 @@ func normalizeDSN(driver Driver, dsn string) string {
 	switch {
 	case strings.HasPrefix(lowerDSN, "sqlite://"):
 		return dsn[len("sqlite://"):]
-	case strings.HasPrefix(lowerDSN, "sqlite3://"):
-		return dsn[len("sqlite3://"):]
 	default:
 		return dsn
 	}
@@ -218,4 +217,31 @@ func normalizeMySQLDSN(dsn string) string {
 	}
 
 	return dsn + "?parseTime=true"
+}
+
+// rebind translates `?` placeholders into the driver-native bind style.
+// Postgres uses $N dollar placeholders; MySQL and SQLite keep `?`.
+func (db *DB) rebind(query string) string {
+	if db == nil || db.driver != DriverPostgres {
+		return query
+	}
+
+	var builder strings.Builder
+	builder.Grow(len(query) + 8)
+	position := 0
+
+	for {
+		idx := strings.Index(query, "?")
+		if idx == -1 {
+			builder.WriteString(query)
+			break
+		}
+
+		builder.WriteString(query[:idx])
+		position++
+		builder.WriteString(fmt.Sprintf("$%d", position))
+		query = query[idx+1:]
+	}
+
+	return builder.String()
 }

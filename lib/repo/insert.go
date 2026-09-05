@@ -38,15 +38,16 @@ func insertSkipExists[T any](db *DB, b buildersql.Stmt, skipExists bool) (*T, er
 		return nil, err
 	}
 
-	rows, err := db.conn.QueryxContext(context.Background(), query, args...)
+	rows, err := db.conn.QueryContext(context.Background(), query, args...)
 	if err != nil {
 		return nil, err
 	}
 
 	defer rows.Close()
 
+	rowScanner := newStructScanner(rows)
 	for rows.Next() {
-		if err := rows.StructScan(&t); err != nil {
+		if err := rowScanner.Scan(&t); err != nil {
 			return nil, err
 		}
 	}
@@ -81,7 +82,7 @@ func insertMySQL[T any](db *DB, b buildersql.Stmt) (*T, error) {
 	}
 
 	var record T
-	if err := db.conn.GetContext(context.Background(), &record, compiledQuery, compiledArgs...); err != nil {
+	if err := getStruct(context.Background(), db.conn, &record, compiledQuery, compiledArgs...); err != nil {
 		return nil, err
 	}
 
@@ -159,9 +160,8 @@ func (db *DB) lookupPrimaryKeyColumn(tableName string) (string, error) {
 	}
 
 	var primaryKey string
-	err := db.conn.GetContext(
+	err := db.conn.QueryRowContext(
 		context.Background(),
-		&primaryKey,
 		`SELECT COLUMN_NAME
 FROM information_schema.KEY_COLUMN_USAGE
 WHERE TABLE_SCHEMA = DATABASE()
@@ -170,7 +170,7 @@ WHERE TABLE_SCHEMA = DATABASE()
 ORDER BY ORDINAL_POSITION
 LIMIT 1`,
 		cleanTable,
-	)
+	).Scan(&primaryKey)
 	if err != nil {
 		return "", err
 	}

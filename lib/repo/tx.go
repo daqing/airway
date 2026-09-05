@@ -2,14 +2,13 @@ package repo
 
 import (
 	"context"
-
-	"github.com/jmoiron/sqlx"
+	"database/sql"
 )
 
-func Tx(db *DB, fn func(tx *sqlx.Tx) error) error {
+func Tx(db *DB, fn func(tx *sql.Tx) error) error {
 	ctx := context.Background()
 
-	tx, err := db.conn.BeginTxx(ctx, nil)
+	tx, err := db.conn.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}

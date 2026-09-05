@@ -13,9 +13,9 @@ The project supports PostgreSQL, SQLite 3, and MySQL 8 from the same codebase; t
 
 ## Tech Stack
 
-- **Language:** Go 1.26 (module `github.com/daqing/airway`); CGO required (for `mattn/go-sqlite3`).
+- **Language:** Go 1.26 (module `github.com/daqing/airway`); pure-Go SQLite driver (`modernc.org/sqlite`).
 - **HTTP framework:** Gin (`gin-gonic/gin`), with `gin-contrib/cors`.
-- **Database access:** `jmoiron/sqlx` on top of `jackc/pgx/v5` (PostgreSQL), `go-sql-driver/mysql`, `mattn/go-sqlite3`.
+- **Database access:** `database/sql` on top of `jackc/pgx/v5/stdlib` (PostgreSQL), `go-sql-driver/mysql`, `modernc.org/sqlite`.
 - **WebSocket:** `gorilla/websocket`.
 - **Cache/queue (optional):** `redis/go-redis/v9`.
 - **Cloud storage (optional):** `minio/minio-go/v7` (S3-compatible: S3, Cloudflare R2, Tencent COS).
@@ -65,7 +65,7 @@ Prerequisites: copy `.env.example` to `.env` and set `AIRWAY_DB_DSN` and `AIRWAY
 ```bash
 just dev                 # Start dev server with live reload (overmind + air, AIRWAY_ENV=local)
 go run .                 # Run the HTTP server directly (requires AIRWAY_ENV and .env)
-go build -o ./bin/airway .  # Build binary (CGO_ENABLED=1 needed for sqlite3)
+go build -o ./bin/airway .  # Build binary (pure-Go SQLite driver)
 go test ./...            # Run the test suite
 go vet ./...             # Lint
 ```
@@ -129,7 +129,7 @@ All configuration is via environment variables (see `.env.example`):
 
 ## Deployment
 
-- **Docker:** multi-stage `Dockerfile` (golang:1.26-alpine builder with CGO for sqlite3, alpine runtime). Build with `just docker` or `docker build -t airway .`. The image sets `AIRWAY_ENV=production`, exposes port `1900`, and copies `db/` into the image. Note the Dockerfile rewrites apk and Go module proxies to Chinese mirrors (tuna, goproxy.cn).
+- **Docker:** multi-stage `Dockerfile` (golang:1.26-alpine builder, alpine runtime; pure-Go build). Build with `just docker` or `docker build -t airway .`. The image sets `AIRWAY_ENV=production`, exposes port `1900`, and copies `db/` into the image. Note the Dockerfile points the Go module proxy at goproxy.cn (Chinese mirror).
 - **docker-compose:** see `docs/docker-compose.yml.example`.
 - The binary is self-contained; run migrations with `./airway cli db:migrate` before/after deploy as needed.
 

@@ -69,7 +69,7 @@ func detectDriverForDrop(dsn string) repo.Driver {
 		return repo.DriverPostgres
 	case strings.HasPrefix(lowerDSN, "mysql://"):
 		return repo.DriverMySQL
-	case strings.HasPrefix(lowerDSN, "sqlite://"), strings.HasPrefix(lowerDSN, "sqlite3://"):
+	case strings.HasPrefix(lowerDSN, "sqlite://"):
 		return repo.DriverSQLite
 	case strings.HasPrefix(lowerDSN, "file:"), lowerDSN == ":memory:":
 		return repo.DriverSQLite
@@ -77,7 +77,7 @@ func detectDriverForDrop(dsn string) repo.Driver {
 		return repo.DriverMySQL
 	case strings.Contains(lowerDSN, "host="), strings.Contains(lowerDSN, "user="), strings.Contains(lowerDSN, "dbname="):
 		return repo.DriverPostgres
-	case strings.HasSuffix(lowerDSN, ".db"), strings.HasSuffix(lowerDSN, ".sqlite"), strings.HasSuffix(lowerDSN, ".sqlite3"):
+	case strings.HasSuffix(lowerDSN, ".db"), strings.HasSuffix(lowerDSN, ".sqlite"):
 		return repo.DriverSQLite
 	default:
 		return ""
@@ -89,8 +89,6 @@ func normalizeSQLitePath(dsn string) string {
 	switch {
 	case strings.HasPrefix(lowerDSN, "sqlite://"):
 		return dsn[len("sqlite://"):]
-	case strings.HasPrefix(lowerDSN, "sqlite3://"):
-		return dsn[len("sqlite3://"):]
 	default:
 		return dsn
 	}

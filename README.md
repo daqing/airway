@@ -449,7 +449,7 @@ go run . repl
 Or point it at a different database explicitly:
 
 ```bash
-go run . repl --driver sqlite3 --dsn ./tmp/airway.db
+go run . repl --driver sqlite --dsn ./tmp/airway.db
 go run . repl --dsn sqlite://./tmp/airway.db
 ```
 

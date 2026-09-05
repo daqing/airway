@@ -2,12 +2,12 @@ package repo
 
 import (
 	"context"
+	sqlstd "database/sql"
 	"errors"
 	"fmt"
 	"testing"
 
 	"github.com/daqing/airway/lib/sql"
-	"github.com/jmoiron/sqlx"
 )
 
 func TestCountAndExists(t *testing.T) {
@@ -75,9 +75,9 @@ func TestFindOneBehaviors(t *testing.T) {
 func TestTransactionCommitAndRollback(t *testing.T) {
 	forEachPortableTestDB(t, func(t *testing.T, db *DB) {
 		tableName := createTodoTable(t, db)
-		insertSQL := db.conn.Rebind(fmt.Sprintf("INSERT INTO %s (title, completed) VALUES (?, ?)", quoteTestIdentifierForDriver(db.Driver(), tableName)))
+		insertSQL := db.rebind(fmt.Sprintf("INSERT INTO %s (title, completed) VALUES (?, ?)", quoteTestIdentifierForDriver(db.Driver(), tableName)))
 
-		if err := Tx(db, func(tx *sqlx.Tx) error {
+		if err := Tx(db, func(tx *sqlstd.Tx) error {
 			_, err := tx.ExecContext(context.Background(), insertSQL, "committed", false)
 			return err
 		}); err != nil {
@@ -85,7 +85,7 @@ func TestTransactionCommitAndRollback(t *testing.T) {
 		}
 
 		rollbackErr := errors.New("force rollback")
-		err := Tx(db, func(tx *sqlx.Tx) error {
+		err := Tx(db, func(tx *sqlstd.Tx) error {
 			if _, execErr := tx.ExecContext(context.Background(), insertSQL, "rolled-back", true); execErr != nil {
 				return execErr
 			}

@@ -32,16 +32,17 @@ func Find[T any](db *DB, b buildersql.Stmt) ([]*T, error) {
 		return nil, err
 	}
 
-	rows, err := db.conn.QueryxContext(context.Background(), query, args...)
+	rows, err := db.conn.QueryContext(context.Background(), query, args...)
 	if err != nil {
 		return nil, err
 	}
 
 	defer rows.Close()
 
+	rowScanner := newStructScanner(rows)
 	for rows.Next() {
 		var record T
-		if err := rows.StructScan(&record); err != nil {
+		if err := rowScanner.Scan(&record); err != nil {
 			return nil, err
 		}
 		records = append(records, &record)
