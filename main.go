@@ -42,17 +42,17 @@ func main() {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	dsn, err := utils.GetEnv("AIRWAY_DB_DSN")
+	dsn := utils.GetEnvOr("AIRWAY_DSN", "DSN")
 
-	if err == nil {
+	if len(dsn) > 0 {
 		if _, setupErr := repo.SetupDB(dsn); setupErr != nil {
 			log.Printf("database setup failed: %v", setupErr)
 			os.Exit(3)
 		}
 	}
 
-	redisURL, err := utils.GetEnv("AIRWAY_REDIS")
-	if err == nil {
+	redisURL := utils.GetEnvOr("AIRWAY_REDIS", "REDIS")
+	if len(redisURL) > 0 {
 		redis_client.Setup(redisURL)
 	}
 
@@ -77,6 +77,6 @@ func loadCLIEnv() {
 }
 
 func runApp() {
-	app := NewApp("Airway", utils.GetEnvMust("AIRWAY_PORT"))
+	app := NewApp("Airway", utils.GetEnvOr("AIRWAY_PORT", "PORT"))
 	app.Run()
 }

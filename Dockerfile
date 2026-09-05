@@ -12,7 +12,7 @@ COPY --from=builder /app/bin/airway /app
 COPY --from=builder /app/db /app/db
 
 ENV AIRWAY_ENV=production
-ENV AIRWAY_PORT=1900
+ENV PORT=1900
 ENV TZ="Asia/Shanghai"
 
 EXPOSE 1900

@@ -22,3 +22,12 @@ func GetEnvMust(key string) string {
 
 	return val
 }
+
+func GetEnvOr(firstKey string, secondKey string) string {
+	data, err := GetEnv(firstKey)
+	if err != nil {
+		return GetEnvMust(secondKey)
+	}
+
+	return data
+}
