@@ -123,6 +123,23 @@ func TestUploadDownloadDeleteFlow(t *testing.T) {
 	}
 }
 
+func TestUploadURLRespectsPublicPrefix(t *testing.T) {
+	t.Setenv("AIRWAY_URL_PREFIX", "")
+	t.Setenv("URL_PREFIX", "/airway")
+
+	r := setupTestRouter(t)
+
+	uploaded := uploadFile(t, r, "prefix.txt", "prefixed url")
+	key, _ := uploaded["key"].(string)
+	if key == "" {
+		t.Fatalf("upload response missing key: %#v", uploaded)
+	}
+
+	if url, _ := uploaded["url"].(string); url != "/airway"+apiPrefix+"/"+key {
+		t.Fatalf("unexpected url with public prefix: %q", url)
+	}
+}
+
 func TestUploadWithoutFile(t *testing.T) {
 	r := setupTestRouter(t)
 

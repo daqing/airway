@@ -51,6 +51,13 @@ func UploadAction(c *gin.Context) {
 		url = ""
 	}
 
+	// Local storage returns a server-relative path (starting with "/"), which
+	// must carry the public sub-path prefix when the app is deployed under one.
+	// Cloud backends return absolute CDN/presigned URLs and are left unchanged.
+	if url != "" && strings.HasPrefix(url, "/") {
+		url = utils.URLPrefix() + url
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"key":  key,
 		"url":  url,

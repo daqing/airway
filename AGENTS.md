@@ -124,6 +124,7 @@ All configuration is via environment variables (see `.env.example`):
 - `AIRWAY_DB_DSN` — database URL; driver inferred from scheme: `postgres://...`, `sqlite://./tmp/airway.db`, `sqlite://:memory:`, `mysql://...` (native Go MySQL driver DSN format also accepted).
 - `AIRWAY_REDIS` — optional Redis URL.
 - `AIRWAY_PORT` — listen port (default example: `1900`).
+- `URL_PREFIX` — optional public sub-path prefix (e.g. `/airway`) under which the app is served behind a reverse proxy; empty means the root. `AIRWAY_URL_PREFIX` is accepted as an alias.
 - `STORAGE_DRIVER` — `local` (default), `s3`, `r2`, or `cos`; with `STORAGE_ROOT` for local, or `STORAGE_BUCKET` / `STORAGE_ACCESS_KEY` / `STORAGE_SECRET_KEY` / `STORAGE_REGION` / `STORAGE_ENDPOINT` / optional `STORAGE_PUBLIC_URL` (CDN base; disables presigned URLs) for cloud drivers.
 - `TZ` — server timezone (e.g. `Asia/Shanghai`).
 

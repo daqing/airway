@@ -82,6 +82,17 @@ The port to listen on.
 
 Example: `1900`
 
+**URL_PREFIX**
+
+Optional sub-path prefix under which the app is served, for deployments behind a
+reverse proxy, e.g. `http://host:1900/airway/api/v1/...`. Leave unset (or empty)
+to serve at the root. `AIRWAY_URL_PREFIX` is accepted as an alias.
+
+Example: `/airway`
+
+Note: when set, clients — including WebSocket connections — must include the
+prefix (e.g. `ws://host:1900/airway/ws`).
+
 **TZ**
 
 The timezone of the server
