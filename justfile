@@ -19,5 +19,7 @@ generate-watch:
 templ-fmt:
   go tool templ fmt app/views
 
-docker:
-  docker build -t airway .
+build-on-mac:
+  GOOS=linux GOARCH=amd64 go build .
+  podman build -t airway -f Dockerfile.mac
+
