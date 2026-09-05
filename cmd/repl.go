@@ -93,7 +93,7 @@ func openREPLDB(driver string, dsn string) (*repo.DB, error) {
 		return db, nil
 	}
 
-	return nil, fmt.Errorf("database is not configured; set AIRWAY_DB_DSN or pass --dsn")
+	return nil, fmt.Errorf("database is not configured; set DSN (or AIRWAY_DSN) or pass --dsn")
 }
 
 func (r repoREPL) execute(line string) (bool, error) {
