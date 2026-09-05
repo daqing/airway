@@ -165,10 +165,11 @@ go run . cli db:status
 
 迁移相关命令读取数据库连接串的顺序为：
 
-1. `AIRWAY_DB_DSN`
-2. 兼容旧项目时回退到 `AIRWAY_PG`
+1. `AIRWAY_DSN`
+2. `DSN`
+3. 兼容旧项目时依次回退到 `AIRWAY_DB_DSN`、`AIRWAY_PG`
 
-在本地开发场景下，这些环境变量通常可以直接写在项目根目录的 `.env` 文件里，`airway cli ...` 会自动读取。
+在本地开发场景下，`airway cli ...` 会自动加载项目根目录的 `.env` 文件，因此通常直接把 `DSN` 写在 `.env` 里即可。
 迁移命令会复用 Airway 当前 DSN 所对应的数据库类型，因此支持项目当前支持的 PostgreSQL、MySQL 和 SQLite。
 
 ## 安装插件到其他 Airway 项目

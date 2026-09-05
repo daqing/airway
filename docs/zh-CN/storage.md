@@ -76,8 +76,12 @@ import "github.com/daqing/airway/lib/storage"
 store := storage.Current()
 ctx := context.Background()
 
-// 存储文件
-err := store.Put(ctx, "docs/report.pdf", reader, size, "application/pdf")
+// 存储文件（需提供大小与 Content-Type）
+err := store.Put(ctx, "docs/report.pdf", storage.Object{
+	Reader:      reader,
+	Size:        size,
+	ContentType: "application/pdf",
+})
 
 // 读取文件（调用方负责关闭）
 rc, err := store.Get(ctx, "docs/report.pdf")
@@ -97,7 +101,7 @@ err := store.Delete(ctx, "docs/report.pdf")
 
 ```go
 type Storage interface {
-    Put(ctx context.Context, key string, r io.Reader, size int64, contentType string) error
+    Put(ctx context.Context, key string, obj Object) error // Object{Reader, Size, ContentType}
     Get(ctx context.Context, key string) (io.ReadCloser, error)
     Delete(ctx context.Context, key string) error
     Exists(ctx context.Context, key string) (bool, error)
@@ -107,8 +111,8 @@ type Storage interface {
 
 行为说明：
 
-- **key** 是以 `/` 分隔的相对路径，例如 `docs/202607/report.pdf`。空 key、绝对路径和包含 `..` 的 key 会被拒绝，用户输入无法逃逸出存储根目录。
-- **URL()** 按后端区分：`local` 返回应用自身的下载路径（`/api/v1/storage/<key>`）；云存储驱动在配置了 `STORAGE_PUBLIC_URL` 时返回 `公共域名/<key>`，否则返回有效期为 `expires` 的预签名 GET URL。
+- **key** 是以 `/` 分隔的相对路径，例如 `docs/202609/report.pdf`。空 key、绝对路径和包含 `..` 的 key 会被拒绝，用户输入无法逃逸出存储根目录。
+- **URL()** 按后端区分：`local` 返回应用自身的下载路径（`/api/v1/storage/<key>`）；云存储驱动在配置了 `STORAGE_PUBLIC_URL` 时返回 `公共域名/<key>`，否则返回有效期为 `expires` 的预签名 GET URL。当应用配置了 `URL_PREFIX`（例如 `/airway`）时，HTTP 接口返回的本地下载 URL 会自动带上该前缀。
 - **Delete** 是幂等的：删除不存在的 key 不会报错。
 
 ## 3. HTTP API
@@ -132,8 +136,8 @@ curl -F "file=@report.pdf" -F "dir=docs" http://127.0.0.1:1900/api/v1/storage
 
 ```json
 {
-  "key": "docs/202607/8f3a2b1c9d4e5f6a.pdf",
-  "url": "/api/v1/storage/docs/202607/8f3a2b1c9d4e5f6a.pdf",
+  "key": "docs/202609/8f3a2b1c9d4e5f6a.pdf",
+  "url": "/api/v1/storage/docs/202609/8f3a2b1c9d4e5f6a.pdf",
   "size": 12345
 }
 ```
@@ -143,7 +147,7 @@ curl -F "file=@report.pdf" -F "dir=docs" http://127.0.0.1:1900/api/v1/storage
 ### 下载 — `GET /api/v1/storage/<key>`
 
 ```bash
-curl -O http://127.0.0.1:1900/api/v1/storage/docs/202607/8f3a2b1c9d4e5f6a.pdf
+curl -O http://127.0.0.1:1900/api/v1/storage/docs/202609/8f3a2b1c9d4e5f6a.pdf
 ```
 
 返回文件内容，Content-Type 按扩展名推断；key 不存在时返回 `404`。
@@ -151,13 +155,13 @@ curl -O http://127.0.0.1:1900/api/v1/storage/docs/202607/8f3a2b1c9d4e5f6a.pdf
 ### 删除 — `DELETE /api/v1/storage/<key>`
 
 ```bash
-curl -X DELETE http://127.0.0.1:1900/api/v1/storage/docs/202607/8f3a2b1c9d4e5f6a.pdf
+curl -X DELETE http://127.0.0.1:1900/api/v1/storage/docs/202609/8f3a2b1c9d4e5f6a.pdf
 ```
 
 响应 `200 OK`：
 
 ```json
-{"deleted": "docs/202607/8f3a2b1c9d4e5f6a.pdf"}
+{"deleted": "docs/202609/8f3a2b1c9d4e5f6a.pdf"}
 ```
 
 ## 4. 测试
