@@ -111,10 +111,12 @@ DSN="root:passwd@tcp(127.0.0.1:3306)/airway?charset=utf8mb4&parseTime=true"
 | GET | `/api/v1/storage/*key` | 下载文件。 |
 | DELETE | `/api/v1/storage/*key` | 删除文件。 |
 
-当设置了 `URL_PREFIX` 时，以上所有端点也会在前缀路径下提供服务。例如设置 `URL_PREFIX="/airway"`：
+当设置了 `URL_PREFIX` 时，公开路由（首页、WebSocket、API）只会在该前缀下提供服务，
+而不会在根路径响应；健康检查同时仍会在不带前缀的根路径上响应，方便负载均衡探活。例如设置 `URL_PREFIX="/airway"`：
 
 ```bash
 curl http://127.0.0.1:1900/airway/health
+curl http://127.0.0.1:1900/health          # 仍可响应（探活）
 curl -F "file=@report.pdf" http://127.0.0.1:1900/airway/api/v1/storage
 ```
 

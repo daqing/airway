@@ -127,11 +127,14 @@ Registered in `config/routes.go`:
 | GET | `/api/v1/storage/*key` | Download a file. |
 | DELETE | `/api/v1/storage/*key` | Delete a file. |
 
-When `URL_PREFIX` is set, all of these are also served under the prefix. For
-example with `URL_PREFIX="/airway"`:
+When `URL_PREFIX` is set, the public routes — home page, WebSocket, and API —
+are served only under that prefix, not at the root. The health check also stays
+reachable at the bare root, so load-balancer probes can hit `/health` without
+the prefix. For example with `URL_PREFIX="/airway"`:
 
 ```bash
 curl http://127.0.0.1:1900/airway/health
+curl http://127.0.0.1:1900/health          # still answers (probe)
 curl -F "file=@report.pdf" http://127.0.0.1:1900/airway/api/v1/storage
 ```
 
