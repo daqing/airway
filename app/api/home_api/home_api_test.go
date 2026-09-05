@@ -28,10 +28,19 @@ func TestIndexActionRendersHomePage(t *testing.T) {
 	}
 
 	body := w.Body.String()
-	// The h1 carries a templ-generated class, so match the text and closing tag
-	// rather than a bare <h1> tag. height:100vh + flex is the full-viewport
-	// centering rule from the indexPage CSS class.
-	for _, want := range []string{"<title>Airway</title>", ">Airway works!</h1>", "height:100vh", "display:flex"} {
+	for _, want := range []string{
+		"<title>Airway — The full-stack Go web framework</title>",
+		"Less setup.",
+		"THE FULL-STACK GO WEB FRAMEWORK",
+		"id=\"features\"",
+		"id=\"get-started\"",
+		"PostgreSQL",
+		"MySQL 8",
+		"SQLite",
+		"Cloudflare R2",
+		"WebSocket",
+		"REPL",
+	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("expected body to contain %q, got %q", want, body)
 		}

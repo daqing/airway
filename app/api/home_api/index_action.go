@@ -1,8 +1,6 @@
 package home_api
 
 import (
-	"time"
-
 	"github.com/gin-gonic/gin"
 
 	"github.com/daqing/airway/app/views/home"
@@ -10,7 +8,5 @@ import (
 )
 
 func IndexAction(c *gin.Context) {
-	render.HTML(c,
-		home.Index("Airway works!", time.Now().String()),
-	)
+	render.HTML(c, home.Index())
 }

@@ -6,13 +6,20 @@ package layouts
 //	@layouts.Base("My Title") {
 //		<p>Page body…</p>
 //	}
-templ Base(title string) {
+templ Base(title string, description ...string) {
 	<!DOCTYPE html>
 	<html lang="en">
 		<head>
 			<meta charset="utf-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
 			<title>{ title }</title>
+			if len(description) > 0 {
+				<meta name="description" content={ description[0] }/>
+				<meta property="og:title" content={ title }/>
+				<meta property="og:description" content={ description[0] }/>
+				<meta property="og:type" content="website"/>
+				<meta name="theme-color" content="#101319"/>
+			}
 			<style>
 			  body {
           position: relative;

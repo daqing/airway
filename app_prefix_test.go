@@ -26,8 +26,8 @@ func TestNewAppServesPublicRoutesUnderURLPrefix(t *testing.T) {
 		path    string
 		wantSub string
 	}{
-		{"prefixed home with trailing slash", "/airway/", "Airway works!"},
-		{"prefixed home without trailing slash", "/airway", "Airway works!"},
+		{"prefixed home with trailing slash", "/airway/", "Less setup."},
+		{"prefixed home without trailing slash", "/airway", "Less setup."},
 		{"prefixed health", "/airway/health", "UP"},
 		{"unprefixed health stays reachable", "/health", "UP"},
 	}
@@ -85,7 +85,7 @@ func TestNewAppWithoutPrefixServesEverythingAtRoot(t *testing.T) {
 		path    string
 		wantSub string
 	}{
-		{"/", "Airway works!"},
+		{"/", "Less setup."},
 		{"/health", "UP"},
 	} {
 		w := httptest.NewRecorder()
