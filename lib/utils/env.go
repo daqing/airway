@@ -5,10 +5,12 @@ import (
 	"os"
 )
 
+const EMPTY_STRING = ""
+
 func GetEnv(key string) (string, error) {
 	v := TrimFull(os.Getenv(key))
-	if v == "" {
-		return "", fmt.Errorf("%s must be set", key)
+	if v == EMPTY_STRING {
+		return EMPTY_STRING, fmt.Errorf("%s must be set", key)
 	}
 
 	return v, nil
@@ -21,6 +23,19 @@ func GetEnvMust(key string) string {
 	}
 
 	return val
+}
+
+func GetEnvMulti(keys ...string) string {
+	for _, key := range keys {
+		data, err := GetEnv(key)
+		if err == nil {
+			return data
+		}
+
+		continue
+	}
+
+	return EMPTY_STRING
 }
 
 func GetEnvOr(firstKey string, secondKey string) string {

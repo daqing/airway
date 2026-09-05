@@ -15,6 +15,7 @@ The project supports PostgreSQL, SQLite 3, and MySQL 8 from the same codebase; t
 
 - **Language:** Go 1.26 (module `github.com/daqing/airway`); pure-Go SQLite driver (`modernc.org/sqlite`).
 - **HTTP framework:** Gin (`gin-gonic/gin`), with `gin-contrib/cors`.
+- **HTML views:** [templ](https://templ.guide/) templates under `app/views`, compiled to Go and rendered via `lib/render.HTML`. Generated `*_templ.go` files are committed.
 - **Database access:** `database/sql` on top of `jackc/pgx/v5/stdlib` (PostgreSQL), `go-sql-driver/mysql`, `modernc.org/sqlite`.
 - **WebSocket:** `gorilla/websocket`.
 - **Cache/queue (optional):** `redis/go-redis/v9`.
@@ -26,6 +27,8 @@ The project supports PostgreSQL, SQLite 3, and MySQL 8 from the same codebase; t
 ```
 main.go          Entry point. Dispatches to CLI commands or runs the HTTP server.
 app.go           App struct: builds the Gin engine, middleware, routes.
+generate.go      Holds the //go:generate directive that regenerates *_templ.go
+                 from the .templ views under app/views.
 config/          Route registration. config/routes.go wires all app API modules.
 app/
   api/           HTTP API modules, one package per namespace (e.g. health_api,
@@ -34,6 +37,9 @@ app/
   services/      Business-logic layer (currently empty; use `cli generate service`).
   middlewares/   HTTP middlewares (currently empty).
   websocket/     WebSocket hub, connections, publish endpoint.
+  views/         Server-rendered HTML pages as templ templates, one folder per
+                 API module (e.g. app/views/home/index.templ for home_api).
+                 Each folder is its own package; *_templ.go is committed.
 cmd/             CLI commands: scaffolding generators, db create/drop/migrate/
                  rollback/status, schema dump/show, plugin install, upload, REPL,
                  version.
@@ -49,7 +55,7 @@ lib/
   storage/       Unified file storage (local, s3, r2, cos). Access via
                  storage.Current() after boot.
   redis_client/  Redis setup helper.
-  render/        JSON response helpers (ok, error, found).
+  render/        Response helpers: JSON (ok, error, found) and HTML via templ.
   utils/         Env/config helpers, password hashing, tokens, dates, markdown.
   validation/    Input validation helpers.
 docs/            Guides: cli.md, storage.md, docker-compose.yml.example,
@@ -68,7 +74,10 @@ go run .                 # Run the HTTP server directly (requires AIRWAY_ENV and
 go build -o ./bin/airway .  # Build binary (pure-Go SQLite driver)
 go test ./...            # Run the test suite
 go vet ./...             # Lint
+go generate ./...        # Regenerate *_templ.go from the .templ views (just generate)
 ```
+
+The generated `*_templ.go` files are committed, so plain `go build`/`go test` never need the templ CLI; run `go generate ./...` after editing any `.templ` view and commit the refreshed output.
 
 Other `just` recipes: `just install-deps` (installs air, tmux, overmind), `just docker` (builds the Docker image).
 
@@ -102,6 +111,7 @@ Migration and schema commands read `AIRWAY_DB_DSN` first and fall back to the le
 - **API modules** (`app/api/<name>_api/`): one package per namespace. `routes.go` exposes `Routes(r *gin.RouterGroup)`; handlers live in `<action>_action.go` as `func XxxAction(c *gin.Context)`. New modules must be wired into `config/routes.go`.
 - **Data access:** prefer the generics API in `lib/repo` (`repo.FindBy[T]`, `repo.CreateFrom[T]`, `repo.UpdateByID[T]`, `repo.DeleteByID[T]`, `repo.Preload(...)`, `repo.Join(...)`) and the `lib/sql` builder for conditions (`sql.Eq`, `sql.And`, `sql.Gt`, ...). Use `repo.Preload` instead of hand-written loops to avoid N+1 queries.
 - **Responses:** use the `lib/render` helpers rather than hand-rolled JSON.
+- **HTML views:** server-rendered pages live under `app/views/<module>/` as templ files, one folder per API module (e.g. `app/views/home/` for `home_api`); a shared shell lives in `app/views/layouts/`. Actions render them with `render.HTML(c, view.Component())` (see `home_api`). Re-run `go generate ./...` when you edit a `.templ` file and keep the generated `*_templ.go`.
 - **Storage:** always go through `storage.Current()` — never touch local disk or cloud SDKs directly.
 - **Globals at boot:** `main.go` initializes the DB (`repo.SetupDB`), Redis (`redis_client.Setup`), and storage (`storage.Setup`) from environment variables; packages then use their `Current*()` accessors.
 - **Naming:** environment variables are prefixed `AIRWAY_`; CLI subcommands follow the Rails-like `db:migrate` / `schema:dump` style.

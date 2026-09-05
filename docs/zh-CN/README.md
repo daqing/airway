@@ -4,6 +4,7 @@
 
 - **[English README](../README.md)**
 - **[CLI 脚手架指南](cli.md)** / **[文件存储指南](storage.md)**
+- **[视图模板指南（templ）](template.md)**
 - **[SQL Builder DSL 指南](sql-builder.md)**
 
 ## Airway 是什么
@@ -351,5 +352,6 @@ Compose 示例见 [docs/docker-compose.yml.example](../docker-compose.yml.exampl
 ## 更多指南
 
 - [CLI 脚手架指南](cli.md) · [文件存储指南](storage.md)
+- [视图模板指南（templ）](template.md)
 - [SQL Builder DSL 指南](sql-builder.md)
 - [English README](../README.md)
