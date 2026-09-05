@@ -49,7 +49,7 @@ func (db *DB) prepareQuery(query string, vals buildersql.NamedArgs) (string, []a
 		return "", nil, err
 	}
 
-	return db.conn.Rebind(compiledQuery), args, nil
+	return db.rebind(compiledQuery), args, nil
 }
 
 func compileNamedQuery(query string, vals buildersql.NamedArgs) (string, []any, error) {

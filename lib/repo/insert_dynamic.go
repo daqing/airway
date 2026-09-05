@@ -22,7 +22,7 @@ func InsertByType(db *DB, b buildersql.Stmt, modelType reflect.Type) (any, error
 		return nil, err
 	}
 
-	rows, err := db.conn.QueryxContext(context.Background(), query, args...)
+	rows, err := db.conn.QueryContext(context.Background(), query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -30,8 +30,9 @@ func InsertByType(db *DB, b buildersql.Stmt, modelType reflect.Type) (any, error
 	defer rows.Close()
 
 	record := reflect.New(modelType)
+	rowScanner := newStructScanner(rows)
 	for rows.Next() {
-		if err := rows.StructScan(record.Interface()); err != nil {
+		if err := rowScanner.Scan(record.Interface()); err != nil {
 			return nil, err
 		}
 	}
@@ -66,7 +67,7 @@ func insertMySQLByType(db *DB, b buildersql.Stmt, modelType reflect.Type) (any, 
 	}
 
 	record := reflect.New(modelType)
-	if err := db.conn.GetContext(context.Background(), record.Interface(), compiledQuery, compiledArgs...); err != nil {
+	if err := getStruct(context.Background(), db.conn, record.Interface(), compiledQuery, compiledArgs...); err != nil {
 		return nil, err
 	}
 

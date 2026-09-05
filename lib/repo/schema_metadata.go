@@ -126,17 +126,16 @@ func inspectSQLiteTable(db *DB, tableName string) (*schema.TableState, error) {
 	table := &schema.TableState{Name: tableName}
 
 	createSQL := ""
-	if err := db.Conn().GetContext(
+	if err := db.Conn().QueryRowContext(
 		ctx,
-		&createSQL,
-		db.Conn().Rebind(`SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?`),
+		db.rebind(`SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?`),
 		tableName,
-	); err != nil {
+	).Scan(&createSQL); err != nil {
 		return nil, err
 	}
 
 	columnRows := []sqliteColumnRow{}
-	if err := db.Conn().SelectContext(ctx, &columnRows, fmt.Sprintf("PRAGMA table_info(%s)", quoteSQLiteIdentifier(tableName))); err != nil {
+	if err := selectStructs(ctx, db.Conn(), &columnRows, fmt.Sprintf("PRAGMA table_info(%s)", quoteSQLiteIdentifier(tableName))); err != nil {
 		return nil, err
 	}
 
@@ -158,7 +157,7 @@ func inspectSQLiteTable(db *DB, tableName string) (*schema.TableState, error) {
 	}
 
 	indexRows := []sqliteIndexRow{}
-	if err := db.Conn().SelectContext(ctx, &indexRows, fmt.Sprintf("PRAGMA index_list(%s)", quoteSQLiteIdentifier(tableName))); err != nil {
+	if err := selectStructs(ctx, db.Conn(), &indexRows, fmt.Sprintf("PRAGMA index_list(%s)", quoteSQLiteIdentifier(tableName))); err != nil {
 		return nil, err
 	}
 
@@ -168,7 +167,7 @@ func inspectSQLiteTable(db *DB, tableName string) (*schema.TableState, error) {
 		}
 
 		indexColumns := []sqliteIndexColumnRow{}
-		if err := db.Conn().SelectContext(ctx, &indexColumns, fmt.Sprintf("PRAGMA index_info(%s)", quoteSQLiteIdentifier(row.Name))); err != nil {
+		if err := selectStructs(ctx, db.Conn(), &indexColumns, fmt.Sprintf("PRAGMA index_info(%s)", quoteSQLiteIdentifier(row.Name))); err != nil {
 			return nil, err
 		}
 
@@ -191,7 +190,7 @@ func inspectSQLiteTable(db *DB, tableName string) (*schema.TableState, error) {
 	}
 
 	foreignKeyRows := []sqliteForeignKeyRow{}
-	if err := db.Conn().SelectContext(ctx, &foreignKeyRows, fmt.Sprintf("PRAGMA foreign_key_list(%s)", quoteSQLiteIdentifier(tableName))); err != nil {
+	if err := selectStructs(ctx, db.Conn(), &foreignKeyRows, fmt.Sprintf("PRAGMA foreign_key_list(%s)", quoteSQLiteIdentifier(tableName))); err != nil {
 		return nil, err
 	}
 
@@ -214,12 +213,12 @@ func inspectMySQLTable(db *DB, tableName string) (*schema.TableState, error) {
 	table := &schema.TableState{Name: tableName}
 
 	columnRows := []mysqlColumnRow{}
-	columnQuery := db.Conn().Rebind(`SELECT COLUMN_NAME AS column_name, DATA_TYPE AS data_type, COLUMN_TYPE AS column_type, IS_NULLABLE AS is_nullable, COLUMN_DEFAULT AS column_default, COLUMN_KEY AS column_key, EXTRA AS extra
+	columnQuery := db.rebind(`SELECT COLUMN_NAME AS column_name, DATA_TYPE AS data_type, COLUMN_TYPE AS column_type, IS_NULLABLE AS is_nullable, COLUMN_DEFAULT AS column_default, COLUMN_KEY AS column_key, EXTRA AS extra
 FROM information_schema.columns
 WHERE TABLE_SCHEMA = DATABASE()
   AND TABLE_NAME = ?
 ORDER BY ORDINAL_POSITION`)
-	if err := db.Conn().SelectContext(ctx, &columnRows, columnQuery, tableName); err != nil {
+	if err := selectStructs(ctx, db.Conn(), &columnRows, columnQuery, tableName); err != nil {
 		return nil, err
 	}
 
@@ -260,7 +259,7 @@ func inspectPostgresTable(db *DB, tableName string) (*schema.TableState, error) 
 	table := &schema.TableState{Name: tableName}
 
 	columnRows := []pgColumnRow{}
-	columnQuery := db.Conn().Rebind(`SELECT column_name,
+	columnQuery := db.rebind(`SELECT column_name,
        data_type,
        udt_name,
        COALESCE(character_maximum_length, 0) AS character_maximum_length,
@@ -272,7 +271,7 @@ FROM information_schema.columns
 WHERE table_schema = CURRENT_SCHEMA()
   AND table_name = ?
 ORDER BY ordinal_position`)
-	if err := db.Conn().SelectContext(ctx, &columnRows, columnQuery, tableName); err != nil {
+	if err := selectStructs(ctx, db.Conn(), &columnRows, columnQuery, tableName); err != nil {
 		return nil, err
 	}
 
@@ -311,7 +310,7 @@ ORDER BY ordinal_position`)
 func inspectInformationSchemaIndexes(db *DB, tableName string) ([]schema.Index, map[string]bool, error) {
 	ctx := context.Background()
 	rows := []indexRow{}
-	query := db.Conn().Rebind(`SELECT INDEX_NAME AS index_name,
+	query := db.rebind(`SELECT INDEX_NAME AS index_name,
        COLUMN_NAME AS column_name,
        (NON_UNIQUE = 0) AS is_unique,
        (INDEX_NAME = 'PRIMARY') AS is_primary,
@@ -320,7 +319,7 @@ FROM information_schema.STATISTICS
 WHERE TABLE_SCHEMA = DATABASE()
   AND TABLE_NAME = ?
 ORDER BY INDEX_NAME, SEQ_IN_INDEX`)
-	if err := db.Conn().SelectContext(ctx, &rows, query, tableName); err != nil {
+	if err := selectStructs(ctx, db.Conn(), &rows, query, tableName); err != nil {
 		return nil, nil, err
 	}
 
@@ -330,7 +329,7 @@ ORDER BY INDEX_NAME, SEQ_IN_INDEX`)
 func inspectPostgresIndexes(db *DB, tableName string) ([]schema.Index, map[string]bool, error) {
 	ctx := context.Background()
 	rows := []indexRow{}
-	query := db.Conn().Rebind(`SELECT idx.index_name,
+	query := db.rebind(`SELECT idx.index_name,
        idx.column_name,
        idx.is_unique,
        idx.is_primary,
@@ -352,7 +351,7 @@ FROM (
     AND t.relname = ?
 ) AS idx
 ORDER BY idx.index_name, idx.seq_in_index`)
-	if err := db.Conn().SelectContext(ctx, &rows, query, tableName); err != nil {
+	if err := selectStructs(ctx, db.Conn(), &rows, query, tableName); err != nil {
 		return nil, nil, err
 	}
 
@@ -362,7 +361,7 @@ ORDER BY idx.index_name, idx.seq_in_index`)
 func inspectMySQLForeignKeys(db *DB, tableName string) ([]schema.ForeignKey, error) {
 	ctx := context.Background()
 	rows := []foreignKeyRow{}
-	query := db.Conn().Rebind(`SELECT kcu.CONSTRAINT_NAME AS constraint_name,
+	query := db.rebind(`SELECT kcu.CONSTRAINT_NAME AS constraint_name,
        kcu.COLUMN_NAME AS column_name,
        kcu.REFERENCED_TABLE_NAME AS referenced_table_name,
        kcu.REFERENCED_COLUMN_NAME AS referenced_column_name,
@@ -377,7 +376,7 @@ WHERE kcu.TABLE_SCHEMA = DATABASE()
   AND kcu.TABLE_NAME = ?
   AND kcu.REFERENCED_TABLE_NAME IS NOT NULL
 ORDER BY kcu.CONSTRAINT_NAME, kcu.ORDINAL_POSITION`)
-	if err := db.Conn().SelectContext(ctx, &rows, query, tableName); err != nil {
+	if err := selectStructs(ctx, db.Conn(), &rows, query, tableName); err != nil {
 		return nil, err
 	}
 
@@ -387,7 +386,7 @@ ORDER BY kcu.CONSTRAINT_NAME, kcu.ORDINAL_POSITION`)
 func inspectPostgresForeignKeys(db *DB, tableName string) ([]schema.ForeignKey, error) {
 	ctx := context.Background()
 	rows := []foreignKeyRow{}
-	query := db.Conn().Rebind(`SELECT tc.constraint_name,
+	query := db.rebind(`SELECT tc.constraint_name,
        kcu.column_name,
        ccu.table_name AS referenced_table_name,
        ccu.column_name AS referenced_column_name,
@@ -408,7 +407,7 @@ WHERE tc.constraint_type = 'FOREIGN KEY'
   AND tc.table_schema = CURRENT_SCHEMA()
   AND tc.table_name = ?
 ORDER BY tc.constraint_name, kcu.ordinal_position`)
-	if err := db.Conn().SelectContext(ctx, &rows, query, tableName); err != nil {
+	if err := selectStructs(ctx, db.Conn(), &rows, query, tableName); err != nil {
 		return nil, err
 	}
 

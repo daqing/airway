@@ -40,6 +40,8 @@ func runCLI(args []string) error {
 		return runCLIDBCreate(xargs)
 	case "plugin", "plugin:install":
 		return runCLIPlugin(command, xargs)
+	case "upload":
+		return runUpload(xargs)
 	case "help", "-h", "--help":
 		printCLIUsage(os.Stdout)
 		return nil
@@ -71,15 +73,15 @@ func runCLIPlugin(command string, args []string) error {
 }
 
 func cliDSN() (string, error) {
-	if dsn, err := utils.GetEnv("AIRWAY_DB_DSN"); err == nil {
-		return dsn, nil
+	// Prefer the same scheme as the server: AIRWAY_DSN, then the short DSN.
+	// AIRWAY_DB_DSN and AIRWAY_PG remain supported for backward compatibility.
+	for _, key := range []string{"AIRWAY_DSN", "DSN", "AIRWAY_DB_DSN", "AIRWAY_PG"} {
+		if dsn, err := utils.GetEnv(key); err == nil {
+			return dsn, nil
+		}
 	}
 
-	if dsn, err := utils.GetEnv("AIRWAY_PG"); err == nil {
-		return dsn, nil
-	}
-
-	return "", fmt.Errorf("database dsn is not configured; set AIRWAY_DB_DSN (preferred) or AIRWAY_PG")
+	return "", fmt.Errorf("database dsn is not configured; set DSN (or AIRWAY_DSN)")
 }
 
 func printCLIUsage(w io.Writer) {
@@ -93,6 +95,7 @@ func printCLIUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "  airway cli plugin install /path/to/project")
 	_, _ = fmt.Fprintln(w, "  airway cli schema:dump")
 	_, _ = fmt.Fprintln(w, "  airway cli schema:show")
+	_, _ = fmt.Fprintln(w, "  airway cli upload [key] /path/to/file")
 }
 
 func printCLIGenerateUsage(w io.Writer) {

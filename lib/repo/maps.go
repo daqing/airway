@@ -2,9 +2,9 @@ package repo
 
 import (
 	"context"
+	"database/sql"
 
 	buildersql "github.com/daqing/airway/lib/sql"
-	"github.com/jmoiron/sqlx"
 )
 
 func Preview(db *DB, b buildersql.Stmt) (string, []any, error) {
@@ -34,7 +34,7 @@ func FindMaps(db *DB, b buildersql.Stmt) ([]map[string]any, error) {
 		return nil, err
 	}
 
-	rows, err := db.conn.QueryxContext(context.Background(), query, args...)
+	rows, err := db.conn.QueryContext(context.Background(), query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +54,7 @@ func InsertMap(db *DB, b buildersql.Stmt) (map[string]any, error) {
 		return nil, err
 	}
 
-	rows, err := db.conn.QueryxContext(context.Background(), query, args...)
+	rows, err := db.conn.QueryContext(context.Background(), query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +99,7 @@ func insertMySQLMap(db *DB, b buildersql.Stmt) (map[string]any, error) {
 		return nil, err
 	}
 
-	rows, err := db.conn.QueryxContext(context.Background(), compiledQuery, compiledArgs...)
+	rows, err := db.conn.QueryContext(context.Background(), compiledQuery, compiledArgs...)
 	if err != nil {
 		return nil, err
 	}
@@ -118,13 +118,28 @@ func insertMySQLMap(db *DB, b buildersql.Stmt) (map[string]any, error) {
 	return records[0], nil
 }
 
-func scanMapRows(rows *sqlx.Rows) ([]map[string]any, error) {
+func scanMapRows(rows *sql.Rows) ([]map[string]any, error) {
+	columns, err := rows.Columns()
+	if err != nil {
+		return nil, err
+	}
+
 	records := make([]map[string]any, 0)
 
 	for rows.Next() {
-		record := map[string]any{}
-		if err := rows.MapScan(record); err != nil {
+		raw := make([]any, len(columns))
+		dest := make([]any, len(columns))
+		for i := range raw {
+			dest[i] = &raw[i]
+		}
+
+		if err := rows.Scan(dest...); err != nil {
 			return nil, err
+		}
+
+		record := make(map[string]any, len(columns))
+		for i, column := range columns {
+			record[column] = raw[i]
 		}
 
 		records = append(records, normalizeRecord(record))

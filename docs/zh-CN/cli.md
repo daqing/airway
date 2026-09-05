@@ -26,6 +26,25 @@ airway cli generate [action|api|model|migration|service|cmd] [params]
 airway cli plugin install /path/to/project
 airway cli schema:dump
 airway cli schema:show
+airway cli upload /path/to/file
+```
+
+## 上传文件
+
+使用 `.env` 中的 storage 配置上传本地文件：
+
+```bash
+airway cli upload /tmp/foo.png
+```
+
+源文件路径会转换为相对于存储根目录的 key。上例的 key 是 `tmp/foo.png`，
+命令输出中显示为 `/tmp/foo.png`。文件大小来自文件信息；Content-Type 优先
+根据扩展名确定，无法确定时再检测文件内容。
+
+如果需要明确指定 storage key，可以把 key 放在本地文件路径之前：
+
+```bash
+airway cli upload images/foo.png /tmp/foo.png
 ```
 
 ## 代码生成命令
@@ -146,10 +165,11 @@ go run . cli db:status
 
 迁移相关命令读取数据库连接串的顺序为：
 
-1. `AIRWAY_DB_DSN`
-2. 兼容旧项目时回退到 `AIRWAY_PG`
+1. `AIRWAY_DSN`
+2. `DSN`
+3. 兼容旧项目时依次回退到 `AIRWAY_DB_DSN`、`AIRWAY_PG`
 
-在本地开发场景下，这些环境变量通常可以直接写在项目根目录的 `.env` 文件里，`airway cli ...` 会自动读取。
+在本地开发场景下，`airway cli ...` 会自动加载项目根目录的 `.env` 文件，因此通常直接把 `DSN` 写在 `.env` 里即可。
 迁移命令会复用 Airway 当前 DSN 所对应的数据库类型，因此支持项目当前支持的 PostgreSQL、MySQL 和 SQLite。
 
 ## 安装插件到其他 Airway 项目
@@ -250,7 +270,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/daqing/airway/app/api/post_api"
-	"github.com/daqing/airway/app/api/up_api"
+	"github.com/daqing/airway/app/api/health_api"
 	"github.com/daqing/airway/app/websocket"
 )
 ```

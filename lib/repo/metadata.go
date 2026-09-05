@@ -26,8 +26,22 @@ WHERE table_schema = CURRENT_SCHEMA()
 ORDER BY table_name`
 	}
 
+	rows, err := db.conn.QueryContext(context.Background(), query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
 	tables := []string{}
-	if err := db.conn.SelectContext(context.Background(), &tables, query); err != nil {
+	for rows.Next() {
+		var table string
+		if err := rows.Scan(&table); err != nil {
+			return nil, err
+		}
+		tables = append(tables, table)
+	}
+
+	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 

@@ -211,7 +211,7 @@ func (p *Preloader) fetchRelatedRecords(config *preloadRelConfig, pks []int64, c
 		return nil, err
 	}
 
-	rows, err := p.db.conn.QueryxContext(context.Background(), p.db.conn.Rebind(compiledQuery), compiledArgs...)
+	rows, err := p.db.conn.QueryContext(context.Background(), p.db.rebind(compiledQuery), compiledArgs...)
 	if err != nil {
 		return nil, err
 	}
@@ -219,9 +219,10 @@ func (p *Preloader) fetchRelatedRecords(config *preloadRelConfig, pks []int64, c
 
 	result := make(map[int64][]reflect.Value)
 
+	rowScanner := newStructScanner(rows)
 	for rows.Next() {
 		record := reflect.New(config.modelType)
-		if err := rows.StructScan(record.Interface()); err != nil {
+		if err := rowScanner.Scan(record.Interface()); err != nil {
 			return nil, err
 		}
 

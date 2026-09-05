@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,7 +14,6 @@ import (
 	"github.com/daqing/airway/lib/migrate/dialect"
 	"github.com/daqing/airway/lib/migrate/schema"
 	"github.com/daqing/airway/lib/repo"
-	"github.com/jmoiron/sqlx"
 )
 
 const migrationDir = "./db/migrate"
@@ -299,7 +299,7 @@ func (m *migrationManager) appliedVersionSet() (map[string]bool, error) {
 }
 
 func (m *migrationManager) appliedVersionList() ([]string, error) {
-	rows, err := m.db.Conn().QueryxContext(
+	rows, err := m.db.Conn().QueryContext(
 		context.Background(),
 		fmt.Sprintf("SELECT version FROM %s ORDER BY version ASC", schemaMigrationsTable),
 	)
@@ -324,7 +324,7 @@ func (m *migrationManager) appliedVersionList() ([]string, error) {
 func (m *migrationManager) applyMigration(unit migrationUnit) error {
 	fmt.Printf("Running migration file %s...\n", unit.displayName())
 
-	tx, err := m.db.Conn().BeginTxx(context.Background(), nil)
+	tx, err := m.db.Conn().BeginTx(context.Background(), nil)
 	if err != nil {
 		return err
 	}
@@ -346,7 +346,7 @@ func (m *migrationManager) applyMigration(unit migrationUnit) error {
 }
 
 func (m *migrationManager) rollbackMigration(unit migrationUnit) error {
-	tx, err := m.db.Conn().BeginTxx(context.Background(), nil)
+	tx, err := m.db.Conn().BeginTx(context.Background(), nil)
 	if err != nil {
 		return err
 	}
@@ -372,7 +372,7 @@ func (m *migrationManager) rollbackMigration(unit migrationUnit) error {
 	return nil
 }
 
-func (m *migrationManager) executeMigrationUnit(ctx context.Context, tx *sqlx.Tx, unit migrationUnit, up bool) error {
+func (m *migrationManager) executeMigrationUnit(ctx context.Context, tx *sql.Tx, unit migrationUnit, up bool) error {
 	switch unit.Kind {
 	case "sql":
 		sqlText := unit.UpSQL
@@ -402,7 +402,7 @@ func (m *migrationManager) executeMigrationUnit(ctx context.Context, tx *sqlx.Tx
 	}
 }
 
-func (m *migrationManager) executeOperations(ctx context.Context, tx *sqlx.Tx, ops []schema.Operation) error {
+func (m *migrationManager) executeOperations(ctx context.Context, tx *sql.Tx, ops []schema.Operation) error {
 	for _, op := range ops {
 		resolvedOp, err := m.resolveOperation(op)
 		if err != nil {
@@ -477,7 +477,7 @@ func (m *migrationManager) resolveOperation(op schema.Operation) (schema.Operati
 	}
 }
 
-func (m *migrationManager) executeSQLiteSchemaOperation(ctx context.Context, tx *sqlx.Tx, op schema.Operation) (bool, error) {
+func (m *migrationManager) executeSQLiteSchemaOperation(ctx context.Context, tx *sql.Tx, op schema.Operation) (bool, error) {
 	if m.state == nil {
 		return false, nil
 	}
@@ -496,7 +496,7 @@ func (m *migrationManager) executeSQLiteSchemaOperation(ctx context.Context, tx 
 	}
 }
 
-func (m *migrationManager) executeSQLiteTableRebuild(ctx context.Context, tx *sqlx.Tx, tableName string, op schema.Operation) error {
+func (m *migrationManager) executeSQLiteTableRebuild(ctx context.Context, tx *sql.Tx, tableName string, op schema.Operation) error {
 	currentTable, ok := m.state.Table(tableName)
 	if !ok {
 		return fmt.Errorf("table %s does not exist in schema state", tableName)
@@ -744,7 +744,7 @@ func extractMigrationVersion(fileName string, suffix string) (string, error) {
 	return version, nil
 }
 
-func execSQLScript(ctx context.Context, tx *sqlx.Tx, script string) error {
+func execSQLScript(ctx context.Context, tx *sql.Tx, script string) error {
 	statements, err := dialect.NewCompiler(repo.DriverSQLite).Compile(schema.RawSQLOp{UpSQL: script})
 	if err != nil {
 		return err

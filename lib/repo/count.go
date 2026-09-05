@@ -12,7 +12,7 @@ func Count(db *DB, b buildersql.Stmt) (n int64, err error) {
 		return 0, err
 	}
 
-	err = db.conn.QueryRowxContext(context.Background(), query, args...).Scan(&n)
+	err = db.conn.QueryRowContext(context.Background(), query, args...).Scan(&n)
 
 	return n, err
 }

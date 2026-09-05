@@ -186,23 +186,15 @@ func (jq *JoinQuery) Find() (*JoinResultSet, error) {
 		return nil, err
 	}
 
-	rows, err := jq.db.conn.QueryxContext(context.Background(), jq.db.conn.Rebind(compiledQuery), compiledArgs...)
+	rows, err := jq.db.conn.QueryContext(context.Background(), jq.db.rebind(compiledQuery), compiledArgs...)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
 	// 收集结果
-	var records []map[string]any
-	for rows.Next() {
-		record := make(map[string]any)
-		if err := rows.MapScan(record); err != nil {
-			return nil, err
-		}
-		records = append(records, record)
-	}
-
-	if err := rows.Err(); err != nil {
+	records, err := scanMapRows(rows)
+	if err != nil {
 		return nil, err
 	}
 
@@ -226,7 +218,11 @@ func (jq *JoinQuery) FindInto(dest any) error {
 		return err
 	}
 
-	return jq.db.conn.SelectContext(context.Background(), dest, jq.db.conn.Rebind(compiledQuery), compiledArgs...)
+	if err := selectStructs(context.Background(), jq.db.conn, dest, jq.db.rebind(compiledQuery), compiledArgs...); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Count 返回计数
@@ -246,7 +242,7 @@ func (jq *JoinQuery) Count() (int64, error) {
 	}
 
 	var count int64
-	err = jq.db.conn.GetContext(context.Background(), &count, jq.db.conn.Rebind(compiledQuery), compiledArgs...)
+	err = jq.db.conn.QueryRowContext(context.Background(), jq.db.rebind(compiledQuery), compiledArgs...).Scan(&count)
 	return count, err
 }
 

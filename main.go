@@ -8,6 +8,7 @@ import (
 	"github.com/daqing/airway/cmd"
 	"github.com/daqing/airway/lib/redis_client"
 	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/storage"
 	"github.com/daqing/airway/lib/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -41,18 +42,23 @@ func main() {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	dsn, err := utils.GetEnv("AIRWAY_DB_DSN")
+	dsn := utils.GetEnvMulti("AIRWAY_DSN", "DSN")
 
-	if err == nil {
+	if len(dsn) > 0 {
 		if _, setupErr := repo.SetupDB(dsn); setupErr != nil {
 			log.Printf("database setup failed: %v", setupErr)
 			os.Exit(3)
 		}
 	}
 
-	redisURL, err := utils.GetEnv("AIRWAY_REDIS")
-	if err == nil {
+	redisURL := utils.GetEnvMulti("AIRWAY_REDIS", "REDIS")
+	if len(redisURL) > 0 {
 		redis_client.Setup(redisURL)
+	}
+
+	if _, err := storage.Setup(storage.FromEnv()); err != nil {
+		log.Printf("storage setup failed: %v", err)
+		os.Exit(4)
 	}
 
 	if len(args) > 0 {
@@ -71,6 +77,6 @@ func loadCLIEnv() {
 }
 
 func runApp() {
-	app := NewApp("Airway", utils.GetEnvMust("AIRWAY_PORT"))
+	app := NewApp("Airway", utils.GetEnvOr("AIRWAY_PORT", "PORT"))
 	app.Run()
 }

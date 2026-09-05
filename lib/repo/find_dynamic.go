@@ -19,7 +19,7 @@ func FindByType(db *DB, b buildersql.Stmt, modelType reflect.Type) (any, error) 
 		return nil, err
 	}
 
-	rows, err := db.conn.QueryxContext(context.Background(), query, args...)
+	rows, err := db.conn.QueryContext(context.Background(), query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -27,9 +27,10 @@ func FindByType(db *DB, b buildersql.Stmt, modelType reflect.Type) (any, error) 
 	defer rows.Close()
 
 	results := reflect.MakeSlice(reflect.SliceOf(reflect.PointerTo(modelType)), 0, 0)
+	rowScanner := newStructScanner(rows)
 	for rows.Next() {
 		record := reflect.New(modelType)
-		if err := rows.StructScan(record.Interface()); err != nil {
+		if err := rowScanner.Scan(record.Interface()); err != nil {
 			return nil, err
 		}
 

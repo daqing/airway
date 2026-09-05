@@ -1,9 +1,9 @@
-package up_api
+package health_api
 
 import (
 	"github.com/gin-gonic/gin"
 )
 
 func Routes(r *gin.Engine) {
-	r.GET("/up", UpAction)
+	r.GET("/health", HealthAction)
 }

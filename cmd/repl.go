@@ -93,7 +93,7 @@ func openREPLDB(driver string, dsn string) (*repo.DB, error) {
 		return db, nil
 	}
 
-	return nil, fmt.Errorf("database is not configured; set AIRWAY_DB_DSN or pass --dsn")
+	return nil, fmt.Errorf("database is not configured; set DSN (or AIRWAY_DSN) or pass --dsn")
 }
 
 func (r repoREPL) execute(line string) (bool, error) {
@@ -139,21 +139,21 @@ func (r repoREPL) printHelp() {
   exit
 
 Expressions:
-  repo.FindOne("users", cond.Eq("id", 1))
-  repo.FindOne[models.User](pg.Select("id").Where(cond.Eq("id", 1)))
+  repo.FindOne("users", sql.Eq("id", 1))
+  repo.FindOne[models.User](pg.Select("id").Where(sql.Eq("id", 1)))
   repo.Insert[models.User](pg.H{"id": 1234})
-  repo.FindOne[User](cond.Eq("id", 1))
-  repo.FindOne[struct{ ID int64; Email string }](pg.Select("id AS id, email AS email").From("users").Where(cond.Eq("id", 1)))
-	repo.Find("users", pg.Select("*").Where(cond.Eq("id", 1)))
-  repo.Find("users", cond.AllOf(cond.Eq("enabled", true), cond.Like("email", "%@example.com")))
+  repo.FindOne[User](sql.Eq("id", 1))
+  repo.FindOne[struct{ ID int64; Email string }](pg.Select("id AS id, email AS email").From("users").Where(sql.Eq("id", 1)))
+	repo.Find("users", pg.Select("*").Where(sql.Eq("id", 1)))
+  repo.Find("users", sql.AllOf(sql.Eq("enabled", true), sql.Like("email", "%@example.com")))
   repo.Insert("users", pg.H{"email": "dev@example.com", "enabled": true})
-  repo.Update("users", pg.H{"enabled": false}, cond.Eq("id", 1))
-  repo.Delete("users", cond.Eq("id", 1))
-  repo.Preview(pg.Select("*").From("users").Where(cond.Eq("id", 1)))
-  pg.Select("*").From("users").Where(cond.Eq("id", 1))
+  repo.Update("users", pg.H{"enabled": false}, sql.Eq("id", 1))
+  repo.Delete("users", sql.Eq("id", 1))
+  repo.Preview(pg.Select("*").From("users").Where(sql.Eq("id", 1)))
+  pg.Select("*").From("users").Where(sql.Eq("id", 1))
 
 Available namespaces:
-  repo, sql, pg, cond, mysql, sqlite, models
+  repo, sql, pg, mysql, sqlite, models
 
 Repo helpers:
   repo.Find(tableOrStmt, [cond])

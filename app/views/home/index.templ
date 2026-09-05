@@ -1,0 +1,196 @@
+package home
+
+import "github.com/daqing/airway/app/views/layouts"
+
+const repositoryURL = "https://github.com/daqing/airway"
+
+// Index renders the framework homepage without a database dependency.
+templ Index() {
+	@layouts.Base("Airway — The full-stack Go web framework", "An open-source full-stack Go web framework inspired by Rails. Build with typed repositories, templ views, migrations, WebSockets, and unified file storage.") {
+		@styles()
+		<div class="home-page" id="top">
+			<a class="skip-link" href="#main">Skip to content</a>
+			<header class="home-header">
+				<nav class="home-nav container" aria-label="Main navigation">
+					<a class="home-brand" href="#top" aria-label="Airway home">@brandMark()
+<span>airway<span class="brand-period">.</span></span></a>
+					<div class="home-nav-links">
+						<a href="#features">The framework</a><a href="#get-started">Quick start</a>
+						<a href={ templ.URL(repositoryURL + "#readme") }>
+							Documentation
+							@arrow("up")
+						</a>
+					</div>
+					<a class="button button-small button-outline" href={ templ.URL(repositoryURL) }>@githubIcon()
+<span>GitHub</span>@arrow("up")
+</a>
+				</nav>
+			</header>
+			<main id="main" tabindex="-1">
+				<section class="home-hero container" aria-labelledby="hero-title">
+					<div class="hero-copy">
+						<p class="eyebrow"><span class="status-dot" aria-hidden="true"></span> THE FULL-STACK GO WEB FRAMEWORK</p>
+						<h1 id="hero-title">Less setup.<br/>More <span class="hero-accent">takeoff<svg viewBox="0 0 340 16" fill="none" aria-hidden="true"><path d="M3 11C85 1 220 1 336 7M54 15C151 8 250 8 303 11" stroke="currentColor" stroke-width="3" stroke-linecap="round"></path></svg></span>.</h1>
+						<p class="hero-lead">The productivity of Rails. The simplicity of Go.<br class="desktop-break"/> One thoughtful framework for your next big idea.</p>
+						<p class="hero-detail">From your first route to your data, views, and storage.<br class="desktop-break"/> All the pieces, already connected.</p>
+						<div class="hero-actions">
+							<a class="button button-primary" href="#get-started">
+								Start building
+								@arrow("right")
+							</a>
+							<a class="button button-text" href={ templ.URL(repositoryURL + "#readme") }>
+								Explore the docs
+								@arrow("up")
+							</a>
+						</div>
+						<div class="hero-meta"><span>@checkIcon()
+Open source</span><span>@checkIcon()
+Written in Go</span><span>@checkIcon()
+Yours to build on</span></div>
+					</div>
+					<div class="hero-preview">
+						<div class="preview-orbit" aria-hidden="true"><span>IDEA</span><span>APPLICATION</span></div>
+						<div class="code-window" data-tabs>
+							<div class="window-heading"><div class="window-dots" aria-hidden="true"><i></i><i></i><i></i></div><span>your-next-big-idea /</span><span class="window-language">GO</span></div>
+							<div class="code-tabs" role="tablist" aria-label="Framework code examples">
+								<button id="tab-api" type="button" role="tab" aria-selected="true" aria-controls="panel-api" data-tab="api">@codeIcon()
+index_action.go</button>
+								<button id="tab-view" type="button" role="tab" aria-selected="false" aria-controls="panel-view" tabindex="-1" data-tab="view">index.templ</button>
+								<button id="tab-cli" type="button" role="tab" aria-selected="false" aria-controls="panel-cli" tabindex="-1" data-tab="cli">terminal</button>
+							</div>
+							<div id="panel-api" class="code-panel" role="tabpanel" aria-labelledby="tab-api" tabindex="0">
+								<pre><code><span class="syntax-comment">{ "// A real API. A little Go." }</span>{ "\n" }<span class="syntax-purple">func</span> <span class="syntax-blue">IndexAction</span>(c *gin.Context) { "{\n" }{ "    " }users, err := repo.<span class="syntax-blue">FindBy</span>[models.User]({ "\n" }{ "        " }sql.H{ "{" }<span class="syntax-green">"active"</span>: <span class="syntax-purple">true</span>{ "},\n" }{ "    )\n\n" }{ "    " }<span class="syntax-purple">if</span> err != <span class="syntax-purple">nil</span> { "{\n" }{ "        " }render.<span class="syntax-blue">Error</span>(c, err){ "\n" }{ "        " }<span class="syntax-purple">return</span>{ "\n    }\n\n" }{ "    " }render.<span class="syntax-blue">OK</span>(c, users){ "\n}" }</code></pre>
+							</div>
+							<div id="panel-view" class="code-panel" role="tabpanel" aria-labelledby="tab-view" tabindex="0" hidden>
+								<pre><code><span class="syntax-comment">{ "// Your HTML belongs in Go, too." }</span>{ "\n" }<span class="syntax-purple">package</span> home{ "\n\n" }<span class="syntax-purple">templ</span> <span class="syntax-blue">Greeting</span>(name string) { "{\n" }{ "    <main>\n        <h1>Hello, { name }.</h1>\n        <p>Your next idea starts here.</p>\n    </main>\n}\n\n" }<span class="syntax-comment">{ "// Render from your Gin action:" }</span>{ "\n" }render.<span class="syntax-blue">HTML</span>(c, home.<span class="syntax-blue">Greeting</span>(<span class="syntax-green">"world"</span>))</code></pre>
+							</div>
+							<div id="panel-cli" class="code-panel" role="tabpanel" aria-labelledby="tab-cli" tabindex="0" hidden>
+								<pre><code><span class="syntax-comment"># Give your idea a little structure.</span>{ "\n" }go run . cli generate api posts{ "\n" }go run . cli generate model post{ "\n" }go run . cli generate service post title:string{ "\n\n" }<span class="syntax-comment"># Evolve your database.</span>{ "\n" }go run . cli generate migration create_posts{ "\n" }go run . cli db:migrate{ "\n\n" }<span class="syntax-comment"># Explore your data interactively.</span>{ "\n" }AIRWAY_ENV=local go run . repl</code></pre>
+							</div>
+							<div class="code-status"><span><span class="status-dot" aria-hidden="true"></span> SMALL CODE. BIG POSSIBILITIES.</span><span>UTF-8</span></div>
+						</div>
+						<div class="preview-caption"><span class="caption-line" aria-hidden="true"></span> Familiar conventions. Refreshingly Go.</div>
+					</div>
+				</section>
+				<div class="stack-strip container" aria-label="Built with Go, Gin, templ, PostgreSQL, MySQL and SQLite">
+					<span class="stack-label">A solid foundation.<br/><strong>From the first line.</strong></span>
+					<div class="stack-wordmark go-wordmark">Go<span aria-hidden="true">→</span></div>
+					<div class="stack-wordmark">Gin<span class="stack-symbol" aria-hidden="true">↟</span></div>
+					<div class="stack-wordmark templ-wordmark"><span aria-hidden="true">{ "{" }</span> templ <span aria-hidden="true">{ "}" }</span></div>
+					<div class="stack-divider" aria-hidden="true"></div>
+					<div class="stack-database">@databaseIcon()
+<span>PostgreSQL</span></div>
+					<div class="stack-database">@databaseIcon()
+<span>MySQL 8</span></div>
+					<div class="stack-database">@databaseIcon()
+<span>SQLite</span></div>
+				</div>
+				<section id="features" class="home-features" aria-labelledby="features-title">
+					<div class="container">
+						<div class="section-heading"><div><p class="eyebrow">01 / A FRAMEWORK THAT FITS TOGETHER</p><h2 id="features-title">Your stack.<br/>Already on the same page.</h2></div><p>Stop assembling the essentials.<br/>Start building what makes your app yours.</p></div>
+						<div class="home-feature-grid">
+							@feature("01", "A data layer that speaks Go", "Generics-based CRUD, eager loading, joins, and transactions. Pair typed repositories with an expressive, dialect-aware SQL builder.", "#repository-api-librepo", "Explore the repository", "data")
+							@feature("02", "HTML, with a Go mindset", "Compose type-safe, server-rendered views with templ. Keep your pages and your API in the same language, in the same application.", "#html-views-templ", "Meet templ views", "code")
+							@feature("03", "A head start, built in", "Generate APIs, actions, models, and services from the CLI. Evolve your schema with migrations and explore your data in the REPL.", "#cli", "Find your workflow", "terminal")
+							@feature("04", "Files at home. Or in the cloud.", "One storage API for local files, Amazon S3, Cloudflare R2, and Tencent COS. Change your backend through configuration.", "#file-storage", "Explore storage", "storage")
+							@feature("05", "Ready for real time", "Gin handles your HTTP routes. Built-in WebSocket pub/sub connects your clients. Add Redis when your application needs it.", "#http-endpoints", "See the endpoints", "realtime")
+							@feature("06", "A straightforward way to ship", "Build a self-contained Go binary or a Docker image. Pure-Go SQLite needs no CGO. Deploy under a sub-path behind your reverse proxy.", "#deployment", "Take it to production", "deploy")
+						</div>
+						<div class="framework-note"><span class="note-mark" aria-hidden="true">+</span><p><strong>Use the whole framework. Or just the parts you love.</strong> Reusable libraries under <code>lib/</code>, a runnable application skeleton, and room to make it your own.</p></div>
+					</div>
+				</section>
+				<section class="database-section container" aria-labelledby="database-title">
+					<div>
+						<p class="eyebrow">02 / YOUR DATA, YOUR CHOICE</p>
+						<h2 id="database-title">Different databases.<br/><span class="text-muted">Same familiar code.</span></h2>
+						<p class="section-copy">Start small with SQLite. Connect to PostgreSQL or MySQL 8. Airway infers the driver from your connection string, so your basic CRUD code stays with you.</p>
+						<a class="inline-link" href={ templ.URL(repositoryURL + "#database-dsns") }>
+							See database configuration
+							@arrow("right")
+						</a>
+					</div>
+					<div class="database-demo" data-tabs>
+						<div class="database-tabs" role="tablist" aria-label="Database connection examples">
+							<button id="tab-sqlite" type="button" role="tab" aria-selected="true" aria-controls="panel-sqlite" data-tab="sqlite">SQLite</button>
+							<button id="tab-postgres" type="button" role="tab" aria-selected="false" aria-controls="panel-postgres" tabindex="-1" data-tab="postgres">PostgreSQL</button>
+							<button id="tab-mysql" type="button" role="tab" aria-selected="false" aria-controls="panel-mysql" tabindex="-1" data-tab="mysql">MySQL 8</button>
+						</div>
+						<div class="database-env"><span>.env</span><span>ONE CONFIGURATION CHANGE</span></div>
+						<div id="panel-sqlite" role="tabpanel" aria-labelledby="tab-sqlite" tabindex="0"><pre><code><span class="syntax-comment"># Local development, zero database services.</span>{ "\n" }DSN=<span class="syntax-green">"sqlite://./tmp/airway.db"</span></code></pre></div>
+						<div id="panel-postgres" role="tabpanel" aria-labelledby="tab-postgres" tabindex="0" hidden><pre><code><span class="syntax-comment"># Connect to your PostgreSQL database.</span>{ "\n" }DSN=<span class="syntax-green">"postgres://user:pass@localhost:5432/airway"</span></code></pre></div>
+						<div id="panel-mysql" role="tabpanel" aria-labelledby="tab-mysql" tabindex="0" hidden><pre><code><span class="syntax-comment"># Connect to your MySQL 8 database.</span>{ "\n" }DSN=<span class="syntax-green">"mysql://user:pass@localhost:3306/airway"</span></code></pre></div>
+						<div class="database-query"><span class="syntax-comment">{ "// Your application code stays familiar." }</span><code>repo.<span class="syntax-blue">FindBy</span>[User](sql.H{ "{" }<span class="syntax-green">"active"</span>: true{ "}" })</code></div>
+						<p class="database-footnote">Basic CRUD is portable. Some advanced SQL helpers are PostgreSQL-specific.</p>
+					</div>
+				</section>
+				<section id="get-started" class="quickstart-section" aria-labelledby="quickstart-title">
+					<div class="container quickstart-grid">
+						<div>
+							<p class="eyebrow">03 / CLEAR FOR TAKEOFF</p>
+							<h2 id="quickstart-title">Your next project<br/>starts here.</h2>
+							<p class="section-copy">A few commands. A working application.<br/>And a whole lot of possibility.</p>
+							<ol class="start-steps"><li><span>01</span><div><strong>Make it yours</strong><p>Clone Airway and copy the example config.</p></div></li><li><span>02</span><div><strong>Pick your database</strong><p>Uncomment the SQLite DSN in your .env file.</p></div></li><li><span>03</span><div><strong>You’re ready to Go</strong><p>Start the app and open localhost:1900.</p></div></li></ol>
+							<a class="inline-link" href={ templ.URL(repositoryURL + "#quick-start") }>
+								Read the complete setup guide
+								@arrow("right")
+							</a>
+						</div>
+						<div class="quickstart-terminal"><div class="terminal-heading"><span>@terminalIcon()
+Quick start</span><button type="button" class="copy-button" data-copy="quickstart-code" hidden aria-label="Copy quick start commands">@copyIcon()
+<span>Copy</span></button></div><pre><code id="quickstart-code"><span class="syntax-comment"># 1. Get the code</span>{ "\n" }git clone https://github.com/daqing/airway.git{ "\n" }cd airway{ "\n" }cp .env.example .env{ "\n\n" }<span class="syntax-comment"># 2. In .env, uncomment the SQLite DSN:</span>{ "\n" }<span class="syntax-comment"># DSN="sqlite://./tmp/airway.db"</span>{ "\n\n" }<span class="syntax-comment"># 3. Start your application</span>{ "\n" }AIRWAY_ENV=local go run .</code></pre><div class="terminal-footer"><span class="status-dot" aria-hidden="true"></span><span>Next stop: <strong>http://localhost:1900</strong></span>@arrow("right")
+</div><p class="terminal-requirement">Requires Go 1.26.2 or later · Live reload with <code>just dev</code></p><p class="copy-status" role="status" aria-live="polite"></p></div>
+					</div>
+				</section>
+				<section class="community-section container" aria-labelledby="community-title">
+					<div><p class="eyebrow">OPEN SOURCE. OPEN POSSIBILITIES.</p><h2 id="community-title">Good things are built together.</h2><p>Read the code. Open an issue. Make your first contribution.<br/>There’s a place for your ideas in Airway.</p></div>
+					<a class="button button-primary" href={ templ.URL(repositoryURL) }>
+						@githubIcon()
+						Find us on GitHub
+						@arrow("up")
+					</a>
+				</section>
+			</main>
+			<footer class="home-footer container">
+				<a class="home-brand" href="#top" aria-label="Airway home">@brandMark()
+<span>airway<span class="brand-period">.</span></span></a><span>Built with Go. Made for what’s next.</span>
+				<nav aria-label="Footer navigation">
+					<a href={ templ.URL(repositoryURL + "#readme") }>Docs</a><a href={ templ.URL(repositoryURL + "/issues") }>Issues</a>
+					<a href={ templ.URL(repositoryURL + "/blob/main/docs/zh-CN/README.md") } lang="zh-CN">
+						中文文档
+						@arrow("up")
+					</a>
+				</nav><a class="back-top" href="#top" aria-label="Back to top">↑</a>
+			</footer>
+		</div>
+		@interactions()
+	}
+}
+
+templ feature(number string, title string, description string, anchor string, label string, icon string) {
+	<article class="feature-card">
+		<div class="feature-top">
+			<span class="feature-icon" aria-hidden="true">
+				switch icon {
+					case "data":
+						@databaseIcon()
+					case "code":
+						@codeIcon()
+					case "terminal":
+						@terminalIcon()
+					case "storage":
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 18H6a4 4 0 0 1-1-7.87A7 7 0 0 1 18.7 9a4.5 4.5 0 0 1-.2 9H17M12 12v10m-3-7 3-3 3 3"></path></svg>
+					case "realtime":
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m14 2-9 12h6l-1 8 9-12h-6z"></path></svg>
+					case "deploy":
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m12 3 9 5v9l-9 5-9-5V8zm0 10v9M3 8l9 5 9-5M8 5l9 5v4"></path></svg>
+				}
+			</span><span class="feature-number">{ number }</span>
+		</div>
+		<h3>{ title }</h3>
+		<p>{ description }</p>
+		<a href={ templ.URL(repositoryURL + anchor) }>
+			{ label }
+			@arrow("right")
+		</a>
+	</article>
+}
