@@ -1,0 +1,22 @@
+/* Languages are listed directly in the nav bar, so hide the built-in
+   language dropdown (desktop) and its mobile-menu counterpart. */
+.VPNavBarTranslations,
+.VPNavScreenTranslations {
+  display: none;
+}
+
+/* The "..." extra menu only groups items we now show directly in the
+   navbar (languages, appearance, social links) — hide it entirely. */
+.VPNavBarExtra {
+  display: none !important;
+}
+
+/* Show the appearance toggle and social links in the navbar at every
+   desktop width (upstream only shows them at >= 1280px). */
+@media (min-width: 768px) {
+  .VPNavBarAppearance,
+  .VPNavBarSocialLinks {
+    display: flex !important;
+    align-items: center;
+  }
+}
