@@ -24,6 +24,7 @@ airway db:drop
 airway db:migrate [version]
 airway db:rollback [step]
 airway db:status
+airway engine new <module-path>                           # scaffold a new engine module
 airway engine:list
 airway engine:install [name]
 airway generate [action|api|model|migration|service|cmd] [params]
@@ -237,6 +238,17 @@ In normal local development, these values can come directly from your project's 
 The migration commands use the current Airway DSN and work with the databases supported by the project, including PostgreSQL, MySQL, and SQLite.
 
 ## Engine Commands
+
+Scaffold a new engine module (a standalone Go module; see
+[docs/engine.md](engine.md)):
+
+```bash
+airway engine new im                              # directory: im, engine name: im
+airway engine new github.com/me/airway-im-engine  # name derived from the last path segment
+```
+
+Unlike the commands below, `engine new` works fine with the globally installed
+`airway` — it writes files and does not depend on compile-time registration.
 
 Engines are optional feature modules enabled with blank imports in
 `engines.go` (see [docs/engine.md](engine.md)):

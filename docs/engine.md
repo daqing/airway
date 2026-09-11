@@ -49,6 +49,19 @@ myengine.Engine.Routes(r.Group("/custom/prefix"))
 
 ## Authoring an Engine
 
+Scaffold a new engine module with the CLI (works with the globally installed
+`airway` — no compile-time registration involved):
+
+```bash
+airway engine new im                              # directory: im
+airway engine new github.com/me/airway-im-engine  # engine name derived from
+                                                  # the last path segment
+```
+
+This generates `go.mod`, `engine.go` (Engine implementation + `init()`
+registration), a sample API module under `app/api/<name>_api/`, and empty
+`app/models/` and `db/migrate/` directories, then runs `go mod tidy`.
+
 An Engine repository mirrors the layout of a regular Airway project:
 
 ```

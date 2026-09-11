@@ -21,6 +21,8 @@ func runCLIEngine(args []string) error {
 	subcommand := strings.ToLower(strings.TrimSpace(args[0]))
 
 	switch subcommand {
+	case "new":
+		return runCLIEngineNew(args[1:])
 	case "list":
 		return runCLIEngineList()
 	case "install":
@@ -35,6 +37,7 @@ func runCLIEngine(args []string) error {
 
 func printCLIEngineUsage(w *os.File) {
 	_, _ = fmt.Fprintln(w, "usage:")
+	_, _ = fmt.Fprintln(w, "  airway engine new <module-path>")
 	_, _ = fmt.Fprintln(w, "  airway engine list")
 	_, _ = fmt.Fprintln(w, "  airway engine install [name]")
 }

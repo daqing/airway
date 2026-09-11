@@ -44,6 +44,17 @@ myengine.Engine.Routes(r.Group("/custom/prefix"))
 
 ## 开发一个 Engine
 
+用 CLI 脚手架一个新的 Engine 模块（全局安装的 `airway` 即可运行，不涉及编译期注册）：
+
+```bash
+airway engine new im                              # 目录：im
+airway engine new github.com/me/airway-im-engine  # Engine 名称从路径最后一段推导
+```
+
+该命令会生成 `go.mod`、`engine.go`（Engine 实现 + `init()` 注册）、
+`app/api/<name>_api/` 下的示例 API 模块，以及空的 `app/models/` 和
+`db/migrate/` 目录，然后自动执行 `go mod tidy`。
+
 Engine 仓库的目录结构与标准 Airway 项目一致：
 
 ```

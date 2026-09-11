@@ -55,6 +55,7 @@ airway db:rollback [step]
 airway db:status
 airway schema:dump
 airway schema:show
+airway engine new <module-path>                         # 生成新的 Engine 模块骨架
 airway engine:list
 airway engine:install [name]
 airway upload [key] /path/to/file
@@ -119,6 +120,13 @@ airway schema:show   # 打印当前的 db/schema.json
 
 ### Engine（引擎）
 
+生成一个新的 Engine 模块骨架（用全局安装的 `airway` 即可运行——它只是写文件）：
+
+```bash
+airway engine new im                              # 目录：im，Engine 名称：im
+airway engine new github.com/me/airway-im-engine  # 名称从路径最后一段推导
+```
+
 Engine 是通过 `engines.go` 中的空白导入启用的可选功能模块
 （参见 [engine.md](engine.md)）：
 
@@ -159,6 +167,7 @@ REPL 只能看到编译进当前二进制的模型——项目模型通过 `app/
 | 命令 | 全局 `airway` | 项目二进制（`go run . ...`） |
 | --- | --- | --- |
 | `new`、`generate`、`server` | 可用 | 可用 |
+| `engine new` | 可用 | 可用 |
 | `db:create` / `db:drop` / `db:migrate` / `db:rollback` / `db:status` | 可用（SQL 迁移） | 可用 |
 | `schema:dump` / `schema:show`、`upload`、`version` | 可用 | 可用 |
 | `repl` | 仅框架内置模型 | **推荐**——能看到你的项目模型 |

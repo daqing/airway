@@ -58,6 +58,7 @@ airway db:rollback [step]
 airway db:status
 airway schema:dump
 airway schema:show
+airway engine new <module-path>                         # scaffold a new engine module
 airway engine:list
 airway engine:install [name]
 airway upload [key] /path/to/file
@@ -128,6 +129,14 @@ airway schema:show   # print the current db/schema.json
 
 ### Engines
 
+Scaffold a new engine module (works with the globally installed `airway` — it
+only writes files):
+
+```bash
+airway engine new im                              # directory: im, engine name: im
+airway engine new github.com/me/airway-im-engine  # name derived from the last path segment
+```
+
 Engines are optional feature modules enabled via blank imports in
 `engines.go` (see [docs/engine.md](engine.md)):
 
@@ -171,6 +180,7 @@ engines, Go DSL migrations). Use the right binary for each:
 | Command | Global `airway` | Project binary (`go run . ...`) |
 | --- | --- | --- |
 | `new`, `generate`, `server` | yes | yes |
+| `engine new` | yes | yes |
 | `db:create` / `db:drop` / `db:migrate` / `db:rollback` / `db:status` | yes (SQL migrations) | yes |
 | `schema:dump` / `schema:show`, `upload`, `version` | yes | yes |
 | `repl` | framework's built-in models only | **use this** — sees your project models |

@@ -106,6 +106,7 @@ func printUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "  airway db:status")
 	_, _ = fmt.Fprintln(w, "  airway schema:dump")
 	_, _ = fmt.Fprintln(w, "  airway schema:show")
+	_, _ = fmt.Fprintln(w, "  airway engine new <module-path>")
 	_, _ = fmt.Fprintln(w, "  airway engine:list")
 	_, _ = fmt.Fprintln(w, "  airway engine:install [name]")
 	_, _ = fmt.Fprintln(w, "  airway upload [key] /path/to/file")

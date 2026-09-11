@@ -23,6 +23,7 @@ airway db:drop
 airway db:migrate [version]
 airway db:rollback [step]
 airway db:status
+airway engine new <module-path>                           # 生成新的 Engine 模块骨架
 airway engine:list
 airway engine:install [name]
 airway generate [action|api|model|migration|service|cmd] [params]
@@ -221,6 +222,17 @@ airway db:status
 迁移命令会复用 Airway 当前 DSN 所对应的数据库类型，因此支持项目当前支持的 PostgreSQL、MySQL 和 SQLite。
 
 ## Engine 命令
+
+生成一个新的 Engine 模块骨架（独立的 Go module；见
+[Engine 扩展机制](engine.md)）：
+
+```bash
+airway engine new im                              # 目录：im，Engine 名称：im
+airway engine new github.com/me/airway-im-engine  # 名称从路径最后一段推导
+```
+
+与下面的命令不同，`engine new` 用全局安装的 `airway` 即可运行——它只是写文件，
+不依赖编译期注册。
 
 Engine 是通过 `engines.go` 中的 blank import 启用的可选功能模块（见
 [Engine 扩展机制](engine.md)）：
