@@ -27,6 +27,8 @@ The project supports PostgreSQL, SQLite 3, and MySQL 8 from the same codebase; t
 ```
 main.go          Entry point. Dispatches to CLI commands or runs the HTTP server.
 app.go           App struct: builds the Gin engine, middleware, routes.
+engines.go       Optional engines are enabled here via blank imports (Go modules
+                 registered through lib/engine; see docs/engine.md).
 generate.go      Holds the //go:generate directive that regenerates *_templ.go
                  from the .templ views under app/views.
 config/          Route registration. config/routes.go wires all app API modules.
@@ -41,8 +43,8 @@ app/
                  API module (e.g. app/views/home/index.templ for home_api).
                  Each folder is its own package; *_templ.go is committed.
 cmd/             CLI commands: scaffolding generators, db create/drop/migrate/
-                 rollback/status, schema dump/show, plugin install, upload, REPL,
-                 version.
+                 rollback/status, schema dump/show, engine list/install, plugin
+                 install (deprecated), upload, REPL, version.
 db/
   migrate/       Migration files live here (imported for side effects).
   schema.json    Schema snapshot, written by `cli schema:dump`.
@@ -52,14 +54,17 @@ lib/
   repo/          Repository/ORM layer: generics-based CRUD (FindBy[User], etc.),
                  Preload (eager loading), Joins, transactions.
   migrate/       Migration internals (dialect compiler, schema state).
+  engine/        Engine extension mechanism: registry, mounting, boot hooks,
+                 REPL models. Engines are separate Go modules enabled by blank
+                 imports in engines.go (see docs/engine.md).
   storage/       Unified file storage (local, s3, r2, cos). Access via
                  storage.Current() after boot.
   redis_client/  Redis setup helper.
   render/        Response helpers: JSON (ok, error, found) and HTML via templ.
   utils/         Env/config helpers, password hashing, tokens, dates, markdown.
   validation/    Input validation helpers.
-docs/            Guides: cli.md, storage.md, docker-compose.yml.example,
-                 zh-CN/ (Chinese docs).
+docs/            Guides: cli.md, engine.md, storage.md,
+                 docker-compose.yml.example, zh-CN/ (Chinese docs).
 data/storage/    Default local file-storage root.
 tmp/             Local dev database (airway.db), build artifacts. Git-ignored.
 ```
@@ -99,7 +104,9 @@ go run . cli db:rollback [step]
 go run . cli db:status
 go run . cli schema:dump | schema:show                # writes/reads db/schema.json
 go run . cli upload [key] /path/to/file               # upload via configured storage
-go run . cli plugin install /path/to/project          # copy app/, cmd/, migrations into another project
+go run . cli engine:list                              # registered engines and mount paths
+go run . cli engine:install <name>                    # copy an engine's embedded SQL migrations
+go run . cli plugin install /path/to/project          # deprecated; use engines instead
 go run . repl                                         # interactive repo REPL
 ```
 
@@ -114,6 +121,7 @@ Migration and schema commands read `AIRWAY_DB_DSN` first and fall back to the le
 - **HTML views:** server-rendered pages live under `app/views/<module>/` as templ files, one folder per API module (e.g. `app/views/home/` for `home_api`); a shared shell lives in `app/views/layouts/`. Actions render them with `render.HTML(c, view.Component())` (see `home_api`). Re-run `go generate ./...` when you edit a `.templ` file and keep the generated `*_templ.go`.
 - **Storage:** always go through `storage.Current()` — never touch local disk or cloud SDKs directly.
 - **Globals at boot:** `main.go` initializes the DB (`repo.SetupDB`), Redis (`redis_client.Setup`), and storage (`storage.Setup`) from environment variables; packages then use their `Current*()` accessors.
+- **Engines:** optional feature modules (separate Go modules, e.g. an IM backend) implement `lib/engine.Engine` and self-register via `init()`; hosts enable them with blank imports in `engines.go`. Routes mount through `engine.MountAll` in `config/routes.go`, boot hooks run from `main.go` after infra setup, and engine SQL migrations install via `cli engine:install` (see docs/engine.md).
 - **Naming:** environment variables are prefixed `AIRWAY_`; CLI subcommands follow the Rails-like `db:migrate` / `schema:dump` style.
 - Format code with `gofmt`/`go fmt`; keep changes minimal and match the surrounding style.
 - **Git commit messages:** a concise one-line summary plus a short paragraph describing what the change accomplishes; leave implementation details (files, functions, internal mechanics) out of the message. Do not add AI attribution/signatures (such as `Co-Authored-By` or any other AI-related lines) to commit messages.

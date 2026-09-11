@@ -22,8 +22,10 @@ airway cli db:drop
 airway cli db:migrate [version]
 airway cli db:rollback [step]
 airway cli db:status
+airway cli engine:list
+airway cli engine:install [name]
 airway cli generate [action|api|model|migration|service|cmd] [params]
-airway cli plugin install /path/to/project
+airway cli plugin install /path/to/project  # deprecated; use engines (docs/engine.md)
 airway cli schema:dump
 airway cli schema:show
 airway cli upload /path/to/file
@@ -183,10 +185,26 @@ Migration commands read:
 In normal local development, these values can come directly from your project's `.env` file because `airway cli ...` loads it automatically.
 The migration commands use the current Airway DSN and work with the databases supported by the project, including PostgreSQL, MySQL, and SQLite.
 
+## Engine Commands
+
+Engines are optional feature modules enabled with blank imports in
+`engines.go` (see [docs/engine.md](engine.md)):
+
+```bash
+go run . cli engine:list           # list registered engines and mount paths
+go run . cli engine:install <name> # copy an engine's embedded SQL migrations into db/migrate
+```
+
+`engine:install` assigns fresh timestamps to the copied migrations and skips
+files that are already installed; afterwards they are ordinary migrations
+managed by `db:migrate` / `db:rollback` / `db:status`.
+
 ## Plugin Installation
 
-Install the current project as a plugin into another Airway project:
+> **Deprecated**: `plugin install` will be removed in a future release. Use the
+> Engine mechanism instead (see [docs/engine.md](engine.md)).
 
+Install the current project as a plugin into another Airway project:
 ```bash
 go run . cli plugin install /path/to/project
 ```

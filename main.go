@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/daqing/airway/cmd"
+	"github.com/daqing/airway/lib/engine"
 	"github.com/daqing/airway/lib/redis_client"
 	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/storage"
@@ -59,6 +60,11 @@ func main() {
 	if _, err := storage.Setup(storage.FromEnv()); err != nil {
 		log.Printf("storage setup failed: %v", err)
 		os.Exit(4)
+	}
+
+	if err := engine.BootAll(); err != nil {
+		log.Printf("engine boot failed: %v", err)
+		os.Exit(5)
 	}
 
 	if len(args) > 0 {

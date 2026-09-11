@@ -6,6 +6,7 @@ database driver is inferred from the DSN at runtime.
 
 - **[中文文档](docs/zh-CN/README.md)**
 - **[CLI 脚手架指南](docs/cli.md)** / **[文件存储指南](docs/storage.md)**
+- **[Engine 扩展机制](docs/engine.md)** / **[Engine 扩展机制（中文）](docs/zh-CN/engine.md)**
 - **[SQL Builder DSL 指南（中文）](docs/zh-CN/sql-builder.md)**
 
 ## What Airway is
@@ -32,6 +33,9 @@ Airway is both a **framework/library** and a **runnable application skeleton**:
 - **HTML views with [templ](https://templ.guide/)**: pages as `.templ`
   templates under `app/views/`, rendered from actions via `lib/render.HTML`.
 - **Scaffolding CLI** (`airway cli generate ...`, `db:migrate`, ...).
+- **Engines**: Rails Engine-style feature modules shipped as independent Go
+  modules — install with `go get`, enable with one blank import in
+  `engines.go` (see [docs/engine.md](docs/engine.md)).
 - **Repo REPL** with typed scan and Go-expression evaluation.
 - **Optional sub-path prefix** (`URL_PREFIX`) for deploying behind a reverse
   proxy, e.g. `http://host:1900/airway/...`.

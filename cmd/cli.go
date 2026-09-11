@@ -38,6 +38,12 @@ func runCLI(args []string) error {
 		return runCLIDBDrop(xargs)
 	case "db:create":
 		return runCLIDBCreate(xargs)
+	case "engine":
+		return runCLIEngine(xargs)
+	case "engine:list":
+		return runCLIEngineList()
+	case "engine:install":
+		return runCLIEngineInstall(xargs)
 	case "plugin", "plugin:install":
 		return runCLIPlugin(command, xargs)
 	case "upload":
@@ -68,6 +74,8 @@ func runCLIPlugin(command string, args []string) error {
 		return fmt.Errorf("usage: airway cli plugin install /path/to/project")
 	}
 
+	fmt.Println("WARNING: `cli plugin install` is deprecated and will be removed in a future release.")
+	fmt.Println("Use engines instead: ship the module as a Go module and enable it with a blank import in engines.go (see docs/engine.md).")
 	fmt.Println("Install current plugin to", args[0])
 	return installPlugin(args[0], timeNow().Format("20060102150405"))
 }
@@ -91,8 +99,10 @@ func printCLIUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "  airway cli db:migrate [version]")
 	_, _ = fmt.Fprintln(w, "  airway cli db:rollback [step]")
 	_, _ = fmt.Fprintln(w, "  airway cli db:status")
+	_, _ = fmt.Fprintln(w, "  airway cli engine:list")
+	_, _ = fmt.Fprintln(w, "  airway cli engine:install [name]")
 	_, _ = fmt.Fprintln(w, "  airway cli generate [action|api|model|migration|service|cmd] [params]")
-	_, _ = fmt.Fprintln(w, "  airway cli plugin install /path/to/project")
+	_, _ = fmt.Fprintln(w, "  airway cli plugin install /path/to/project (deprecated; use engines)")
 	_, _ = fmt.Fprintln(w, "  airway cli schema:dump")
 	_, _ = fmt.Fprintln(w, "  airway cli schema:show")
 	_, _ = fmt.Fprintln(w, "  airway cli upload [key] /path/to/file")

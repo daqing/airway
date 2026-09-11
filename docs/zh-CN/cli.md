@@ -22,8 +22,10 @@ airway cli db:drop
 airway cli db:migrate [version]
 airway cli db:rollback [step]
 airway cli db:status
+airway cli engine:list
+airway cli engine:install [name]
 airway cli generate [action|api|model|migration|service|cmd] [params]
-airway cli plugin install /path/to/project
+airway cli plugin install /path/to/project  # 已废弃；请改用 Engine（docs/zh-CN/engine.md）
 airway cli schema:dump
 airway cli schema:show
 airway cli upload /path/to/file
@@ -172,7 +174,22 @@ go run . cli db:status
 在本地开发场景下，`airway cli ...` 会自动加载项目根目录的 `.env` 文件，因此通常直接把 `DSN` 写在 `.env` 里即可。
 迁移命令会复用 Airway 当前 DSN 所对应的数据库类型，因此支持项目当前支持的 PostgreSQL、MySQL 和 SQLite。
 
+## Engine 命令
+
+Engine 是通过 `engines.go` 中的 blank import 启用的可选功能模块（见
+[Engine 扩展机制](engine.md)）：
+
+```bash
+go run . cli engine:list           # 列出已注册的 Engine 及挂载路径
+go run . cli engine:install <name> # 把 Engine 内嵌的 SQL 迁移复制到 db/migrate
+```
+
+`engine:install` 会为复制的迁移文件分配新的时间戳，并跳过已安装的文件；复制后它们就是
+普通迁移，由 `db:migrate` / `db:rollback` / `db:status` 统一管理。
+
 ## 安装插件到其他 Airway 项目
+
+> **已废弃**：`plugin install` 将在未来版本移除。请改用 Engine 机制扩展功能（见 [Engine 扩展机制](engine.md)）。
 
 如果你当前仓库是一个插件项目，可以把它安装到另一个 Airway 项目：
 
