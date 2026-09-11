@@ -20,7 +20,8 @@ export default defineConfig({
       themeConfig: {
         nav: [
           { text: 'Guide', link: '/cli-standalone' },
-          { text: '简体中文', link: '/zh-CN/', ariaLabel: '切换到中文' },
+          { text: 'English', link: '/', activeMatch: '^/(?!zh-CN/)' },
+          { text: '简体中文', link: '/zh-CN/' },
         ],
         sidebar: [
           {
@@ -48,7 +49,8 @@ export default defineConfig({
       themeConfig: {
         nav: [
           { text: '指南', link: '/zh-CN/cli-standalone' },
-          { text: 'English', link: '/', ariaLabel: 'Switch to English' },
+          { text: 'English', link: '/' },
+          { text: '简体中文', link: '/zh-CN/', activeMatch: '^/zh-CN/' },
         ],
         sidebar: [
           {
