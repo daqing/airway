@@ -370,7 +370,7 @@ This gives you:
 
 ### Step 5. Wire the API routes into the router
 
-Open [config/routes.go](/Users/daqing/mzevo/open-source/airway/config/routes.go) and import the generated package:
+Open [config/routes.go](https://github.com/daqing/airway/blob/main/config/routes.go) and import the generated package:
 
 ```go
 import (
