@@ -1,12 +1,11 @@
 package cmd
 
 import (
-	"fmt"
 	"log"
+	"os"
 	"strconv"
 )
 
-// args 最少会有一个参数
 func Run(args []string) {
 	if err := run(args); err != nil {
 		log.Fatal(err)
@@ -15,7 +14,8 @@ func Run(args []string) {
 
 func run(args []string) error {
 	if len(args) == 0 {
-		return fmt.Errorf("no args")
+		printUsage(os.Stdout)
+		return nil
 	}
 
 	command := args[0]
@@ -23,15 +23,20 @@ func run(args []string) error {
 	switch command {
 	case "repl":
 		runRepoREPL(args[1:])
+		return nil
 	case "version":
 		showVersion(args[1:])
+		return nil
 	case "cli":
+		// Backward-compatible alias for the pre-0.5 `airway cli ...` form.
 		return runCLI(args[1:])
+	case "help", "-h", "--help":
+		printUsage(os.Stdout)
+		return nil
 	default:
-		return fmt.Errorf("unknown command: %s", command)
+		// Direct subcommands: `airway generate ...`, `airway db:migrate`, ...
+		return runCLI(args)
 	}
-
-	return nil
 }
 
 func parseInt(s string) int {

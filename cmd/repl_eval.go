@@ -13,8 +13,8 @@ import (
 	"strings"
 	"unicode"
 
-	appmodels "github.com/daqing/airway/app/models"
 	"github.com/daqing/airway/lib/engine"
+	"github.com/daqing/airway/lib/replreg"
 	"github.com/daqing/airway/lib/repo"
 	reposql "github.com/daqing/airway/lib/sql"
 	mysqlsql "github.com/daqing/airway/lib/sql/mysql"
@@ -854,7 +854,7 @@ func newSQLiteNamespace() replNamespace {
 }
 
 func newModelsNamespace() replNamespace {
-	hostModels := appmodels.REPLNamespace()
+	hostModels := replreg.Namespace()
 
 	engineModels, err := engine.REPLNamespaces(slices.Collect(maps.Keys(hostModels))...)
 	if err != nil {

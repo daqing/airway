@@ -12,7 +12,7 @@ import (
 
 func runCLI(args []string) error {
 	if len(args) == 0 {
-		printCLIUsage(os.Stdout)
+		printUsage(os.Stdout)
 		return nil
 	}
 
@@ -20,6 +20,8 @@ func runCLI(args []string) error {
 	xargs := args[1:]
 
 	switch command {
+	case "new":
+		return runCLINew(xargs)
 	case "generate", "g":
 		return runCLIGenerate(xargs)
 	case "db:migrate":
@@ -49,17 +51,17 @@ func runCLI(args []string) error {
 	case "upload":
 		return runUpload(xargs)
 	case "help", "-h", "--help":
-		printCLIUsage(os.Stdout)
+		printUsage(os.Stdout)
 		return nil
 	default:
-		return fmt.Errorf("unknown cli command: %s", command)
+		return fmt.Errorf("unknown command: %s", command)
 	}
 }
 
 func runCLIPlugin(command string, args []string) error {
 	if command == "plugin" {
 		if len(args) == 0 {
-			return fmt.Errorf("usage: airway cli plugin install /path/to/project")
+			return fmt.Errorf("usage: airway plugin install /path/to/project")
 		}
 
 		subcommand := strings.ToLower(strings.TrimSpace(args[0]))
@@ -71,7 +73,7 @@ func runCLIPlugin(command string, args []string) error {
 	}
 
 	if len(args) != 1 {
-		return fmt.Errorf("usage: airway cli plugin install /path/to/project")
+		return fmt.Errorf("usage: airway plugin install /path/to/project")
 	}
 
 	fmt.Println("WARNING: `cli plugin install` is deprecated and will be removed in a future release.")
@@ -92,55 +94,60 @@ func cliDSN() (string, error) {
 	return "", fmt.Errorf("database dsn is not configured; set DSN (or AIRWAY_DSN)")
 }
 
-func printCLIUsage(w io.Writer) {
+func printUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "usage:")
-	_, _ = fmt.Fprintln(w, "  airway cli db:create")
-	_, _ = fmt.Fprintln(w, "  airway cli db:drop")
-	_, _ = fmt.Fprintln(w, "  airway cli db:migrate [version]")
-	_, _ = fmt.Fprintln(w, "  airway cli db:rollback [step]")
-	_, _ = fmt.Fprintln(w, "  airway cli db:status")
-	_, _ = fmt.Fprintln(w, "  airway cli engine:list")
-	_, _ = fmt.Fprintln(w, "  airway cli engine:install [name]")
-	_, _ = fmt.Fprintln(w, "  airway cli generate [action|api|model|migration|service|cmd] [params]")
-	_, _ = fmt.Fprintln(w, "  airway cli plugin install /path/to/project (deprecated; use engines)")
-	_, _ = fmt.Fprintln(w, "  airway cli schema:dump")
-	_, _ = fmt.Fprintln(w, "  airway cli schema:show")
-	_, _ = fmt.Fprintln(w, "  airway cli upload [key] /path/to/file")
+	_, _ = fmt.Fprintln(w, "  airway new <module-path>                 create a new Airway project")
+	_, _ = fmt.Fprintln(w, "  airway server                            start the HTTP server")
+	_, _ = fmt.Fprintln(w, "  airway generate [action|api|model|migration|service|cmd] [params]")
+	_, _ = fmt.Fprintln(w, "  airway db:create")
+	_, _ = fmt.Fprintln(w, "  airway db:drop")
+	_, _ = fmt.Fprintln(w, "  airway db:migrate [version]")
+	_, _ = fmt.Fprintln(w, "  airway db:rollback [step]")
+	_, _ = fmt.Fprintln(w, "  airway db:status")
+	_, _ = fmt.Fprintln(w, "  airway schema:dump")
+	_, _ = fmt.Fprintln(w, "  airway schema:show")
+	_, _ = fmt.Fprintln(w, "  airway engine:list")
+	_, _ = fmt.Fprintln(w, "  airway engine:install [name]")
+	_, _ = fmt.Fprintln(w, "  airway upload [key] /path/to/file")
+	_, _ = fmt.Fprintln(w, "  airway repl                              interactive repo REPL (project binary only)")
+	_, _ = fmt.Fprintln(w, "  airway version")
+	_, _ = fmt.Fprintln(w, "")
+	_, _ = fmt.Fprintln(w, "`airway <command>` remains accepted as an alias for `airway <command>`.")
 }
 
 func printCLIGenerateUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "usage:")
-	_, _ = fmt.Fprintln(w, "  airway cli generate [action|api|model|migration|service|cmd] [params]")
+	_, _ = fmt.Fprintln(w, "  airway generate [action|api|model|migration|service|cmd] [params]")
 }
 
 func printCLIGenerateMigrationUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "usage:")
-	_, _ = fmt.Fprintln(w, "  airway cli generate migration [name]")
+	_, _ = fmt.Fprintln(w, "  airway generate migration [name]")
 }
 
 func printCLIGenerateActionUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "usage:")
-	_, _ = fmt.Fprintln(w, "  airway cli generate action [api] [action]")
+	_, _ = fmt.Fprintln(w, "  airway generate action [api] [action]")
 }
 
 func printCLIGenerateAPIUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "usage:")
-	_, _ = fmt.Fprintln(w, "  airway cli generate api [name]")
+	_, _ = fmt.Fprintln(w, "  airway generate api [name]")
 }
 
 func printCLIGenerateModelUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "usage:")
-	_, _ = fmt.Fprintln(w, "  airway cli generate model [name] [field:type]...")
+	_, _ = fmt.Fprintln(w, "  airway generate model [name] [field:type]...")
 }
 
 func printCLIGenerateServiceUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "usage:")
-	_, _ = fmt.Fprintln(w, "  airway cli generate service <name> <field:type> <field:type>...")
+	_, _ = fmt.Fprintln(w, "  airway generate service <name> <field:type> <field:type>...")
 }
 
 func printCLIGenerateCmdUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "usage:")
-	_, _ = fmt.Fprintln(w, "  airway cli generate cmd <name> <field> <field>...")
+	_, _ = fmt.Fprintln(w, "  airway generate cmd <name> <field> <field>...")
 }
 
 func isHelpArg(value string) bool {

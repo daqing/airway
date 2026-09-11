@@ -7,11 +7,35 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"text/template"
 	"time"
 )
 
 var timeNow = time.Now
+
+// currentModulePath reads the module path of the project in the current
+// working directory, so generated code imports the project's own packages
+// (e.g. <module>/app/models) instead of the framework's. Falls back to the
+// framework module path when go.mod is missing or malformed.
+func currentModulePath() string {
+	const fallback = "github.com/daqing/airway"
+
+	data, err := os.ReadFile("go.mod")
+	if err != nil {
+		return fallback
+	}
+
+	for line := range strings.Lines(string(data)) {
+		if module, ok := strings.CutPrefix(strings.TrimSpace(line), "module "); ok {
+			if module = strings.TrimSpace(module); module != "" {
+				return module
+			}
+		}
+	}
+
+	return fallback
+}
 
 func ensureDir(path string) error {
 	return os.MkdirAll(path, 0o755)

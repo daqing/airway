@@ -48,7 +48,7 @@ func generateAction(args []string) error {
 	}
 
 	if len(args) != 2 {
-		return fmt.Errorf("usage: airway cli generate action [api] [action]")
+		return fmt.Errorf("usage: airway generate action [api] [action]")
 	}
 
 	mod := strings.TrimSpace(args[0])
@@ -71,7 +71,7 @@ func generateAPI(args []string) error {
 	}
 
 	if len(args) != 1 {
-		return fmt.Errorf("usage: airway cli generate api [name]")
+		return fmt.Errorf("usage: airway generate api [name]")
 	}
 
 	name := strings.TrimSpace(args[0])
@@ -99,7 +99,7 @@ func generateModel(args []string) error {
 	}
 
 	if len(args) == 0 {
-		return fmt.Errorf("usage: airway cli generate model [name] [field:type]...")
+		return fmt.Errorf("usage: airway generate model [name] [field:type]...")
 	}
 
 	name := strings.TrimSpace(args[0])
@@ -123,11 +123,11 @@ func generateService(args []string) error {
 	}
 
 	if len(args) < 2 {
-		return fmt.Errorf("usage: airway cli generate service <name> <field:type> <field:type>...")
+		return fmt.Errorf("usage: airway generate service <name> <field:type> <field:type>...")
 	}
 
 	name := strings.TrimSpace(args[0])
-	data := serviceTemplateData{Name: toCamelName(name)}
+	data := serviceTemplateData{Name: toCamelName(name), Module: currentModulePath()}
 
 	fields := make([]string, 0, len(args)-1)
 	assignments := make([]string, 0, len(args)-1)
@@ -158,13 +158,14 @@ func generateCmd(args []string) error {
 	}
 
 	if len(args) < 2 {
-		return fmt.Errorf("usage: airway cli generate cmd <name> <field> <field>...")
+		return fmt.Errorf("usage: airway generate cmd <name> <field> <field>...")
 	}
 
 	name := strings.TrimSpace(args[0])
 	data := cmdTemplateData{
 		Name:      toCamelName(name),
 		LowerName: name,
+		Module:    currentModulePath(),
 	}
 
 	fields := make([]string, 0, len(args)-1)

@@ -16,7 +16,7 @@ Airway is both a **framework/library** and a **runnable application skeleton**:
 - Reusable layers under `lib/` — SQL builder, repository/ORM, migrations,
   storage, rendering, validation.
 - A Gin-based HTTP server (`main.go` + `app/` + `config/`) with a scaffolding
-  CLI, WebSocket support and a REPL, ready to `go run .`.
+  CLI, WebSocket support and a REPL, ready to `go run . server`.
 
 ## Features
 
@@ -32,7 +32,7 @@ Airway is both a **framework/library** and a **runnable application skeleton**:
 - **Gin web server + WebSocket** pub/sub.
 - **HTML views with [templ](https://templ.guide/)**: pages as `.templ`
   templates under `app/views/`, rendered from actions via `lib/render.HTML`.
-- **Scaffolding CLI** (`airway cli generate ...`, `db:migrate`, ...).
+- **Scaffolding CLI** (`airway generate ...`, `db:migrate`, ...).
 - **Engines**: Rails Engine-style feature modules shipped as independent Go
   modules — install with `go get`, enable with one blank import in
   `engines.go` (see [docs/engine.md](docs/engine.md)).
@@ -42,7 +42,18 @@ Airway is both a **framework/library** and a **runnable application skeleton**:
 
 ## Quick start
 
-### 1. Get the code and configure `.env`
+### 1. Install the CLI and scaffold a project
+
+```bash
+go install github.com/daqing/airway@latest
+airway new myapp        # or: airway new github.com/me/myapp (directory = last path segment)
+cd myapp
+cp .env.example .env
+```
+
+`airway new` generates a fresh project skeleton from the framework's `app/`
+scaffold, runs `go mod tidy`, and prints the follow-up steps. To hack on the
+framework itself instead, clone the repository:
 
 ```bash
 git clone https://github.com/daqing/airway.git
@@ -64,7 +75,7 @@ set, the `AIRWAY_` form wins. See [Configuration](#configuration).
 ### 2. Run the server
 
 ```bash
-go run .   # requires AIRWAY_ENV (e.g. AIRWAY_ENV=local) and a configured DSN
+go run . server   # or: airway server (requires AIRWAY_ENV, e.g. AIRWAY_ENV=local, and a configured DSN)
 ```
 
 Or start the local dev server with live reload:
@@ -170,23 +181,33 @@ require the templ CLI.
 
 ## CLI
 
-All commands run through the main binary; `cli` commands auto-load `.env` from
-the project root:
+The Airway CLI is a single `airway` binary (install with
+`go install github.com/daqing/airway@latest`); inside a project the same
+commands also run as `go run . <command>`. Commands auto-load `.env` from the
+project root:
 
 ```bash
-airway cli generate api admin                  # new API namespace under app/api/
-airway cli generate action admin show          # new action in an existing API module
-airway cli generate model post                 # new model in app/models/
-airway cli generate service post title:string  # CRUD service in app/services/
-airway cli generate migration create_posts     # new migration in db/migrate/
-airway cli db:create | db:drop
-airway cli db:migrate [version]                # apply migrations
-airway cli db:rollback [step]
-airway cli db:status
-airway cli schema:dump | schema:show           # writes / reads db/schema.json
-airway cli upload [key] /path/to/file          # upload via the configured storage
-airway cli plugin install /path/to/project     # copy app/, cmd/ and migrations into another project
+airway new myapp                           # scaffold a new project skeleton
+airway server                              # start the HTTP server
+airway generate api admin                  # new API namespace under app/api/
+airway generate action admin show          # new action in an existing API module
+airway generate model post                 # new model in app/models/
+airway generate service post title:string  # CRUD service in app/services/
+airway generate migration create_posts     # new .up.sql/.down.sql pair in db/migrate/
+airway db:create | db:drop
+airway db:migrate [version]                # apply migrations
+airway db:rollback [step]
+airway db:status
+airway schema:dump | schema:show           # writes / reads db/schema.json
+airway upload [key] /path/to/file          # upload via the configured storage
+airway version
 ```
+
+The legacy form `airway cli <command>` still works as a compatibility alias.
+Because models and engines are registered at compile time, prefer the project
+binary for `repl` and `engine:install` (`go run . repl`,
+`go run . engine:install <name>`) — the globally installed `airway` only sees
+what is compiled into itself.
 
 Database commands read `DSN`/`AIRWAY_DSN`; the legacy `AIRWAY_DB_DSN` and
 `AIRWAY_PG` are still honored for backward compatibility. See the full
@@ -322,6 +343,10 @@ go run . repl                              # uses the configured DSN
 go run . repl --driver sqlite --dsn ./tmp/airway.db
 ```
 
+Run the REPL through your project binary as shown: it only sees the models
+compiled into the binary (registered via `lib/replreg`), so the globally
+installed `airway repl` only sees the framework's built-in models.
+
 Commands: `help`, `driver`, `tables`, `exit`. Type a Go expression to evaluate
 it — builders print the compiled SQL, `repo.*` calls run against the database:
 
@@ -402,7 +427,7 @@ docker run -p 1900:1900 -e AIRWAY_ENV=production -e DSN="sqlite:///app/tmp/airwa
 Run migrations before/after deploy:
 
 ```bash
-./airway cli db:migrate
+./airway db:migrate
 ```
 
 See [docs/docker-compose.yml.example](docs/docker-compose.yml.example) for a

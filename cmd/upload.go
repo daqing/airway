@@ -20,7 +20,7 @@ func runUpload(args []string) error {
 		return nil
 	}
 	if len(args) < 1 || len(args) > 2 {
-		return fmt.Errorf("usage: airway cli upload [key] /path/to/file")
+		return fmt.Errorf("usage: airway upload [key] /path/to/file")
 	}
 
 	filename := args[len(args)-1]
@@ -73,8 +73,8 @@ func runUpload(args []string) error {
 
 func printUploadUsage() {
 	fmt.Println("usage:")
-	fmt.Println("  airway cli upload /path/to/file")
-	fmt.Println("  airway cli upload key /path/to/file")
+	fmt.Println("  airway upload /path/to/file")
+	fmt.Println("  airway upload key /path/to/file")
 }
 
 func explicitUploadKey(value string) (string, error) {

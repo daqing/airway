@@ -35,8 +35,8 @@ func runCLIEngine(args []string) error {
 
 func printCLIEngineUsage(w *os.File) {
 	_, _ = fmt.Fprintln(w, "usage:")
-	_, _ = fmt.Fprintln(w, "  airway cli engine list")
-	_, _ = fmt.Fprintln(w, "  airway cli engine install [name]")
+	_, _ = fmt.Fprintln(w, "  airway engine list")
+	_, _ = fmt.Fprintln(w, "  airway engine install [name]")
 }
 
 func runCLIEngineList() error {
@@ -58,7 +58,7 @@ func runCLIEngineList() error {
 // regular db:migrate / db:rollback / db:status machinery.
 func runCLIEngineInstall(args []string) error {
 	if len(args) != 1 {
-		return fmt.Errorf("usage: airway cli engine install [name]")
+		return fmt.Errorf("usage: airway engine install [name]")
 	}
 
 	name := strings.TrimSpace(args[0])

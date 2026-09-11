@@ -17,18 +17,21 @@ go get github.com/example/airway-im-engine
 #    )
 
 # 3. 把 Engine 内嵌的 SQL 迁移复制到 db/migrate（如果有的话）
-go run . cli engine:install im
+go run . engine:install im
 
 # 4. 照常执行迁移
-go run . cli db:migrate
+go run . db:migrate
 ```
 
 常用命令：
 
 ```bash
-go run . cli engine:list            # 列出已注册的 Engine 及其挂载路径
-go run . cli engine:install [name]  # 复制 Engine 的 SQL 迁移
+go run . engine:list            # 列出已注册的 Engine 及其挂载路径
+go run . engine:install [name]  # 复制 Engine 的 SQL 迁移
 ```
+
+Engine 在编译期注册，所以这些命令需要通过项目二进制运行（在项目目录中执行
+`go run . ...`）：全局安装的 `airway` CLI 只能列出/安装编译进它自身的 Engine。
 
 Engine 注册的路由在它声明的挂载路径下应答（例如 `/api/v1/im`）。选择暴露模型的
 Engine，其模型会出现在 `go run . repl` 中，与宿主模型并列。
@@ -114,7 +117,8 @@ REPL 模型名不能与宿主模型或其他 Engine 的模型重名；冲突时 
   `schema.RegisterChange`（与宿主项目的 DSL 迁移完全一样），import 后即自动加入全局
   迁移列表。
 - **SQL 文件**（`<version>_<name>.up.sql` / `.down.sql`）通过 `MigrationFS()` 内嵌，由
-  `airway cli engine:install <name>` 复制到宿主的 `db/migrate/` 并分配新的时间戳。复制后
+  `engine:install <name>`（在宿主项目中以 `go run . engine:install <name>` 运行）复制到
+  宿主的 `db/migrate/` 并分配新的时间戳。复制后
   就是普通的宿主迁移：`db:migrate`、`db:rollback`、`db:status` 照常工作；重复执行
   `engine:install` 会跳过已安装的文件。
 

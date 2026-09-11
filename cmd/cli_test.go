@@ -145,15 +145,20 @@ func TestGenerateMigrationCreatesUpAndDownFiles(t *testing.T) {
 		timeNow = previousNow
 	})
 
-	if err := run([]string{"cli", "generate", "migration", "create_posts"}); err != nil {
+	if err := run([]string{"generate", "migration", "create_posts"}); err != nil {
 		t.Fatalf("run generate migration: %v", err)
 	}
 
-	migrationPath := filepath.Join(wd, "db", "migrate", "20260327123456_create_posts.go")
+	upPath := filepath.Join(wd, "db", "migrate", "20260327123456_create_posts.up.sql")
+	upContent := readFile(t, upPath)
+	if !strings.Contains(upContent, "CREATE TABLE posts") {
+		t.Fatalf("expected CREATE TABLE example in up migration, got:\n%s", upContent)
+	}
 
-	content := readFile(t, migrationPath)
-	if !strings.Contains(content, `schema.RegisterChange("20260327123456", "create_posts"`) {
-		t.Fatalf("expected DSL migration template, got:\n%s", content)
+	downPath := filepath.Join(wd, "db", "migrate", "20260327123456_create_posts.down.sql")
+	downContent := readFile(t, downPath)
+	if !strings.Contains(downContent, "DROP TABLE posts") {
+		t.Fatalf("expected DROP TABLE example in down migration, got:\n%s", downContent)
 	}
 }
 
@@ -164,7 +169,7 @@ func TestCLIGenerateHelpPrintsUsage(t *testing.T) {
 		}
 	})
 
-	if !strings.Contains(output, "airway cli generate [action|api|model|migration|service|cmd] [params]") {
+	if !strings.Contains(output, "airway generate [action|api|model|migration|service|cmd] [params]") {
 		t.Fatalf("expected generate usage output, got:\n%s", output)
 	}
 }
@@ -178,32 +183,32 @@ func TestCLIGenerateSubcommandHelpPrintsUsage(t *testing.T) {
 		{
 			name:     "action",
 			args:     []string{"cli", "generate", "action", "-h"},
-			expected: "airway cli generate action [api] [action]",
+			expected: "airway generate action [api] [action]",
 		},
 		{
 			name:     "api",
 			args:     []string{"cli", "generate", "api", "-h"},
-			expected: "airway cli generate api [name]",
+			expected: "airway generate api [name]",
 		},
 		{
 			name:     "model",
 			args:     []string{"cli", "generate", "model", "-h"},
-			expected: "airway cli generate model [name] [field:type]...",
+			expected: "airway generate model [name] [field:type]...",
 		},
 		{
 			name:     "migration",
 			args:     []string{"cli", "generate", "migration", "-h"},
-			expected: "airway cli generate migration [name]",
+			expected: "airway generate migration [name]",
 		},
 		{
 			name:     "service",
 			args:     []string{"cli", "generate", "service", "-h"},
-			expected: "airway cli generate service <name> <field:type> <field:type>...",
+			expected: "airway generate service <name> <field:type> <field:type>...",
 		},
 		{
 			name:     "cmd",
 			args:     []string{"cli", "generate", "cmd", "-h"},
-			expected: "airway cli generate cmd <name> <field> <field>...",
+			expected: "airway generate cmd <name> <field> <field>...",
 		},
 	}
 
@@ -232,7 +237,7 @@ func TestGenerateMigrationHelpPrintsUsageWithoutCreatingFile(t *testing.T) {
 		}
 	})
 
-	if !strings.Contains(output, "airway cli generate migration [name]") {
+	if !strings.Contains(output, "airway generate migration [name]") {
 		t.Fatalf("expected migration usage output, got:\n%s", output)
 	}
 

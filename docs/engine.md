@@ -19,18 +19,22 @@ go get github.com/example/airway-im-engine
 #    )
 
 # 3. Copy the engine's embedded SQL migrations into db/migrate (if it ships any)
-go run . cli engine:install im
+go run . engine:install im
 
 # 4. Migrate as usual
-go run . cli db:migrate
+go run . db:migrate
 ```
 
 Handy commands:
 
 ```bash
-go run . cli engine:list            # registered engines and their mount paths
-go run . cli engine:install [name]  # copy an engine's SQL migrations
+go run . engine:list            # registered engines and their mount paths
+go run . engine:install [name]  # copy an engine's SQL migrations
 ```
+
+Engines register at compile time, so run these commands through the project
+binary (`go run . ...` in the project directory): a globally installed `airway`
+CLI can only list and install the engines compiled into itself.
 
 Routes registered by the engine answer under its declared mount path (e.g.
 `/api/v1/im`). Engine models that opt in appear in `go run . repl` alongside
@@ -121,7 +125,8 @@ conflicts disable engine REPL models and log a warning.
   migrations) and they join the global migration list on import.
 - **SQL files** (`<version>_<name>.up.sql` / `.down.sql`) are embedded via
   `MigrationFS()` and copied into the host's `db/migrate/` by
-  `airway cli engine:install <name>` with fresh timestamps. After copying they
+  `engine:install <name>` (run as `go run . engine:install <name>` in the host
+  project) with fresh timestamps. After copying they
   are ordinary host migrations: `db:migrate`, `db:rollback` and `db:status`
   work on them unchanged, and re-running `engine:install` skips files already
   installed.
