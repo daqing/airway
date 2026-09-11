@@ -1,40 +1,78 @@
 # Airway CLI 脚手架使用说明
 
-Airway 已经内置脚手架命令，可以直接通过主命令调用：
+Airway 内置脚手架 CLI，可以全局安装：
 
 ```bash
-go run . cli ...
+go install github.com/daqing/airway@latest
 ```
 
-执行 `airway cli ...` 时，Airway 会优先自动加载当前项目根目录下的 `.env` 文件。
+安装后即得到 `airway` 命令。命令执行时会优先自动加载当前项目根目录下的 `.env` 文件。
+在项目（或框架仓库）内部，同样的命令也可以用 `go run . <命令>` 的方式执行——其中
+`repl`、`engine:install` 等命令*建议*用这种方式运行，因为它们只能看到编译进当前
+二进制的模型和 Engine（详见下文）。
 
-如果你已经编译出二进制，也可以这样调用：
-
-```bash
-./airway cli ...
-```
+旧形式 `airway cli <命令>` 仍作为兼容别名可用。
 
 ## 命令总览
 
 ```bash
-airway cli db:create
-airway cli db:drop
-airway cli db:migrate [version]
-airway cli db:rollback [step]
-airway cli db:status
-airway cli generate [action|api|model|migration|service|cmd] [params]
-airway cli plugin install /path/to/project
-airway cli schema:dump
-airway cli schema:show
-airway cli upload /path/to/file
+airway new <module-path>                                # 生成新项目骨架
+airway server                                           # 启动 HTTP 服务
+airway db:create
+airway db:drop
+airway db:migrate [version]
+airway db:rollback [step]
+airway db:status
+airway engine new <module-path>                           # 生成新的 Engine 模块骨架
+airway engine:list
+airway engine:install [name]
+airway generate [action|api|model|migration|service|cmd] [params]
+airway plugin install /path/to/project  # 已废弃；请改用 Engine（docs/zh-CN/engine.md）
+airway schema:dump
+airway schema:show
+airway upload /path/to/file
+airway repl
+airway version
 ```
+
+不带参数运行 `airway` 会打印用法说明。
+
+## 创建新项目
+
+```bash
+airway new myapp                    # 目录名：myapp
+airway new github.com/me/myapp      # module 路径；目录取路径最后一段
+```
+
+`airway new` 会以框架仓库的 `app/` 骨架为模板生成一个新项目，自动执行
+`go mod tidy`，并打印后续步骤：
+
+```bash
+cd myapp
+cp .env.example .env    # 配置 DSN 和 PORT
+airway db:create
+airway db:migrate
+go run .                # 启动服务器（等同于 go run . server）
+```
+
+新项目的二进制不带参数（或带 `server`）时启动 HTTP 服务；带其他参数时派发给
+内置 CLI。
+
+## 启动服务器
+
+```bash
+airway server        # 或者在源码目录中：go run . server
+```
+
+框架仓库根目录的 `main.go` 不再默认启动 HTTP 服务——开发框架本身时请使用
+`go run . server`。Docker 镜像已经以 `server` 参数启动。
 
 ## 上传文件
 
 使用 `.env` 中的 storage 配置上传本地文件：
 
 ```bash
-airway cli upload /tmp/foo.png
+airway upload /tmp/foo.png
 ```
 
 源文件路径会转换为相对于存储根目录的 key。上例的 key 是 `tmp/foo.png`，
@@ -44,15 +82,18 @@ airway cli upload /tmp/foo.png
 如果需要明确指定 storage key，可以把 key 放在本地文件路径之前：
 
 ```bash
-airway cli upload images/foo.png /tmp/foo.png
+airway upload images/foo.png /tmp/foo.png
 ```
 
 ## 代码生成命令
 
+生成器会读取当前目录 `go.mod` 中的 module 路径，因此生成的 service/cmd 代码
+import 的是项目自身的 `app/models`、`app/services` 包，而不是硬编码的框架路径。
+
 ### 生成 API 模块
 
 ```bash
-go run . cli generate api admin
+airway generate api admin
 ```
 
 会创建：
@@ -65,7 +106,7 @@ go run . cli generate api admin
 ### 在已有 API 模块里生成 action
 
 ```bash
-go run . cli generate action admin show
+airway generate action admin show
 ```
 
 会创建：
@@ -77,7 +118,7 @@ go run . cli generate action admin show
 ### 生成 model
 
 ```bash
-go run . cli generate model post
+airway generate model post
 ```
 
 会创建：
@@ -93,7 +134,7 @@ go run . cli generate model post
 ### 生成 service
 
 ```bash
-go run . cli generate service post title:string published:bool
+airway generate service post title:string published:bool
 ```
 
 会创建：
@@ -112,7 +153,7 @@ go run . cli generate service post title:string published:bool
 ### 生成命令辅助代码
 
 ```bash
-go run . cli generate cmd post title published
+airway generate cmd post title published
 ```
 
 会创建：
@@ -124,43 +165,51 @@ go run . cli generate cmd post title published
 ### 生成迁移文件
 
 ```bash
-go run . cli generate migration create_posts
+airway generate migration create_posts
 ```
 
-会在以下目录生成新的 SQL migration：
+会在 `db/migrate/` 下生成一对带时间戳的 SQL 文件：
 
-- `db/migrate`
+- `<时间戳>_create_posts.up.sql` —— 正向迁移
+- `<时间戳>_create_posts.down.sql` —— 回滚迁移
+
+两个文件里带有注释掉的 `CREATE TABLE` / `DROP TABLE` 示例，编辑成你需要的
+表结构即可。
+
+旧的 Go DSL 迁移机制（`lib/migrate/schema` 的 `schema.RegisterChange`）仍然保留，
+但 DSL 迁移只在编译进执行迁移的二进制时生效。CLI 在 `./db/migrate` 下发现
+时间戳命名的 `.go` 迁移文件时会打印警告，提醒这一点。
 
 ## 数据库迁移命令
 
 ### 执行全部待运行迁移
 
 ```bash
-go run . cli db:migrate
+airway db:migrate
 ```
 
 ### 迁移到指定版本
 
 ```bash
-go run . cli db:migrate 20260327120000
+airway db:migrate 20260327120000
 ```
 
 ### 回滚最近一次迁移
 
 ```bash
-go run . cli db:rollback
+airway db:rollback
 ```
 
 ### 按步数回滚
 
 ```bash
-go run . cli db:rollback 3
+airway db:rollback 3
 ```
 
 ### 查看迁移状态
 
 ```bash
-go run . cli db:status
+airway db:status
 ```
 
 迁移相关命令读取数据库连接串的顺序为：
@@ -169,15 +218,55 @@ go run . cli db:status
 2. `DSN`
 3. 兼容旧项目时依次回退到 `AIRWAY_DB_DSN`、`AIRWAY_PG`
 
-在本地开发场景下，`airway cli ...` 会自动加载项目根目录的 `.env` 文件，因此通常直接把 `DSN` 写在 `.env` 里即可。
+在本地开发场景下，CLI 会自动加载项目根目录的 `.env` 文件，因此通常直接把 `DSN` 写在 `.env` 里即可。
 迁移命令会复用 Airway 当前 DSN 所对应的数据库类型，因此支持项目当前支持的 PostgreSQL、MySQL 和 SQLite。
 
+## Engine 命令
+
+生成一个新的 Engine 模块骨架（独立的 Go module；见
+[Engine 扩展机制](engine.md)）：
+
+```bash
+airway engine new im                              # 目录：im，Engine 名称：im
+airway engine new github.com/me/airway-im-engine  # 名称从路径最后一段推导
+```
+
+与下面的命令不同，`engine new` 用全局安装的 `airway` 即可运行——它只是写文件，
+不依赖编译期注册。
+
+Engine 是通过 `engines.go` 中的 blank import 启用的可选功能模块（见
+[Engine 扩展机制](engine.md)）：
+
+```bash
+go run . engine:list           # 列出已注册的 Engine 及挂载路径
+go run . engine:install <name> # 把 Engine 内嵌的 SQL 迁移复制到 db/migrate
+```
+
+Engine 在编译期注册，所以这些命令需要通过项目二进制运行（在项目目录中执行
+`go run . ...`）：全局安装的 `airway` 只能列出/安装编译进它自身的 Engine。
+
+`engine:install` 会为复制的迁移文件分配新的时间戳，并跳过已安装的文件；复制后它们就是
+普通迁移，由 `db:migrate` / `db:rollback` / `db:status` 统一管理。
+
+## REPL
+
+```bash
+go run . repl
+```
+
+REPL 只能看到编译进当前二进制、通过 `github.com/daqing/airway/lib/replreg`
+注册的模型——项目模型的 init 通过 `app/models` 的 `registerREPLModel` 注册
+（该函数委托给 `lib/replreg`）。因此在项目中请使用 `go run . repl`；全局安装的
+`airway repl` 只能看到框架自带的模型。
+
 ## 安装插件到其他 Airway 项目
+
+> **已废弃**：`plugin install` 将在未来版本移除。请改用 Engine 机制扩展功能（见 [Engine 扩展机制](engine.md)）。
 
 如果你当前仓库是一个插件项目，可以把它安装到另一个 Airway 项目：
 
 ```bash
-go run . cli plugin install /path/to/project
+airway plugin install /path/to/project
 ```
 
 该命令会复制：
@@ -195,10 +284,10 @@ go run . cli plugin install /path/to/project
 ### 第 1 步：生成 migration
 
 ```bash
-go run . cli generate migration create_posts
+airway generate migration create_posts
 ```
 
-然后编辑 `db/migrate/` 下面新生成的 SQL 文件，写入表结构。
+然后编辑 `db/migrate/` 下面新生成的 `.up.sql` 文件，写入表结构。
 
 例如：
 
@@ -215,13 +304,13 @@ CREATE TABLE posts (
 执行迁移：
 
 ```bash
-go run . cli db:migrate
+airway db:migrate
 ```
 
 ### 第 2 步：生成 model
 
 ```bash
-go run . cli generate model post
+airway generate model post
 ```
 
 这会创建 `app/models/post.go`。
@@ -241,7 +330,7 @@ type Post struct {
 ### 第 3 步：生成 service
 
 ```bash
-go run . cli generate service post title:string published:bool
+airway generate service post title:string published:bool
 ```
 
 这会创建 `app/services/post.go`，里面带有基础 CRUD 方法。
@@ -249,9 +338,9 @@ go run . cli generate service post title:string published:bool
 ### 第 4 步：生成 API 模块
 
 ```bash
-go run . cli generate api post
-go run . cli generate action post create
-go run . cli generate action post show
+airway generate api post
+airway generate action post create
+airway generate action post show
 ```
 
 这会生成：
@@ -309,7 +398,7 @@ just
 或者：
 
 ```bash
-go run .
+go run . server
 ```
 
 到这里，你已经把下面这几层骨架都搭起来了：

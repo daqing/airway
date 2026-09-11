@@ -7,6 +7,7 @@ import (
 	"github.com/daqing/airway/app/api/home_api"
 	"github.com/daqing/airway/app/api/storage_api"
 	"github.com/daqing/airway/app/websocket"
+	"github.com/daqing/airway/lib/engine"
 )
 
 // Routes registers every route — public and internal — at the root paths. This
@@ -24,6 +25,8 @@ func PublicRoutes(r *gin.Engine) {
 
 	websocketRoutes(r)
 	apiGroupRoutes(r)
+
+	engine.MountAll(r)
 }
 
 // HealthRoutes registers the internal health-check route. It stays reachable at

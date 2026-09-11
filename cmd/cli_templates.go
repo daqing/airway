@@ -76,7 +76,7 @@ type modelTemplateData struct {
 const serviceTemplate = `package services
 
 import (
-	"github.com/daqing/airway/app/models"
+	"{{.Module}}/app/models"
 	"github.com/daqing/airway/lib/repo"
 	sql "github.com/daqing/airway/lib/sql"
 )
@@ -100,6 +100,7 @@ func Delete{{.Name}}(id sql.IdType) error {
 
 type serviceTemplateData struct {
 	Name   string
+	Module string
 	Fields string
 	SQLH   string
 }
@@ -111,8 +112,8 @@ import (
 	"log"
 	"strconv"
 
-	"github.com/daqing/airway/app/models"
-	"github.com/daqing/airway/app/services"
+	"{{.Module}}/app/models"
+	"{{.Module}}/app/services"
 	sql "github.com/daqing/airway/lib/sql"
 )
 
@@ -168,6 +169,7 @@ func find{{.Name}}(args []string) (*models.{{.Name}}, error) {
 type cmdTemplateData struct {
 	Name           string
 	LowerName      string
+	Module         string
 	Fields         string
 	Args           string
 	Args1          string

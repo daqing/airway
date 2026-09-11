@@ -5,12 +5,16 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"log"
+	"maps"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 	"unicode"
 
-	appmodels "github.com/daqing/airway/app/models"
+	"github.com/daqing/airway/lib/engine"
+	"github.com/daqing/airway/lib/replreg"
 	"github.com/daqing/airway/lib/repo"
 	reposql "github.com/daqing/airway/lib/sql"
 	mysqlsql "github.com/daqing/airway/lib/sql/mysql"
@@ -850,8 +854,19 @@ func newSQLiteNamespace() replNamespace {
 }
 
 func newModelsNamespace() replNamespace {
+	hostModels := replreg.Namespace()
+
+	engineModels, err := engine.REPLNamespaces(slices.Collect(maps.Keys(hostModels))...)
+	if err != nil {
+		log.Printf("engine REPL models disabled: %v", err)
+	} else {
+		for name, model := range engineModels {
+			hostModels[name] = reflect.TypeOf(model)
+		}
+	}
+
 	namespace := replNamespace{}
-	for name, modelType := range appmodels.REPLNamespace() {
+	for name, modelType := range hostModels {
 		namespace[name] = modelType
 	}
 

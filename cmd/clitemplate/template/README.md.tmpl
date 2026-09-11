@@ -1,0 +1,22 @@
+# {{module}}
+
+An [Airway](https://github.com/daqing/airway) application.
+
+## Setup
+
+```bash
+cp .env.example .env   # set DSN and PORT
+airway db:create
+airway db:migrate
+go run .               # start the HTTP server (or: airway server)
+```
+
+## Common commands
+
+```bash
+airway generate api admin          # scaffold an API namespace
+airway generate model post         # scaffold a model
+airway generate migration create_posts
+airway db:migrate
+go run . repl                      # REPL with this project's models
+```

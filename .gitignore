@@ -15,3 +15,7 @@
 *.sh
 
 schema.json
+
+node_modules/
+docs/.vitepress/dist/
+docs/.vitepress/cache/

@@ -7,25 +7,23 @@ import (
 	"strings"
 )
 
-type migrationTemplateData struct {
-	Version string
-	Name    string
-	Slug    string
-}
-
-const migrationTemplate = `package migrate
-
-import "github.com/daqing/airway/lib/migrate/schema"
-
-func init() {
-	schema.RegisterChange("{{.Version}}", "{{.Slug}}", func(m *schema.Migrator) {
-		m.CreateTable("{{.Name}}", func(t *schema.Table) {
-			t.ID()
-			t.Timestamps()
-		})
-	})
-}
+const migrationUpTemplate = `-- Migration: {{.Slug}} (up)
+-- Write the SQL to apply below.
+{{.UpExample}}
 `
+
+const migrationDownTemplate = `-- Migration: {{.Slug}} (down)
+-- Write the SQL to roll back below.
+{{.DownExample}}
+`
+
+type migrationTemplateData struct {
+	Version     string
+	Name        string
+	Slug        string
+	UpExample   string
+	DownExample string
+}
 
 func generateMigrationFiles(args []string) error {
 	if len(args) == 1 && isHelpArg(args[0]) {
@@ -34,7 +32,7 @@ func generateMigrationFiles(args []string) error {
 	}
 
 	if len(args) != 1 {
-		return fmt.Errorf("usage: airway cli generate migration [name]")
+		return fmt.Errorf("usage: airway generate migration [name]")
 	}
 
 	name := strings.TrimSpace(args[0])
@@ -47,11 +45,35 @@ func generateMigrationFiles(args []string) error {
 	}
 
 	version := timeNow().Format("20060102150405")
-	targetPath := filepath.Join(migrationDir, fmt.Sprintf("%s_%s.go", version, name))
+	data := migrationTemplateData{
+		Version:     version,
+		Name:        strings.TrimPrefix(name, "create_"),
+		Slug:        name,
+		UpExample:   "-- e.g. CREATE TABLE ...;",
+		DownExample: "-- e.g. DROP TABLE ...;",
+	}
 
-	return writeTemplateFile(migrationTemplate, targetPath, migrationTemplateData{
-		Version: version,
-		Name:    strings.TrimPrefix(strings.TrimSpace(name), "create_"),
-		Slug:    name,
-	})
+	if table, ok := strings.CutPrefix(name, "create_"); ok && table != "" {
+		data.UpExample = fmt.Sprintf(`--
+-- CREATE TABLE %s (
+--   id BIGINT PRIMARY KEY,
+--   created_at TIMESTAMP NOT NULL,
+--   updated_at TIMESTAMP NOT NULL
+-- );`, table)
+		data.DownExample = fmt.Sprintf("--\n-- DROP TABLE %s;", table)
+	}
+
+	upPath := filepath.Join(migrationDir, fmt.Sprintf("%s_%s.up.sql", version, name))
+	if err := writeTemplateFile(migrationUpTemplate, upPath, data); err != nil {
+		return err
+	}
+
+	downPath := filepath.Join(migrationDir, fmt.Sprintf("%s_%s.down.sql", version, name))
+	if err := writeTemplateFile(migrationDownTemplate, downPath, data); err != nil {
+		return err
+	}
+
+	fmt.Printf("Created migration %s\n", upPath)
+	fmt.Printf("Created migration %s\n", downPath)
+	return nil
 }

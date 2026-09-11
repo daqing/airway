@@ -12,7 +12,7 @@
 Airway 既是**框架/库**，也是一个**可直接运行的应用程序骨架**：
 
 - `lib/` 下可复用的分层——SQL Builder、Repository/ORM、迁移、存储、渲染、校验。
-- 一个基于 Gin 的 HTTP 服务（`main.go` + `app/` + `config/`），内置脚手架 CLI、WebSocket 与 REPL，可直接 `go run .` 启动。
+- 一个基于 Gin 的 HTTP 服务（`main.go` + `app/` + `config/`），内置脚手架 CLI、WebSocket 与 REPL，可直接 `go run . server` 启动。
 
 ## 特性
 
@@ -21,13 +21,23 @@ Airway 既是**框架/库**，也是一个**可直接运行的应用程序骨架
 - **基于 schema 的迁移**：通过 CLI 生成与应用迁移；SQLite 的表结构变更通过重建表处理。
 - **统一的文件存储**（`lib/storage`）：本地目录、Amazon S3、Cloudflare R2 或腾讯云 COS——完全由配置决定，并提供 HTTP 上传/下载 API。
 - **Gin Web 服务 + WebSocket** 发布/订阅。
-- **脚手架 CLI**（`airway cli generate ...`、`db:migrate` 等）。
+- **脚手架 CLI**（`airway generate ...`、`db:migrate` 等）。
 - **Repo REPL**：支持类型化扫描与 Go 表达式求值。
 - **可选子路径前缀**（`URL_PREFIX`）：便于在反向代理后部署，例如 `http://host:1900/airway/...`。
 
 ## 快速开始
 
-### 1. 获取代码并配置 `.env`
+### 1. 安装 CLI 并生成新项目
+
+```bash
+go install github.com/daqing/airway@latest
+airway new myapp        # 或：airway new github.com/me/myapp（目录取路径最后一段）
+cd myapp
+cp .env.example .env
+```
+
+`airway new` 会以框架的 `app/` 骨架为模板生成一个新项目，自动执行 `go mod tidy`，
+并打印后续步骤。如果你是想开发框架本身，可以改为克隆仓库：
 
 ```bash
 git clone https://github.com/daqing/airway.git
@@ -47,7 +57,7 @@ PORT="1900"
 ### 2. 启动服务
 
 ```bash
-go run .   # 需要设置 AIRWAY_ENV（例如 AIRWAY_ENV=local）以及配置好的 DSN
+go run . server   # 或：airway server（需要设置 AIRWAY_ENV，例如 AIRWAY_ENV=local，以及配置好的 DSN）
 ```
 
 或者使用热重载启动本地开发服务：
@@ -125,22 +135,30 @@ curl -F "file=@report.pdf" http://127.0.0.1:1900/airway/api/v1/storage
 
 ## CLI
 
-所有命令都通过主程序运行；`cli` 命令会自动从项目根目录加载 `.env`：
+Airway CLI 是一个独立的 `airway` 二进制（通过
+`go install github.com/daqing/airway@latest` 安装）；在项目内同样的命令也可以
+用 `go run . <命令>` 执行。命令会自动从项目根目录加载 `.env`：
 
 ```bash
-airway cli generate api admin                  # 在 app/api/ 下新建 API namespace
-airway cli generate action admin show          # 在已有 API 模块中新增 action
-airway cli generate model post                 # 在 app/models/ 下新建 model
-airway cli generate service post title:string  # 在 app/services/ 下新建 CRUD service
-airway cli generate migration create_posts     # 在 db/migrate/ 下新建迁移
-airway cli db:create | db:drop
-airway cli db:migrate [version]                # 应用迁移
-airway cli db:rollback [step]
-airway cli db:status
-airway cli schema:dump | schema:show           # 写入 / 读取 db/schema.json
-airway cli upload [key] /path/to/file          # 通过已配置的存储上传文件
-airway cli plugin install /path/to/project     # 把 app/、cmd/ 与迁移复制到另一个项目
+airway new myapp                           # 生成新项目骨架
+airway server                              # 启动 HTTP 服务
+airway generate api admin                  # 在 app/api/ 下新建 API namespace
+airway generate action admin show          # 在已有 API 模块中新增 action
+airway generate model post                 # 在 app/models/ 下新建 model
+airway generate service post title:string  # 在 app/services/ 下新建 CRUD service
+airway generate migration create_posts     # 在 db/migrate/ 下新建 .up.sql/.down.sql 迁移文件对
+airway db:create | db:drop
+airway db:migrate [version]                # 应用迁移
+airway db:rollback [step]
+airway db:status
+airway schema:dump | schema:show           # 写入 / 读取 db/schema.json
+airway upload [key] /path/to/file          # 通过已配置的存储上传文件
+airway version
 ```
+
+旧形式 `airway cli <命令>` 仍作为兼容别名可用。由于模型和 Engine 在编译期注册，
+`repl` 与 `engine:install` 建议通过项目二进制运行（`go run . repl`、
+`go run . engine:install <name>`）——全局安装的 `airway` 只能看到编译进它自身的内容。
 
 数据库相关命令读取 `DSN`/`AIRWAY_DSN`；为了向后兼容，仍支持旧的 `AIRWAY_DB_DSN` 与 `AIRWAY_PG`。完整的[CLI 指南](cli.md)。
 
@@ -272,6 +290,9 @@ go run . repl                              # 使用已配置的 DSN
 go run . repl --driver sqlite --dsn ./tmp/airway.db
 ```
 
+请像上面这样通过项目二进制运行 REPL：它只能看到编译进该二进制、通过 `lib/replreg`
+注册的模型，因此全局安装的 `airway repl` 只能看到框架自带的模型。
+
 命令：`help`、`driver`、`tables`、`exit`。直接输入一条 Go 表达式即可求值——Builder 会打印编译后的 SQL，`repo.*` 调用会真实执行数据库操作：
 
 ```text
@@ -346,7 +367,7 @@ docker run -p 1900:1900 -e AIRWAY_ENV=production -e DSN="sqlite:///app/tmp/airwa
 部署前后运行迁移：
 
 ```bash
-./airway cli db:migrate
+./airway db:migrate
 ```
 
 Compose 示例见 [docs/docker-compose.yml.example](../docker-compose.yml.example)。如需在反向代理后面以子路径前缀提供服务，请设置 `URL_PREFIX`（例如 `/airway`）——参见上文[「HTTP 端点」](#http-端点)。

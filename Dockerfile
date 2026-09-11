@@ -15,4 +15,4 @@ ENV TZ="Asia/Shanghai"
 
 EXPOSE 1900
 
-CMD ["/app/airway"]
+CMD ["/app/airway", "server"]

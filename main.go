@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/daqing/airway/cmd"
+	"github.com/daqing/airway/lib/engine"
 	"github.com/daqing/airway/lib/redis_client"
 	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/storage"
@@ -14,24 +15,29 @@ import (
 	"github.com/joho/godotenv"
 )
 
+// The airway binary is a CLI first: `airway <command>` (see `airway help`).
+// Only the `server` subcommand starts the HTTP server.
 func main() {
 	args := os.Args[1:]
-	isCLICommand := len(args) > 0 && args[0] == "cli"
 
-	if isCLICommand {
-		loadCLIEnv()
-		cmd.Run(args)
+	if len(args) > 0 && args[0] == "server" {
+		runServer()
 		return
 	}
 
+	loadCLIEnv()
+	cmd.Run(args)
+}
+
+func runServer() {
 	appConfig := utils.AppConfig()
 
-	if !isCLICommand && appConfig.Env == "" {
+	if appConfig.Env == "" {
 		log.Println("AIRWAY_ENV is not set")
 		os.Exit(1)
 	}
 
-	if !isCLICommand && appConfig.IsLocal {
+	if appConfig.IsLocal {
 		envFile := ".env"
 		err := godotenv.Load(envFile)
 		if err != nil {
@@ -61,9 +67,9 @@ func main() {
 		os.Exit(4)
 	}
 
-	if len(args) > 0 {
-		cmd.Run(args)
-		return
+	if err := engine.BootAll(); err != nil {
+		log.Printf("engine boot failed: %v", err)
+		os.Exit(5)
 	}
 
 	runApp()
