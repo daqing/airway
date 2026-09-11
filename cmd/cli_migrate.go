@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
 
-	_ "github.com/daqing/airway/db/migrate"
 	"github.com/daqing/airway/lib/migrate/dialect"
 	"github.com/daqing/airway/lib/migrate/schema"
 	"github.com/daqing/airway/lib/repo"
@@ -569,6 +569,8 @@ func (m *migrationManager) executeSQLiteTableRebuild(ctx context.Context, tx *sq
 }
 
 func (m *migrationManager) loadMigrationUnits() ([]migrationUnit, error) {
+	warnOnDSLMigrationFiles(migrationDir)
+
 	sqlUpFiles, err := readMigrationFiles(migrationDir, ".up.sql")
 	if err != nil {
 		return nil, err
@@ -697,6 +699,26 @@ func (u migrationUnit) displayName() string {
 	}
 
 	return u.Name
+}
+
+var dslMigrationFilePattern = regexp.MustCompile(`^\d+_.*\.go$`)
+
+// warnOnDSLMigrationFiles prints a heads-up when the project still has Go DSL
+// migration files. Those register through init() and only run when compiled
+// into the binary that executes them; the standalone CLI cannot see them.
+func warnOnDSLMigrationFiles(dir string) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() || !dslMigrationFilePattern.MatchString(entry.Name()) {
+			continue
+		}
+
+		fmt.Fprintf(os.Stderr, "WARNING: %s is a Go DSL migration; it only runs when compiled into a binary that imports it. Prefer SQL migrations (<version>_<name>.up.sql/.down.sql) so `airway db:migrate` can run them.\n", filepath.Join(dir, entry.Name()))
+	}
 }
 
 func readMigrationFiles(dir string, suffix string) ([]migrationFile, error) {

@@ -1,0 +1,23 @@
+// Package {{engine}}engine implements the {{engine}} Airway engine.
+package {{engine}}engine
+
+import (
+	"github.com/daqing/airway/lib/engine"
+	"github.com/gin-gonic/gin"
+
+	"{{module}}/app/api/{{engine}}_api"
+)
+
+// Engine is the {{engine}} feature module.
+type Engine struct{}
+
+func (Engine) Name() string      { return "{{engine}}" }
+func (Engine) MountPath() string { return "/api/v1/{{engine}}" }
+
+func (Engine) Routes(r *gin.RouterGroup) {
+	{{engine}}_api.Routes(r)
+}
+
+func init() {
+	engine.Register(Engine{})
+}

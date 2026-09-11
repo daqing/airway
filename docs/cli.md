@@ -1,40 +1,80 @@
 # Airway CLI Scaffolding Guide
 
-Airway includes a built-in scaffolding CLI. You can use it through the main command:
+Airway ships a scaffolding CLI. Install it globally with:
 
 ```bash
-go run . cli ...
+go install github.com/daqing/airway@latest
 ```
 
-When running `airway cli ...`, Airway automatically tries to load `.env` from the current project root first.
+This gives you the `airway` command. Commands auto-load `.env` from the current
+project root. Inside a project (or the framework repo itself) the same commands
+also work as `go run . <command>` — and some commands (`repl`,
+`engine:install`) *should* be run that way, because they only see the models
+and engines compiled into the running binary (see below).
 
-If you already built the binary, the same commands also work as:
-
-```bash
-./airway cli ...
-```
+The legacy form `airway cli <command>` still works as a compatibility alias.
 
 ## Command Overview
 
 ```bash
-airway cli db:create
-airway cli db:drop
-airway cli db:migrate [version]
-airway cli db:rollback [step]
-airway cli db:status
-airway cli generate [action|api|model|migration|service|cmd] [params]
-airway cli plugin install /path/to/project
-airway cli schema:dump
-airway cli schema:show
-airway cli upload /path/to/file
+airway new <module-path>                                # scaffold a new project skeleton
+airway server                                           # start the HTTP server
+airway db:create
+airway db:drop
+airway db:migrate [version]
+airway db:rollback [step]
+airway db:status
+airway engine new <module-path>                           # scaffold a new engine module
+airway engine:list
+airway engine:install [name]
+airway generate [action|api|model|migration|service|cmd] [params]
+airway plugin install /path/to/project  # deprecated; use engines (docs/engine.md)
+airway schema:dump
+airway schema:show
+airway upload /path/to/file
+airway repl
+airway version
 ```
+
+Running `airway` with no arguments prints usage.
+
+## Start a new project
+
+```bash
+airway new myapp                    # directory: myapp
+airway new github.com/me/myapp      # module path; directory is the last path segment
+```
+
+`airway new` generates a fresh project skeleton based on the framework's `app/`
+scaffold, runs `go mod tidy`, and prints the follow-up steps:
+
+```bash
+cd myapp
+cp .env.example .env    # set DSN and PORT
+airway db:create
+airway db:migrate
+go run .                # starts the server (same as: go run . server)
+```
+
+A generated project's binary starts the HTTP server when run with no arguments
+(or with `server`), and dispatches any other arguments to the built-in CLI.
+
+## Start the server
+
+```bash
+airway server        # or, from source: go run . server
+```
+
+The framework repository's own `main.go` no longer starts the server by
+default — use `go run . server` when developing Airway itself. The Docker image
+already runs the binary with `server`.
 
 ## Upload a file
 
 Upload a local file using the storage configuration from `.env`:
 
 ```bash
-airway cli upload /tmp/foo.png
+airway upload /tmp/foo.png
 ```
 
 The source path becomes a root-relative storage key. In this example the key
@@ -45,15 +85,19 @@ file contents.
 To choose the storage key explicitly, pass it before the local file path:
 
 ```bash
-airway cli upload images/foo.png /tmp/foo.png
+airway upload images/foo.png /tmp/foo.png
 ```
 
 ## Code Generators
 
+Generators read the module path from the current directory's `go.mod`, so the
+generated service/cmd code imports your project's own `app/models` and
+`app/services` packages — no hard-coded framework paths.
+
 ### Generate an API module
 
 ```bash
-go run . cli generate api admin
+airway generate api admin
 ```
 
 This creates:
@@ -77,7 +121,7 @@ Use this when you want to create a new API namespace quickly.
 ### Generate an action inside an existing API module
 
 ```bash
-go run . cli generate action admin show
+airway generate action admin show
 ```
 
 This creates:
@@ -89,7 +133,7 @@ Use this when the API folder already exists and you only need a new endpoint han
 ### Generate a model
 
 ```bash
-go run . cli generate model post
+airway generate model post
 ```
 
 This creates:
@@ -105,7 +149,7 @@ The generated model includes:
 ### Generate a service
 
 ```bash
-go run . cli generate service post title:string published:bool
+airway generate service post title:string published:bool
 ```
 
 This creates:
@@ -124,7 +168,7 @@ Field arguments use `name:type` format.
 ### Generate a command helper
 
 ```bash
-go run . cli generate cmd post title published
+airway generate cmd post title published
 ```
 
 This creates:
@@ -136,43 +180,53 @@ This generator is useful if your project exposes extra custom CLI helpers around
 ### Generate a migration
 
 ```bash
-go run . cli generate migration create_posts
+airway generate migration create_posts
 ```
 
-This creates a new SQL migration file under:
+This creates a pair of timestamped SQL files under `db/migrate/`:
 
-- `db/migrate`
+- `<timestamp>_create_posts.up.sql` — the forward migration
+- `<timestamp>_create_posts.down.sql` — the rollback migration
+
+Both files contain commented-out `CREATE TABLE` / `DROP TABLE` examples to get
+you started; edit them to define your real schema.
+
+The older Go DSL migration mechanism (`schema.RegisterChange` in
+`lib/migrate/schema`) is still supported, but DSL migrations only take effect
+when they are compiled into the binary that runs the migration. When the CLI
+finds timestamp-named `.go` migration files under `./db/migrate`, it prints a
+warning to remind you of this.
 
 ## Migration Commands
 
 ### Run all pending migrations
 
 ```bash
-go run . cli db:migrate
+airway db:migrate
 ```
 
 ### Migrate to a specific version
 
 ```bash
-go run . cli db:migrate 20260327120000
+airway db:migrate 20260327120000
 ```
 
 ### Roll back the latest migration
 
 ```bash
-go run . cli db:rollback
+airway db:rollback
 ```
 
 ### Roll back multiple steps
 
 ```bash
-go run . cli db:rollback 3
+airway db:rollback 3
 ```
 
 ### Show migration status
 
 ```bash
-go run . cli db:status
+airway db:status
 ```
 
 Migration commands read:
@@ -180,15 +234,57 @@ Migration commands read:
 1. `AIRWAY_DB_DSN`
 2. `AIRWAY_PG` as a legacy fallback
 
-In normal local development, these values can come directly from your project's `.env` file because `airway cli ...` loads it automatically.
+In normal local development, these values can come directly from your project's `.env` file because the CLI loads it automatically.
 The migration commands use the current Airway DSN and work with the databases supported by the project, including PostgreSQL, MySQL, and SQLite.
+
+## Engine Commands
+
+Scaffold a new engine module (a standalone Go module; see
+[docs/engine.md](engine.md)):
+
+```bash
+airway engine new im                              # directory: im, engine name: im
+airway engine new github.com/me/airway-im-engine  # name derived from the last path segment
+```
+
+Unlike the commands below, `engine new` works fine with the globally installed
+`airway` — it writes files and does not depend on compile-time registration.
+
+Engines are optional feature modules enabled with blank imports in
+`engines.go` (see [docs/engine.md](engine.md)):
+
+```bash
+go run . engine:list           # list registered engines and mount paths
+go run . engine:install <name> # copy an engine's embedded SQL migrations into db/migrate
+```
+
+Engines register at compile time, so run these through the project binary
+(`go run . ...` in the project directory): the globally installed `airway` can
+only list and install the engines compiled into itself.
+
+`engine:install` assigns fresh timestamps to the copied migrations and skips
+files that are already installed; afterwards they are ordinary migrations
+managed by `db:migrate` / `db:rollback` / `db:status`.
+
+## REPL
+
+```bash
+go run . repl
+```
+
+The REPL only sees the models compiled into the binary you run — project models
+register through `registerREPLModel` in `app/models`, which delegates to
+`github.com/daqing/airway/lib/replreg`. Use `go run . repl` inside your project;
+the globally installed `airway repl` only sees the framework's built-in models.
 
 ## Plugin Installation
 
-Install the current project as a plugin into another Airway project:
+> **Deprecated**: `plugin install` will be removed in a future release. Use the
+> Engine mechanism instead (see [docs/engine.md](engine.md)).
 
+Install the current project as a plugin into another Airway project:
 ```bash
-go run . cli plugin install /path/to/project
+airway plugin install /path/to/project
 ```
 
 This copies:
@@ -206,10 +302,10 @@ Here is a minimal workflow for adding a `posts` feature from scratch.
 ### Step 1. Generate the database migration
 
 ```bash
-go run . cli generate migration create_posts
+airway generate migration create_posts
 ```
 
-Then edit the generated SQL file in `db/migrate/` and define the table you need.
+Then edit the generated `.up.sql` file in `db/migrate/` and define the table you need.
 
 Example:
 
@@ -226,13 +322,13 @@ CREATE TABLE posts (
 Run the migration:
 
 ```bash
-go run . cli db:migrate
+airway db:migrate
 ```
 
 ### Step 2. Generate the model
 
 ```bash
-go run . cli generate model post
+airway generate model post
 ```
 
 This creates `app/models/post.go`.
@@ -252,7 +348,7 @@ type Post struct {
 ### Step 3. Generate the service
 
 ```bash
-go run . cli generate service post title:string published:bool
+airway generate service post title:string published:bool
 ```
 
 This creates `app/services/post.go` with basic CRUD helpers.
@@ -260,9 +356,9 @@ This creates `app/services/post.go` with basic CRUD helpers.
 ### Step 4. Generate the API module
 
 ```bash
-go run . cli generate api post
-go run . cli generate action post create
-go run . cli generate action post show
+airway generate api post
+airway generate action post create
+airway generate action post show
 ```
 
 This gives you:
@@ -274,7 +370,7 @@ This gives you:
 
 ### Step 5. Wire the API routes into the router
 
-Open [config/routes.go](/Users/daqing/mzevo/open-source/airway/config/routes.go) and import the generated package:
+Open [config/routes.go](https://github.com/daqing/airway/blob/main/config/routes.go) and import the generated package:
 
 ```go
 import (
@@ -320,7 +416,7 @@ just
 Or:
 
 ```bash
-go run .
+go run . server
 ```
 
 At that point you have the full skeleton for:

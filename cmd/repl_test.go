@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/daqing/airway/lib/replreg"
 	"github.com/daqing/airway/lib/repo"
 )
 
@@ -23,6 +24,10 @@ type replUser struct {
 
 func (replUser) TableName() string {
 	return "users"
+}
+
+func init() {
+	replreg.Register("User", replUser{})
 }
 
 func TestRepoREPLExecutesGoStyleRepoCalls(t *testing.T) {
