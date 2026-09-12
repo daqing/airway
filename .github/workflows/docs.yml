@@ -3,11 +3,10 @@ name: Deploy docs to GitHub Pages
 on:
   push:
     branches: [main, feat/engine]
-    paths:
-      - docs/**
-      - package.json
-      - package-lock.json
-      - .github/workflows/docs.yml
+    # Rebuild on every release tag so the homepage shows the new version.
+    # (No `paths` filter: a tag push changes no files, so a paths filter
+    # would silently skip tag-triggered builds.)
+    tags: ['v*']
   workflow_dispatch:
 
 permissions:
@@ -23,6 +22,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Full history so `git tag --list` sees every release tag when the
+          # docs build injects the latest version into the homepage.
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22

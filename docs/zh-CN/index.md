@@ -9,9 +9,6 @@ hero:
     - theme: brand
       text: 快速上手
       link: /zh-CN/cli-standalone
-    - theme: alt
-      text: GitHub 仓库
-      link: https://github.com/daqing/airway
 
 features:
   - title: 一个 CLI 搞定一切
@@ -23,3 +20,4 @@ features:
   - title: 服务端渲染视图
     details: 基于 templ 的类型安全 HTML，内置 WebSocket Hub 与统一的本地 / S3 / R2 / COS 存储。
 ---
+

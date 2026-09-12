@@ -20,3 +20,26 @@
     align-items: center;
   }
 }
+
+/* Keep the hero install command (home-hero-actions-after slot) on the same
+   line as the action buttons: .actions is a block-level flex container by
+   default, so make both boxes inline-level and let them share a line box.
+   Both align by their top edge: the button sits 24px (32px >= 640px) below
+   the .actions box top (-6px margin + padding-top + 6px .action padding),
+   so the command pill gets the same margin-top. */
+.VPHero .actions {
+  display: inline-flex;
+  vertical-align: top;
+}
+
+.VPHero .main > .install-command {
+  vertical-align: top;
+  margin-top: 24px;
+}
+
+@media (min-width: 640px) {
+  .VPHero .main > .install-command {
+    margin-top: 32px;
+  }
+}
+
