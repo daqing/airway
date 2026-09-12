@@ -24,7 +24,7 @@ func run(args []string) error {
 	case "repl":
 		runRepoREPL(args[1:])
 		return nil
-	case "version":
+	case "version", "-v", "--version":
 		showVersion(args[1:])
 		return nil
 	case "cli":

@@ -2,8 +2,11 @@ package cmd
 
 import "fmt"
 
-const version = "0.5.0-dev"
+// Version is reported by `airway version`. The binary's main package sets it
+// from the embedded VERSION file; "dev" is the fallback for binaries built
+// without one.
+var Version = "dev"
 
 func showVersion(_ []string) {
-	fmt.Printf("airway %s\n", version)
+	fmt.Printf("airway %s\n", Version)
 }

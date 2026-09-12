@@ -120,7 +120,8 @@ airway upload [key] /path/to/file                     # upload via configured st
 airway engine new <module-path>                       # scaffold a new engine module
 airway engine:list                                    # registered engines and mount paths
 airway plugin install /path/to/project                # deprecated; use engines instead
-airway version
+airway version                                          # or -v / --version; prints the VERSION file contents
+airway --version | -v                                   # print VERSION contents without loading .env
 go run . engine:install <name>                        # copy an engine's embedded SQL migrations
 go run . repl                                         # interactive repo REPL
 ```

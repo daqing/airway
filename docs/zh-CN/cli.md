@@ -32,7 +32,7 @@ airway schema:dump
 airway schema:show
 airway upload /path/to/file
 airway repl
-airway version
+airway version                                           # 或 -v / --version；打印 VERSION 文件内容
 ```
 
 不带参数运行 `airway` 会打印用法说明。

@@ -33,7 +33,7 @@ airway schema:dump
 airway schema:show
 airway upload /path/to/file
 airway repl
-airway version
+airway version                                           # or -v / --version; prints the VERSION file contents
 ```
 
 Running `airway` with no arguments prints usage.

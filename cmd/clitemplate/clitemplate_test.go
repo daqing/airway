@@ -18,6 +18,8 @@ func TestScaffoldWritesTemplateWithModuleReplaced(t *testing.T) {
 		"go.mod",
 		"main.go",
 		"app.go",
+		"VERSION",
+		"version.go",
 		".env.example",
 		".gitignore",
 		"config/routes.go",

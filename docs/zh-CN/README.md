@@ -153,7 +153,7 @@ airway db:rollback [step]
 airway db:status
 airway schema:dump | schema:show           # 写入 / 读取 db/schema.json
 airway upload [key] /path/to/file          # 通过已配置的存储上传文件
-airway version
+airway version                                           # 或 -v / --version；打印 VERSION 文件内容
 ```
 
 旧形式 `airway cli <命令>` 仍作为兼容别名可用。由于模型和 Engine 在编译期注册，
