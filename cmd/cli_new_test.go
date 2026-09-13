@@ -22,6 +22,21 @@ func TestNewProjectScaffoldsModule(t *testing.T) {
 	if !strings.Contains(goMod, "module github.com/example/demo") {
 		t.Fatalf("expected module path in go.mod, got:\n%s", goMod)
 	}
+
+	for _, rel := range []string{
+		".env.example",
+		"Dockerfile",
+		"app/views/home/index.templ",
+		"app/views/home/index_templ.go",
+	} {
+		content := readFile(t, filepath.Join(wd, "demo", rel))
+		if strings.Contains(content, "1900") {
+			t.Fatalf("expected no leftover port 1900 in scaffolded %s", rel)
+		}
+		if !strings.Contains(content, "1905") {
+			t.Fatalf("expected scaffolded %s to use port 1905", rel)
+		}
+	}
 }
 
 func TestNewProjectRejectsExistingNonEmptyDirectory(t *testing.T) {
