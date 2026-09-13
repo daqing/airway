@@ -2,7 +2,7 @@ package home
 
 import "{{module}}/app/views/layouts"
 
-const repositoryURL = "https://github.com/daqing/airway"
+const repositoryURL = "https://{{module}}"
 
 // Index renders the framework homepage without a database dependency.
 templ Index() {
@@ -21,9 +21,15 @@ templ Index() {
 							@arrow("up")
 						</a>
 					</div>
-					<a class="button button-small button-outline" href={ templ.URL(repositoryURL) }>@githubIcon()
+					<div class="home-nav-side">
+						<button type="button" class="theme-toggle" data-theme-toggle aria-pressed="false" aria-label="Toggle light and dark mode" title="Toggle light and dark mode">
+							@sunIcon()
+							@moonIcon()
+						</button>
+						<a class="button button-small button-outline" href={ templ.URL(repositoryURL) }>@githubIcon()
 <span>GitHub</span>@arrow("up")
 </a>
+					</div>
 				</nav>
 			</header>
 			<main id="main" tabindex="-1">
@@ -137,7 +143,7 @@ index_action.go</button>
 						</div>
 						<div class="quickstart-terminal"><div class="terminal-heading"><span>@terminalIcon()
 Quick start</span><button type="button" class="copy-button" data-copy="quickstart-code" hidden aria-label="Copy quick start commands">@copyIcon()
-<span>Copy</span></button></div><pre><code id="quickstart-code"><span class="syntax-comment"># 1. Get the code</span>{ "\n" }git clone https://github.com/daqing/airway.git{ "\n" }cd airway{ "\n" }cp .env.example .env{ "\n\n" }<span class="syntax-comment"># 2. In .env, uncomment the SQLite DSN:</span>{ "\n" }<span class="syntax-comment"># DSN="sqlite://./tmp/airway.db"</span>{ "\n\n" }<span class="syntax-comment"># 3. Start your application</span>{ "\n" }AIRWAY_ENV=local go run .</code></pre><div class="terminal-footer"><span class="status-dot" aria-hidden="true"></span><span>Next stop: <strong>http://localhost:1900</strong></span>@arrow("right")
+<span>Copy</span></button></div><pre><code id="quickstart-code"><span class="syntax-comment"># 1. Get the code</span>{ "\n" }git clone https://{{module}}.git{ "\n" }cd airway{ "\n" }cp .env.example .env{ "\n\n" }<span class="syntax-comment"># 2. In .env, uncomment the SQLite DSN:</span>{ "\n" }<span class="syntax-comment"># DSN="sqlite://./tmp/airway.db"</span>{ "\n\n" }<span class="syntax-comment"># 3. Start your application</span>{ "\n" }AIRWAY_ENV=local go run .</code></pre><div class="terminal-footer"><span class="status-dot" aria-hidden="true"></span><span>Next stop: <strong>http://localhost:1900</strong></span>@arrow("right")
 </div><p class="terminal-requirement">Requires Go 1.26.2 or later · Live reload with <code>just dev</code></p><p class="copy-status" role="status" aria-live="polite"></p></div>
 					</div>
 				</section>

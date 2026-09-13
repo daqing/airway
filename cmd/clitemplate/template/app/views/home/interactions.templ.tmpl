@@ -3,6 +3,28 @@ package home
 templ interactions() {
 	<script>
 		(() => {
+			const themeRoot = document.querySelector(".home-page");
+			const themeToggle = document.querySelector("[data-theme-toggle]");
+			if (themeRoot && themeToggle) {
+				const KEY = "airway-theme";
+				const systemLight = window.matchMedia("(prefers-color-scheme: light)");
+				const current = () => themeRoot.dataset.theme || (systemLight.matches ? "light" : "dark");
+				const apply = theme => {
+					themeRoot.dataset.theme = theme;
+					themeToggle.setAttribute("aria-pressed", String(theme === "light"));
+				};
+				const stored = localStorage.getItem(KEY);
+				if (stored === "light" || stored === "dark") apply(stored);
+				else themeToggle.setAttribute("aria-pressed", String(current() === "light"));
+				themeToggle.addEventListener("click", () => {
+					const next = current() === "light" ? "dark" : "light";
+					apply(next);
+					localStorage.setItem(KEY, next);
+				});
+				systemLight.addEventListener("change", () => {
+					if (!localStorage.getItem(KEY)) themeToggle.setAttribute("aria-pressed", String(systemLight.matches));
+				});
+			}
 			document.querySelectorAll(".home-page [data-tabs]").forEach(group => {
 				const tabs = Array.from(group.querySelectorAll('[role="tab"]'));
 				const activate = tab => {
@@ -60,7 +82,7 @@ templ interactions() {
 	<noscript>
 		<style>
 			.home-page [data-tabs] [role="tabpanel"][hidden] { display: block !important; }
-			.home-page [data-tabs] [role="tabpanel"] { border-top: 1px solid #343943; }
+			.home-page [data-tabs] [role="tabpanel"] { border-top: 1px solid var(--panel-line); }
 			.home-page [role="tablist"] { display: none; }
 		</style>
 	</noscript>

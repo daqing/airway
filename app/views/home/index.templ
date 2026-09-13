@@ -21,9 +21,15 @@ templ Index() {
 							@arrow("up")
 						</a>
 					</div>
-					<a class="button button-small button-outline" href={ templ.URL(repositoryURL) }>@githubIcon()
+					<div class="home-nav-side">
+						<button type="button" class="theme-toggle" data-theme-toggle aria-pressed="false" aria-label="Toggle light and dark mode" title="Toggle light and dark mode">
+							@sunIcon()
+							@moonIcon()
+						</button>
+						<a class="button button-small button-outline" href={ templ.URL(repositoryURL) }>@githubIcon()
 <span>GitHub</span>@arrow("up")
 </a>
+					</div>
 				</nav>
 			</header>
 			<main id="main" tabindex="-1">

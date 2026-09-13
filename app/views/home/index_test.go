@@ -47,6 +47,27 @@ func TestIndexRendersHomePage(t *testing.T) {
 	}
 }
 
+func TestIndexSupportsLightAndDarkThemes(t *testing.T) {
+	html := renderToString(t, Index())
+
+	for _, want := range []string{
+		`data-theme-toggle`,
+		`class="theme-toggle"`,
+		`prefers-color-scheme: light`,
+		`.home-page[data-theme="light"]`,
+		`.home-page:not([data-theme="dark"])`,
+		`color-scheme: dark`,
+		`color-scheme: light`,
+		`airway-theme`,
+		`icon-sun`,
+		`icon-moon`,
+	} {
+		if !strings.Contains(html, want) {
+			t.Errorf("expected output to contain %q", want)
+		}
+	}
+}
+
 func TestIndexRendersAllFeatureCards(t *testing.T) {
 	html := renderToString(t, Index())
 
