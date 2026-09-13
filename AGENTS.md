@@ -73,6 +73,9 @@ lib/
   validation/    Input validation helpers.
 docs/            Guides: cli.md, engine.md, storage.md,
                  docker-compose.yml.example, zh-CN/ (Chinese docs).
+  homegen/       //go:build ignore script run by the docs workflow after the
+                 VitePress build; renders the app/views/home templ landing page
+                 over dist/index.html as the GitHub Pages homepage.
 data/storage/    Default local file-storage root.
 tmp/             Local dev database (airway.db), build artifacts. Git-ignored.
 ```
