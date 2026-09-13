@@ -8,5 +8,5 @@ import "fmt"
 var Version = "dev"
 
 func showVersion(_ []string) {
-	fmt.Printf("airway %s\n", Version)
+	fmt.Println(Version)
 }
