@@ -56,6 +56,10 @@ func newProject(module string, tidy bool) error {
 		return fmt.Errorf("scaffold project: %w", err)
 	}
 
+	if err := rewriteScaffoldPort(destDir); err != nil {
+		return fmt.Errorf("rewrite scaffold port: %w", err)
+	}
+
 	fmt.Printf("Created a new Airway project in %s (module %s)\n", destDir, module)
 
 	if tidy {
@@ -74,6 +78,38 @@ func newProject(module string, tidy bool) error {
 	fmt.Println("  airway db:create")
 	fmt.Println("  airway db:migrate")
 	fmt.Println("  go run .               # start the HTTP server")
+
+	return nil
+}
+
+// scaffoldPortFiles are the scaffolded files whose default port is rewritten
+// from 1900 (the framework repo's own default) to 1905, so a freshly generated
+// app doesn't collide with a locally running airway server.
+var scaffoldPortFiles = []string{
+	".env.example",
+	"Dockerfile",
+	"app/views/home/index.templ",
+	"app/views/home/index_templ.go",
+}
+
+func rewriteScaffoldPort(destDir string) error {
+	for _, rel := range scaffoldPortFiles {
+		path := filepath.Join(destDir, rel)
+
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+
+		updated := strings.ReplaceAll(string(data), "1900", "1905")
+		if updated == string(data) {
+			continue
+		}
+
+		if err := os.WriteFile(path, []byte(updated), 0o644); err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
