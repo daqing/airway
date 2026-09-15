@@ -73,6 +73,9 @@ lib/
   validation/    Input validation helpers.
 docs/            Guides: cli.md, engine.md, storage.md,
                  docker-compose.yml.example, zh-CN/ (Chinese docs).
+  homegen/       //go:build ignore script run by the docs workflow after the
+                 VitePress build; renders the app/views/home templ landing page
+                 over dist/index.html as the GitHub Pages homepage.
 data/storage/    Default local file-storage root.
 tmp/             Local dev database (airway.db), build artifacts. Git-ignored.
 ```
@@ -120,7 +123,8 @@ airway upload [key] /path/to/file                     # upload via configured st
 airway engine new <module-path>                       # scaffold a new engine module
 airway engine:list                                    # registered engines and mount paths
 airway plugin install /path/to/project                # deprecated; use engines instead
-airway version
+airway version                                          # or -v / --version; prints the VERSION file contents
+airway --version | -v                                   # print VERSION contents without loading .env
 go run . engine:install <name>                        # copy an engine's embedded SQL migrations
 go run . repl                                         # interactive repo REPL
 ```

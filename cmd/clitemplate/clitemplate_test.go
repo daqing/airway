@@ -18,11 +18,13 @@ func TestScaffoldWritesTemplateWithModuleReplaced(t *testing.T) {
 		"go.mod",
 		"main.go",
 		"app.go",
+		"VERSION",
+		"version.go",
 		".env.example",
 		".gitignore",
 		"config/routes.go",
 		"app/api/health_api/routes.go",
-		"app/models/user.go",
+		"app/models/registry.go",
 		"app/views/home/index.templ",
 		"app/views/home/index_templ.go",
 		"db/migrate/.keep",
@@ -35,6 +37,9 @@ func TestScaffoldWritesTemplateWithModuleReplaced(t *testing.T) {
 	goMod := readFile(t, filepath.Join(destDir, "go.mod"))
 	if !strings.Contains(goMod, "module github.com/example/demo") {
 		t.Fatalf("expected module path in go.mod, got:\n%s", goMod)
+	}
+	if !strings.Contains(goMod, "tool github.com/a-h/templ/cmd/templ") {
+		t.Fatalf("expected templ tool directive in go.mod, got:\n%s", goMod)
 	}
 
 	routes := readFile(t, filepath.Join(destDir, "config", "routes.go"))

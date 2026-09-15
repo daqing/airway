@@ -63,7 +63,7 @@ airway engine:list
 airway engine:install [name]
 airway upload [key] /path/to/file
 airway repl                                             # project binary only
-airway version
+airway version                                           # or -v / --version; prints the VERSION file contents
 airway help                                             # or -h / --help
 ```
 

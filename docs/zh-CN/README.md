@@ -153,7 +153,7 @@ airway db:rollback [step]
 airway db:status
 airway schema:dump | schema:show           # 写入 / 读取 db/schema.json
 airway upload [key] /path/to/file          # 通过已配置的存储上传文件
-airway version
+airway version                                           # 或 -v / --version；打印 VERSION 文件内容
 ```
 
 旧形式 `airway cli <命令>` 仍作为兼容别名可用。由于模型和 Engine 在编译期注册，
@@ -291,17 +291,17 @@ go run . repl --driver sqlite --dsn ./tmp/airway.db
 ```
 
 请像上面这样通过项目二进制运行 REPL：它只能看到编译进该二进制、通过 `lib/replreg`
-注册的模型，因此全局安装的 `airway repl` 只能看到框架自带的模型。
+注册的模型，因此全局安装的 `airway repl` 看不到你项目中的模型。
 
 命令：`help`、`driver`、`tables`、`exit`。直接输入一条 Go 表达式即可求值——Builder 会打印编译后的 SQL，`repo.*` 调用会真实执行数据库操作：
 
 ```text
-repo.FindOne("users", sql.Eq("id", 1))
-repo.Find[models.User](pg.Select("id").Where(sql.Eq("id", 1)))
-repo.Insert[models.User](pg.H{"id": 1234, "email": "dev@example.com"})
-repo.Update("users", pg.H{"enabled": false}, sql.Eq("id", 1))
-repo.Delete("users", sql.Eq("id", 1))
-pg.Select("*").From("users").Where(sql.Eq("id", 1))
+repo.FindOne("posts", sql.Eq("id", 1))
+repo.Find[models.Post](pg.Select("id").Where(sql.Eq("id", 1)))
+repo.Insert[models.Post](pg.H{"id": 1234, "title": "hello"})
+repo.Update("posts", pg.H{"published": false}, sql.Eq("id", 1))
+repo.Delete("posts", sql.Eq("id", 1))
+pg.Select("*").From("posts").Where(sql.Eq("id", 1))
 ```
 
 可用的 namespace：`repo`、`sql`、`pg`、`mysql`、`sqlite`、`models`。

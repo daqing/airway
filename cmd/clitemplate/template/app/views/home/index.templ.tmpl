@@ -2,7 +2,7 @@ package home
 
 import "{{module}}/app/views/layouts"
 
-const repositoryURL = "https://github.com/daqing/airway"
+const repositoryURL = "https://{{module}}"
 
 // Index renders the framework homepage without a database dependency.
 templ Index() {
@@ -21,9 +21,15 @@ templ Index() {
 							@arrow("up")
 						</a>
 					</div>
-					<a class="button button-small button-outline" href={ templ.URL(repositoryURL) }>@githubIcon()
+					<div class="home-nav-side">
+						<button type="button" class="theme-toggle" data-theme-toggle aria-pressed="false" aria-label="Toggle light and dark mode" title="Toggle light and dark mode">
+							@sunIcon()
+							@moonIcon()
+						</button>
+						<a class="button button-small button-outline" href={ templ.URL(repositoryURL) }>@githubIcon()
 <span>GitHub</span>@arrow("up")
 </a>
+					</div>
 				</nav>
 			</header>
 			<main id="main" tabindex="-1">
@@ -59,7 +65,7 @@ index_action.go</button>
 								<button id="tab-cli" type="button" role="tab" aria-selected="false" aria-controls="panel-cli" tabindex="-1" data-tab="cli">terminal</button>
 							</div>
 							<div id="panel-api" class="code-panel" role="tabpanel" aria-labelledby="tab-api" tabindex="0">
-								<pre><code><span class="syntax-comment">{ "// A real API. A little Go." }</span>{ "\n" }<span class="syntax-purple">func</span> <span class="syntax-blue">IndexAction</span>(c *gin.Context) { "{\n" }{ "    " }users, err := repo.<span class="syntax-blue">FindBy</span>[models.User]({ "\n" }{ "        " }sql.H{ "{" }<span class="syntax-green">"active"</span>: <span class="syntax-purple">true</span>{ "},\n" }{ "    )\n\n" }{ "    " }<span class="syntax-purple">if</span> err != <span class="syntax-purple">nil</span> { "{\n" }{ "        " }render.<span class="syntax-blue">Error</span>(c, err){ "\n" }{ "        " }<span class="syntax-purple">return</span>{ "\n    }\n\n" }{ "    " }render.<span class="syntax-blue">OK</span>(c, users){ "\n}" }</code></pre>
+								<pre><code><span class="syntax-comment">{ "// A real API. A little Go." }</span>{ "\n" }<span class="syntax-purple">func</span> <span class="syntax-blue">IndexAction</span>(c *gin.Context) { "{\n" }{ "    " }posts, err := repo.<span class="syntax-blue">FindBy</span>[models.Post]({ "\n" }{ "        " }sql.H{ "{" }<span class="syntax-green">"active"</span>: <span class="syntax-purple">true</span>{ "},\n" }{ "    )\n\n" }{ "    " }<span class="syntax-purple">if</span> err != <span class="syntax-purple">nil</span> { "{\n" }{ "        " }render.<span class="syntax-blue">Error</span>(c, err){ "\n" }{ "        " }<span class="syntax-purple">return</span>{ "\n    }\n\n" }{ "    " }render.<span class="syntax-blue">OK</span>(c, posts){ "\n}" }</code></pre>
 							</div>
 							<div id="panel-view" class="code-panel" role="tabpanel" aria-labelledby="tab-view" tabindex="0" hidden>
 								<pre><code><span class="syntax-comment">{ "// Your HTML belongs in Go, too." }</span>{ "\n" }<span class="syntax-purple">package</span> home{ "\n\n" }<span class="syntax-purple">templ</span> <span class="syntax-blue">Greeting</span>(name string) { "{\n" }{ "    <main>\n        <h1>Hello, { name }.</h1>\n        <p>Your next idea starts here.</p>\n    </main>\n}\n\n" }<span class="syntax-comment">{ "// Render from your Gin action:" }</span>{ "\n" }render.<span class="syntax-blue">HTML</span>(c, home.<span class="syntax-blue">Greeting</span>(<span class="syntax-green">"world"</span>))</code></pre>
@@ -119,7 +125,7 @@ index_action.go</button>
 						<div id="panel-sqlite" role="tabpanel" aria-labelledby="tab-sqlite" tabindex="0"><pre><code><span class="syntax-comment"># Local development, zero database services.</span>{ "\n" }DSN=<span class="syntax-green">"sqlite://./tmp/airway.db"</span></code></pre></div>
 						<div id="panel-postgres" role="tabpanel" aria-labelledby="tab-postgres" tabindex="0" hidden><pre><code><span class="syntax-comment"># Connect to your PostgreSQL database.</span>{ "\n" }DSN=<span class="syntax-green">"postgres://user:pass@localhost:5432/airway"</span></code></pre></div>
 						<div id="panel-mysql" role="tabpanel" aria-labelledby="tab-mysql" tabindex="0" hidden><pre><code><span class="syntax-comment"># Connect to your MySQL 8 database.</span>{ "\n" }DSN=<span class="syntax-green">"mysql://user:pass@localhost:3306/airway"</span></code></pre></div>
-						<div class="database-query"><span class="syntax-comment">{ "// Your application code stays familiar." }</span><code>repo.<span class="syntax-blue">FindBy</span>[User](sql.H{ "{" }<span class="syntax-green">"active"</span>: true{ "}" })</code></div>
+						<div class="database-query"><span class="syntax-comment">{ "// Your application code stays familiar." }</span><code>repo.<span class="syntax-blue">FindBy</span>[Post](sql.H{ "{" }<span class="syntax-green">"active"</span>: true{ "}" })</code></div>
 						<p class="database-footnote">Basic CRUD is portable. Some advanced SQL helpers are PostgreSQL-specific.</p>
 					</div>
 				</section>
@@ -137,7 +143,7 @@ index_action.go</button>
 						</div>
 						<div class="quickstart-terminal"><div class="terminal-heading"><span>@terminalIcon()
 Quick start</span><button type="button" class="copy-button" data-copy="quickstart-code" hidden aria-label="Copy quick start commands">@copyIcon()
-<span>Copy</span></button></div><pre><code id="quickstart-code"><span class="syntax-comment"># 1. Get the code</span>{ "\n" }git clone https://github.com/daqing/airway.git{ "\n" }cd airway{ "\n" }cp .env.example .env{ "\n\n" }<span class="syntax-comment"># 2. In .env, uncomment the SQLite DSN:</span>{ "\n" }<span class="syntax-comment"># DSN="sqlite://./tmp/airway.db"</span>{ "\n\n" }<span class="syntax-comment"># 3. Start your application</span>{ "\n" }AIRWAY_ENV=local go run .</code></pre><div class="terminal-footer"><span class="status-dot" aria-hidden="true"></span><span>Next stop: <strong>http://localhost:1900</strong></span>@arrow("right")
+<span>Copy</span></button></div><pre><code id="quickstart-code"><span class="syntax-comment"># 1. Get the code</span>{ "\n" }git clone https://{{module}}.git{ "\n" }cd airway{ "\n" }cp .env.example .env{ "\n\n" }<span class="syntax-comment"># 2. In .env, uncomment the SQLite DSN:</span>{ "\n" }<span class="syntax-comment"># DSN="sqlite://./tmp/airway.db"</span>{ "\n\n" }<span class="syntax-comment"># 3. Start your application</span>{ "\n" }AIRWAY_ENV=local go run .</code></pre><div class="terminal-footer"><span class="status-dot" aria-hidden="true"></span><span>Next stop: <strong>http://localhost:1900</strong></span>@arrow("right")
 </div><p class="terminal-requirement">Requires Go 1.26.2 or later · Live reload with <code>just dev</code></p><p class="copy-status" role="status" aria-live="polite"></p></div>
 					</div>
 				</section>

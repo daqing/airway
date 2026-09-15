@@ -20,11 +20,19 @@ import (
 func main() {
 	args := os.Args[1:]
 
+	// `--version` / `-v` print the VERSION file contents directly, without
+	// loading .env or any other project setup.
+	if len(args) > 0 && (args[0] == "--version" || args[0] == "-v") {
+		printVersion()
+		return
+	}
+
 	if len(args) > 0 && args[0] == "server" {
 		runServer()
 		return
 	}
 
+	cmd.Version = versionString()
 	loadCLIEnv()
 	cmd.Run(args)
 }

@@ -1,4 +1,30 @@
+import { execSync } from 'node:child_process'
 import { defineConfig } from 'vitepress'
+
+// Latest release tag, read from git at docs build time and injected into the
+// LatestVersion component. Falls back to an empty string (badge hidden) when
+// git or tags are unavailable.
+function latestTag(): string {
+  try {
+    const out = execSync('git tag --list', {
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).toString()
+
+    const compare = (a: string, b: string): number => {
+      const pa = a.replace(/^v/, '').split(/[.-]/).map((x) => parseInt(x, 10) || 0)
+      const pb = b.replace(/^v/, '').split(/[.-]/).map((x) => parseInt(x, 10) || 0)
+      for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+        const d = (pa[i] || 0) - (pb[i] || 0)
+        if (d !== 0) return d
+      }
+      return 0
+    }
+
+    return out.split('\n').map((s) => s.trim()).filter(Boolean).sort(compare).at(-1) ?? ''
+  } catch {
+    return ''
+  }
+}
 
 export default defineConfig({
   base: '/airway/',
@@ -6,6 +32,12 @@ export default defineConfig({
   description: 'A full-stack API framework in Go, inspired by Ruby on Rails',
   cleanUrls: true,
   ignoreDeadLinks: true,
+
+  vite: {
+    define: {
+      __AIRWAY_LATEST_TAG__: JSON.stringify(latestTag()),
+    },
+  },
 
   themeConfig: {
     socialLinks: [

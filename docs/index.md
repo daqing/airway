@@ -9,9 +9,6 @@ hero:
     - theme: brand
       text: Get Started
       link: /cli-standalone
-    - theme: alt
-      text: View on GitHub
-      link: https://github.com/daqing/airway
 
 features:
   - title: One CLI for everything
@@ -23,3 +20,4 @@ features:
   - title: Server-rendered views
     details: Type-safe HTML with templ, plus a WebSocket hub and unified local/S3/R2/COS storage.
 ---
+

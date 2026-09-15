@@ -60,7 +60,7 @@ airway engine:list
 airway engine:install [name]
 airway upload [key] /path/to/file
 airway repl                                             # 仅项目二进制可用
-airway version
+airway version                                           # 或 -v / --version；打印 VERSION 文件内容
 airway help                                             # 或 -h / --help
 ```
 

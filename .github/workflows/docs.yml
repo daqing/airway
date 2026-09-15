@@ -1,13 +1,16 @@
 name: Deploy docs to GitHub Pages
 
+# The site homepage (dist/index.html) is not the VitePress page: after the
+# VitePress build it is overwritten with a static render of the templ landing
+# page in app/views/home (via docs/homegen).
+
 on:
   push:
     branches: [main, feat/engine]
-    paths:
-      - docs/**
-      - package.json
-      - package-lock.json
-      - .github/workflows/docs.yml
+    # Rebuild on every release tag so the homepage shows the new version.
+    # (No `paths` filter: a tag push changes no files, so a paths filter
+    # would silently skip tag-triggered builds.)
+    tags: ['v*']
   workflow_dispatch:
 
 permissions:
@@ -23,12 +26,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Full history so `git tag --list` sees every release tag when the
+          # docs build injects the latest version into the homepage.
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
       - run: npm ci
       - run: npm run docs:build
+      # Replace the VitePress homepage with the static templ landing page.
+      - run: go run docs/homegen/main.go
       - uses: actions/upload-pages-artifact@v3
         with:
           path: docs/.vitepress/dist
