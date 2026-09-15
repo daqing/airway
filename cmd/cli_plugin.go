@@ -9,85 +9,67 @@ import (
 	"strings"
 	"time"
 
-	"github.com/daqing/airway/lib/engine"
+	"github.com/daqing/airway/lib/plugin"
 )
 
-func runCLIEngine(args []string) error {
-	if len(args) == 0 {
-		printCLIEngineUsage(os.Stdout)
-		return nil
-	}
-
-	subcommand := strings.ToLower(strings.TrimSpace(args[0]))
-
-	switch subcommand {
-	case "new":
-		return runCLIEngineNew(args[1:])
-	case "list":
-		return runCLIEngineList()
-	case "install":
-		return runCLIEngineInstall(args[1:])
-	case "help", "-h", "--help":
-		printCLIEngineUsage(os.Stdout)
-		return nil
-	default:
-		return fmt.Errorf("unknown engine command: %s", subcommand)
-	}
+func runCLIPlugin(args []string) error {
+	printCLIPluginUsage(os.Stdout)
+	return nil
 }
 
-func printCLIEngineUsage(w *os.File) {
+func printCLIPluginUsage(w *os.File) {
 	_, _ = fmt.Fprintln(w, "usage:")
-	_, _ = fmt.Fprintln(w, "  airway engine new <module-path>")
-	_, _ = fmt.Fprintln(w, "  airway engine list")
-	_, _ = fmt.Fprintln(w, "  airway engine install [name]")
+	_, _ = fmt.Fprintln(w, "  airway plugin:new <module-path>")
+	_, _ = fmt.Fprintln(w, "  airway plugin:list")
+	_, _ = fmt.Fprintln(w, "  airway plugin:install [name]")
 }
 
-func runCLIEngineList() error {
-	engines := engine.Engines()
-	if len(engines) == 0 {
-		fmt.Println("No engines registered (add blank imports to engines.go)")
+func runCLIPluginList() error {
+	plugins := plugin.Plugins()
+	if len(plugins) == 0 {
+		fmt.Println("No plugins registered (add blank imports to plugins.go)")
 		return nil
 	}
 
-	for _, e := range engines {
-		fmt.Printf("%s\t%s\n", e.Name(), e.MountPath())
+	for _, p := range plugins {
+		fmt.Printf("%s\t%s\n", p.Name(), p.MountPath())
 	}
 
 	return nil
 }
 
-// runCLIEngineInstall copies an engine's embedded SQL migrations into the
+// runCLIPluginInstall copies a plugin's embedded SQL migrations into the
 // host's db/migrate directory with fresh timestamps, so they run through the
 // regular db:migrate / db:rollback / db:status machinery.
-func runCLIEngineInstall(args []string) error {
+func runCLIPluginInstall(args []string) error {
 	if len(args) != 1 {
-		return fmt.Errorf("usage: airway engine install [name]")
+		return fmt.Errorf("usage: airway plugin:install [name]")
 	}
 
 	name := strings.TrimSpace(args[0])
 
-	e := engine.Find(name)
-	if e == nil {
-		return fmt.Errorf("engine %q is not registered; add its blank import to engines.go", name)
+	p := plugin.Find(name)
+	if p == nil {
+		return fmt.Errorf("plugin %q is not registered; add its blank import to plugins.go", name)
 	}
 
-	provider, ok := e.(engine.MigrationProvider)
+	provider, ok := p.(plugin.MigrationProvider)
 	if !ok {
-		fmt.Printf("Engine %s has no SQL migrations to install\n", name)
+		fmt.Printf("Plugin %s has no SQL migrations to install\n", name)
 		return nil
 	}
 
-	return installEngineMigrations(name, provider.MigrationFS(), migrationDir, timeNow())
+	return installPluginMigrations(name, provider.MigrationFS(), migrationDir, timeNow())
 }
 
-func installEngineMigrations(engineName string, migrations fs.FS, dstDir string, now time.Time) error {
-	pairs, err := collectEngineMigrationPairs(migrations)
+func installPluginMigrations(pluginName string, migrations fs.FS, dstDir string, now time.Time) error {
+	pairs, err := collectPluginMigrationPairs(migrations)
 	if err != nil {
-		return fmt.Errorf("read engine %s migrations: %w", engineName, err)
+		return fmt.Errorf("read plugin %s migrations: %w", pluginName, err)
 	}
 
 	if len(pairs) == 0 {
-		fmt.Printf("Engine %s has no SQL migrations to install\n", engineName)
+		fmt.Printf("Plugin %s has no SQL migrations to install\n", pluginName)
 		return nil
 	}
 
@@ -98,7 +80,7 @@ func installEngineMigrations(engineName string, migrations fs.FS, dstDir string,
 	for i, pair := range pairs {
 		version := now.Add(time.Duration(i) * time.Second).Format("20060102150405")
 
-		if engineMigrationInstalled(dstDir, pair.name) {
+		if pluginMigrationInstalled(dstDir, pair.name) {
 			fmt.Printf("Migration %s already installed, skipping...\n", pair.name)
 			continue
 		}
@@ -116,19 +98,19 @@ func installEngineMigrations(engineName string, migrations fs.FS, dstDir string,
 			}
 		}
 
-		fmt.Printf("Installed migration %s_%s from engine %s\n", version, pair.name, engineName)
+		fmt.Printf("Installed migration %s_%s from plugin %s\n", version, pair.name, pluginName)
 	}
 
 	return nil
 }
 
-type engineMigrationPair struct {
+type pluginMigrationPair struct {
 	name string
 	up   []byte
 	down []byte
 }
 
-func collectEngineMigrationPairs(migrations fs.FS) ([]engineMigrationPair, error) {
+func collectPluginMigrationPairs(migrations fs.FS) ([]pluginMigrationPair, error) {
 	ups := map[string][]byte{}
 	downs := map[string][]byte{}
 
@@ -162,7 +144,7 @@ func collectEngineMigrationPairs(migrations fs.FS) ([]engineMigrationPair, error
 		}
 
 		name := strings.TrimSuffix(base, suffix)
-		// Strip the engine's own version prefix; the install assigns a fresh one.
+		// Strip the plugin's own version prefix; the install assigns a fresh one.
 		if _, rest, found := strings.Cut(name, "_"); found {
 			name = rest
 		}
@@ -183,17 +165,17 @@ func collectEngineMigrationPairs(migrations fs.FS) ([]engineMigrationPair, error
 	}
 	sort.Strings(names)
 
-	pairs := make([]engineMigrationPair, 0, len(names))
+	pairs := make([]pluginMigrationPair, 0, len(names))
 	for _, name := range names {
-		pairs = append(pairs, engineMigrationPair{name: name, up: ups[name], down: downs[name]})
+		pairs = append(pairs, pluginMigrationPair{name: name, up: ups[name], down: downs[name]})
 	}
 
 	return pairs, nil
 }
 
-// engineMigrationInstalled reports whether db/migrate already contains a
+// pluginMigrationInstalled reports whether db/migrate already contains a
 // migration whose name part matches (regardless of its timestamp prefix).
-func engineMigrationInstalled(dstDir string, name string) bool {
+func pluginMigrationInstalled(dstDir string, name string) bool {
 	entries, err := os.ReadDir(dstDir)
 	if err != nil {
 		return false

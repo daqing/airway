@@ -13,7 +13,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/daqing/airway/lib/engine"
+	"github.com/daqing/airway/lib/plugin"
 	"github.com/daqing/airway/lib/replreg"
 	"github.com/daqing/airway/lib/repo"
 	reposql "github.com/daqing/airway/lib/sql"
@@ -856,11 +856,11 @@ func newSQLiteNamespace() replNamespace {
 func newModelsNamespace() replNamespace {
 	hostModels := replreg.Namespace()
 
-	engineModels, err := engine.REPLNamespaces(slices.Collect(maps.Keys(hostModels))...)
+	pluginModels, err := plugin.REPLNamespaces(slices.Collect(maps.Keys(hostModels))...)
 	if err != nil {
-		log.Printf("engine REPL models disabled: %v", err)
+		log.Printf("plugin REPL models disabled: %v", err)
 	} else {
-		for name, model := range engineModels {
+		for name, model := range pluginModels {
 			hostModels[name] = reflect.TypeOf(model)
 		}
 	}

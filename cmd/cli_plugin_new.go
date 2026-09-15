@@ -12,22 +12,22 @@ import (
 	"github.com/daqing/airway/cmd/clitemplate"
 )
 
-var engineNamePattern = regexp.MustCompile(`^[a-z][a-z0-9]*$`)
+var pluginNamePattern = regexp.MustCompile(`^[a-z][a-z0-9]*$`)
 
-func runCLIEngineNew(args []string) error {
+func runCLIPluginNew(args []string) error {
 	if len(args) == 1 && isHelpArg(args[0]) {
-		printCLIEngineNewUsage(os.Stdout)
+		printCLIPluginNewUsage(os.Stdout)
 		return nil
 	}
 
 	if len(args) != 1 {
-		return fmt.Errorf("usage: airway engine new <module-path>")
+		return fmt.Errorf("usage: airway plugin:new <module-path>")
 	}
 
-	return newEngine(strings.TrimSpace(args[0]), true)
+	return newPlugin(strings.TrimSpace(args[0]), true)
 }
 
-func newEngine(module string, tidy bool) error {
+func newPlugin(module string, tidy bool) error {
 	if !modulePathPattern.MatchString(module) {
 		return fmt.Errorf("invalid module path %q", module)
 	}
@@ -37,9 +37,9 @@ func newEngine(module string, tidy bool) error {
 		dirName = module[idx+1:]
 	}
 
-	name := engineNameFromDir(dirName)
-	if !engineNamePattern.MatchString(name) {
-		return fmt.Errorf("cannot derive an engine name from %q; use a module path whose last segment is the engine name (e.g. im or github.com/me/airway-im-engine)", module)
+	name := pluginNameFromDir(dirName)
+	if !pluginNamePattern.MatchString(name) {
+		return fmt.Errorf("cannot derive a plugin name from %q; use a module path whose last segment is the plugin name (e.g. im or github.com/me/airway-im-plugin)", module)
 	}
 
 	destDir := filepath.Join(".", dirName)
@@ -57,11 +57,11 @@ func newEngine(module string, tidy bool) error {
 		}
 	}
 
-	if err := clitemplate.ScaffoldEngine(destDir, module, name); err != nil {
-		return fmt.Errorf("scaffold engine: %w", err)
+	if err := clitemplate.ScaffoldPlugin(destDir, module, name); err != nil {
+		return fmt.Errorf("scaffold plugin: %w", err)
 	}
 
-	fmt.Printf("Created a new Airway engine in %s (module %s, name %s)\n", destDir, module, name)
+	fmt.Printf("Created a new Airway plugin in %s (module %s, name %s)\n", destDir, module, name)
 
 	if tidy {
 		tidyCmd := exec.Command("go", "mod", "tidy")
@@ -77,25 +77,25 @@ func newEngine(module string, tidy bool) error {
 	fmt.Printf("  cd %s\n", destDir)
 	fmt.Println("  go get github.com/daqing/airway@latest   # if tidy did not resolve it")
 	fmt.Println("  go mod tidy")
-	fmt.Println("\nEnable it in a host app with a blank import in engines.go:")
+	fmt.Println("\nEnable it in a host app with a blank import in plugins.go:")
 	fmt.Printf("  _ \"%s\"\n", module)
 
 	return nil
 }
 
-// engineNameFromDir derives the engine name from the directory name, dropping
-// the conventional "airway-" prefix and "-engine" suffix
-// (airway-im-engine -> im).
-func engineNameFromDir(dirName string) string {
+// pluginNameFromDir derives the plugin name from the directory name, dropping
+// the conventional "airway-" prefix and "-plugin" suffix
+// (airway-im-plugin -> im).
+func pluginNameFromDir(dirName string) string {
 	name := strings.TrimPrefix(dirName, "airway-")
-	return strings.TrimSuffix(name, "-engine")
+	return strings.TrimSuffix(name, "-plugin")
 }
 
-func printCLIEngineNewUsage(w io.Writer) {
+func printCLIPluginNewUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "usage:")
-	_, _ = fmt.Fprintln(w, "  airway engine new <module-path>")
+	_, _ = fmt.Fprintln(w, "  airway plugin:new <module-path>")
 	_, _ = fmt.Fprintln(w, "")
 	_, _ = fmt.Fprintln(w, "examples:")
-	_, _ = fmt.Fprintln(w, "  airway engine new im")
-	_, _ = fmt.Fprintln(w, "  airway engine new github.com/me/airway-im-engine")
+	_, _ = fmt.Fprintln(w, "  airway plugin:new im")
+	_, _ = fmt.Fprintln(w, "  airway plugin:new github.com/me/airway-im-plugin")
 }

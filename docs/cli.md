@@ -9,8 +9,8 @@ go install github.com/daqing/airway@latest
 This gives you the `airway` command. Commands auto-load `.env` from the current
 project root. Inside a project (or the framework repo itself) the same commands
 also work as `go run . <command>` — and some commands (`repl`,
-`engine:install`) *should* be run that way, because they only see the models
-and engines compiled into the running binary (see below).
+`plugin:install`) *should* be run that way, because they only see the models
+and plugins compiled into the running binary (see below).
 
 The legacy form `airway cli <command>` still works as a compatibility alias.
 
@@ -24,11 +24,10 @@ airway db:drop
 airway db:migrate [version]
 airway db:rollback [step]
 airway db:status
-airway engine new <module-path>                           # scaffold a new engine module
-airway engine:list
-airway engine:install [name]
+airway plugin:new <module-path>                           # scaffold a new plugin module
+airway plugin:list
+airway plugin:install [name]
 airway generate [action|api|model|migration|service|cmd] [params]
-airway plugin install /path/to/project  # deprecated; use engines (docs/engine.md)
 airway schema:dump
 airway schema:show
 airway upload /path/to/file
@@ -237,32 +236,32 @@ Migration commands read:
 In normal local development, these values can come directly from your project's `.env` file because the CLI loads it automatically.
 The migration commands use the current Airway DSN and work with the databases supported by the project, including PostgreSQL, MySQL, and SQLite.
 
-## Engine Commands
+## Plugin Commands
 
-Scaffold a new engine module (a standalone Go module; see
-[docs/engine.md](engine.md)):
+Scaffold a new plugin module (a standalone Go module; see
+[docs/plugin.md](plugin.md)):
 
 ```bash
-airway engine new im                              # directory: im, engine name: im
-airway engine new github.com/me/airway-im-engine  # name derived from the last path segment
+airway plugin:new im                              # directory: im, plugin name: im
+airway plugin:new github.com/me/airway-im-plugin  # name derived from the last path segment
 ```
 
-Unlike the commands below, `engine new` works fine with the globally installed
+Unlike the commands below, `plugin:new` works fine with the globally installed
 `airway` — it writes files and does not depend on compile-time registration.
 
-Engines are optional feature modules enabled with blank imports in
-`engines.go` (see [docs/engine.md](engine.md)):
+Plugins are optional feature modules enabled with blank imports in
+`plugins.go` (see [docs/plugin.md](plugin.md)):
 
 ```bash
-go run . engine:list           # list registered engines and mount paths
-go run . engine:install <name> # copy an engine's embedded SQL migrations into db/migrate
+go run . plugin:list           # list registered plugins and mount paths
+go run . plugin:install <name> # copy a plugin's embedded SQL migrations into db/migrate
 ```
 
-Engines register at compile time, so run these through the project binary
+Plugins register at compile time, so run these through the project binary
 (`go run . ...` in the project directory): the globally installed `airway` can
-only list and install the engines compiled into itself.
+only list and install the plugins compiled into itself.
 
-`engine:install` assigns fresh timestamps to the copied migrations and skips
+`plugin:install` assigns fresh timestamps to the copied migrations and skips
 files that are already installed; afterwards they are ordinary migrations
 managed by `db:migrate` / `db:rollback` / `db:status`.
 
@@ -276,24 +275,6 @@ The REPL only sees the models compiled into the binary you run — project model
 register through `registerREPLModel` in `app/models`, which delegates to
 `github.com/daqing/airway/lib/replreg`. Use `go run . repl` inside your project;
 the globally installed `airway repl` only sees the framework's built-in models.
-
-## Plugin Installation
-
-> **Deprecated**: `plugin install` will be removed in a future release. Use the
-> Engine mechanism instead (see [docs/engine.md](engine.md)).
-
-Install the current project as a plugin into another Airway project:
-```bash
-airway plugin install /path/to/project
-```
-
-This copies:
-
-- `./app/*` into `/path/to/project/app/`
-- `./cmd/*` into `/path/to/project/cmd/`
-- `./db/migrate/*.sql` into `/path/to/project/db/migrate/`
-
-Migration files copied through plugin install are prefixed with a fresh timestamp to avoid version collisions.
 
 ## Practical Example
 

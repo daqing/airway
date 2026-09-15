@@ -1,0 +1,23 @@
+// Package {{plugin}}plugin implements the {{plugin}} Airway plugin.
+package {{plugin}}plugin
+
+import (
+	"github.com/daqing/airway/lib/plugin"
+	"github.com/gin-gonic/gin"
+
+	"{{module}}/app/api/{{plugin}}_api"
+)
+
+// Plugin is the {{plugin}} feature module.
+type Plugin struct{}
+
+func (Plugin) Name() string      { return "{{plugin}}" }
+func (Plugin) MountPath() string { return "/api/v1/{{plugin}}" }
+
+func (Plugin) Routes(r *gin.RouterGroup) {
+	{{plugin}}_api.Routes(r)
+}
+
+func init() {
+	plugin.Register(Plugin{})
+}

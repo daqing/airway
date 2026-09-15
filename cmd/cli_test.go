@@ -94,46 +94,6 @@ func TestRunCLICommandGeneratesServiceAndCmdTemplates(t *testing.T) {
 	}
 }
 
-func TestCLIPluginInstallCopiesAppCmdAndMigrations(t *testing.T) {
-	wd := useTempWorkingDir(t)
-	makeDirs(t, filepath.Join(wd, "app", "api", "demo_api"))
-	makeDirs(t, filepath.Join(wd, "cmd"))
-	makeDirs(t, filepath.Join(wd, "db", "migrate"))
-
-	writeFile(t, filepath.Join(wd, "app", "api", "demo_api", "routes.go"), "package demo_api\n")
-	writeFile(t, filepath.Join(wd, "cmd", "demo.go"), "package cmd\n")
-	writeFile(t, filepath.Join(wd, "db", "migrate", "create_demo.sql"), "-- demo\n")
-
-	targetDir := filepath.Join(wd, "target")
-	makeDirs(t, filepath.Join(targetDir, "app"))
-	makeDirs(t, filepath.Join(targetDir, "cmd"))
-	makeDirs(t, filepath.Join(targetDir, "db", "migrate"))
-
-	frozenTime := time.Date(2026, 3, 27, 12, 34, 56, 0, time.UTC)
-	previousNow := timeNow
-	timeNow = func() time.Time { return frozenTime }
-	t.Cleanup(func() {
-		timeNow = previousNow
-	})
-
-	if err := run([]string{"cli", "plugin", "install", targetDir}); err != nil {
-		t.Fatalf("run plugin install: %v", err)
-	}
-
-	if _, err := os.Stat(filepath.Join(targetDir, "app", "api", "demo_api", "routes.go")); err != nil {
-		t.Fatalf("expected app files copied: %v", err)
-	}
-
-	if _, err := os.Stat(filepath.Join(targetDir, "cmd", "demo.go")); err != nil {
-		t.Fatalf("expected cmd files copied: %v", err)
-	}
-
-	migrationPath := filepath.Join(targetDir, "db", "migrate", "20260327123456_create_demo.sql")
-	if _, err := os.Stat(migrationPath); err != nil {
-		t.Fatalf("expected timestamped migration copied: %v", err)
-	}
-}
-
 func TestGenerateMigrationCreatesUpAndDownFiles(t *testing.T) {
 	wd := useTempWorkingDir(t)
 	makeDirs(t, filepath.Join(wd, "db", "migrate"))

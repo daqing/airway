@@ -1,5 +1,5 @@
 // Package replreg holds the process-wide registry of models exposed to the
-// interactive REPL. Host apps and engines register their models here (usually
+// interactive REPL. Host apps and plugins register their models here (usually
 // from init functions); the REPL builds its namespace from the registry.
 package replreg
 

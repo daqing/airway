@@ -1,0 +1,32 @@
+# {{module}}
+
+An [Airway](https://github.com/daqing/airway) plugin.
+
+## Develop
+
+```bash
+go get github.com/daqing/airway@latest
+go mod tidy
+```
+
+## Use in a host application
+
+```bash
+go get {{module}}
+```
+
+Then enable it with a blank import in the host's `plugins.go`:
+
+```go
+import (
+	_ "{{module}}"
+)
+```
+
+The plugin mounts its routes at `/api/v1/{{plugin}}`. To ship SQL migrations,
+add `<version>_<name>.up.sql` / `.down.sql` files under `db/migrate/`, expose
+them with `plugin.MigrationProvider`, and install them in the host with
+`go run . plugin:install {{plugin}}`.
+
+See https://github.com/daqing/airway/blob/main/docs/plugin.md for the full
+plugin guide.
