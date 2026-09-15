@@ -91,6 +91,19 @@ func pluginNameFromDir(dirName string) string {
 	return strings.TrimSuffix(name, "-plugin")
 }
 
+// pluginNameFromModule derives the plugin name from a module path: the last
+// path segment, minus the conventional affixes
+// (github.com/me/airway-im-plugin -> im). A bare name (im) passes through
+// unchanged.
+func pluginNameFromModule(module string) string {
+	dirName := module
+	if idx := strings.LastIndex(module, "/"); idx >= 0 {
+		dirName = module[idx+1:]
+	}
+
+	return pluginNameFromDir(dirName)
+}
+
 func printCLIPluginNewUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "usage:")
 	_, _ = fmt.Fprintln(w, "  airway plugin:new <module-path>")

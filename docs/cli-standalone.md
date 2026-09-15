@@ -60,7 +60,7 @@ airway schema:dump
 airway schema:show
 airway plugin:new <module-path>                         # scaffold a new plugin module
 airway plugin:list
-airway plugin:install [name]
+airway plugin:install <module>
 airway upload [key] /path/to/file
 airway repl                                             # project binary only
 airway version                                           # or -v / --version; prints the VERSION file contents
@@ -142,7 +142,7 @@ Plugins are optional feature modules enabled via blank imports in
 
 ```bash
 go run . plugin:list           # list registered plugins and mount paths
-go run . plugin:install <name> # copy a plugin's embedded SQL migrations into db/migrate/
+go run . plugin:install <module> # copy a plugin's embedded SQL migrations into db/migrate/
 ```
 
 Plugins register at compile time, so run these through the **project binary**

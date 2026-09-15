@@ -158,7 +158,7 @@ airway version                                           # 或 -v / --version；
 
 旧形式 `airway cli <命令>` 仍作为兼容别名可用。由于模型和 Plugin 在编译期注册，
 `repl` 与 `plugin:install` 建议通过项目二进制运行（`go run . repl`、
-`go run . plugin:install <name>`）——全局安装的 `airway` 只能看到编译进它自身的内容。
+`go run . plugin:install <module>`）——全局安装的 `airway` 只能看到编译进它自身的内容。
 
 数据库相关命令读取 `DSN`/`AIRWAY_DSN`；为了向后兼容，仍支持旧的 `AIRWAY_DB_DSN` 与 `AIRWAY_PG`。完整的[CLI 指南](cli.md)。
 

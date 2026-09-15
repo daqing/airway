@@ -206,7 +206,7 @@ airway version
 The legacy form `airway cli <command>` still works as a compatibility alias.
 Because models and plugins are registered at compile time, prefer the project
 binary for `repl` and `plugin:install` (`go run . repl`,
-`go run . plugin:install <name>`) — the globally installed `airway` only sees
+`go run . plugin:install <module>`) — the globally installed `airway` only sees
 what is compiled into itself.
 
 Database commands read `DSN`/`AIRWAY_DSN`; the legacy `AIRWAY_DB_DSN` and

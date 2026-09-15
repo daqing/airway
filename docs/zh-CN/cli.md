@@ -25,7 +25,7 @@ airway db:rollback [step]
 airway db:status
 airway plugin:new <module-path>                           # 生成新的 Plugin 模块骨架
 airway plugin:list
-airway plugin:install [name]
+airway plugin:install <module>
 airway generate [action|api|model|migration|service|cmd] [params]
 airway schema:dump
 airway schema:show
@@ -238,13 +238,14 @@ Plugin 是通过 `plugins.go` 中的 blank import 启用的可选功能模块（
 
 ```bash
 go run . plugin:list           # 列出已注册的 Plugin 及挂载路径
-go run . plugin:install <name> # 把 Plugin 内嵌的 SQL 迁移复制到 db/migrate
+go run . plugin:install <module> # 把 Plugin 内嵌的 SQL 迁移复制到 db/migrate
 ```
 
 Plugin 在编译期注册，所以这些命令需要通过项目二进制运行（在项目目录中执行
 `go run . ...`）：全局安装的 `airway` 只能列出/安装编译进它自身的 Plugin。
 
-`plugin:install` 会为复制的迁移文件分配新的时间戳，并跳过已安装的文件；复制后它们就是
+`plugin:install` 的参数是 Plugin 的模块路径（如 `github.com/daqing/airway-im-plugin`)，
+插件名从路径最后一段推导（与 `plugin:new` 相同）。它会为复制的迁移文件分配新的时间戳，并跳过已安装的文件；复制后它们就是
 普通迁移，由 `db:migrate` / `db:rollback` / `db:status` 统一管理。
 
 ## REPL

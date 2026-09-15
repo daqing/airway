@@ -57,7 +57,7 @@ airway schema:dump
 airway schema:show
 airway plugin:new <module-path>                         # 生成新的 Plugin 模块骨架
 airway plugin:list
-airway plugin:install [name]
+airway plugin:install <module>
 airway upload [key] /path/to/file
 airway repl                                             # 仅项目二进制可用
 airway version                                           # 或 -v / --version；打印 VERSION 文件内容
@@ -132,7 +132,7 @@ Plugin 是通过 `plugins.go` 中的空白导入启用的可选功能模块
 
 ```bash
 go run . plugin:list           # 列出已注册的 Plugin 及挂载路径
-go run . plugin:install <name> # 把 Plugin 内嵌的 SQL 迁移复制到 db/migrate/
+go run . plugin:install <module> # 把 Plugin 内嵌的 SQL 迁移复制到 db/migrate/
 ```
 
 Plugin 在编译期注册，因此请通过**项目二进制**运行这些命令

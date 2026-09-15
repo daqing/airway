@@ -17,7 +17,7 @@ go get github.com/example/airway-im-plugin
 #    )
 
 # 3. 把 Plugin 内嵌的 SQL 迁移复制到 db/migrate（如果有的话）
-go run . plugin:install im
+go run . plugin:install github.com/example/airway-im-plugin
 
 # 4. 照常执行迁移
 go run . db:migrate
@@ -27,7 +27,7 @@ go run . db:migrate
 
 ```bash
 go run . plugin:list            # 列出已注册的 Plugin 及其挂载路径
-go run . plugin:install [name]  # 复制 Plugin 的 SQL 迁移
+go run . plugin:install <module>  # 复制 Plugin 的 SQL 迁移
 ```
 
 Plugin 在编译期注册，所以这些命令需要通过项目二进制运行（在项目目录中执行
@@ -128,7 +128,7 @@ REPL 模型名不能与宿主模型或其他 Plugin 的模型重名；冲突时 
   `schema.RegisterChange`（与宿主项目的 DSL 迁移完全一样），import 后即自动加入全局
   迁移列表。
 - **SQL 文件**（`<version>_<name>.up.sql` / `.down.sql`）通过 `MigrationFS()` 内嵌，由
-  `plugin:install <name>`（在宿主项目中以 `go run . plugin:install <name>` 运行）复制到
+  `plugin:install <module>`（在宿主项目中以 `go run . plugin:install <module>` 运行）复制到
   宿主的 `db/migrate/` 并分配新的时间戳。复制后
   就是普通的宿主迁移：`db:migrate`、`db:rollback`、`db:status` 照常工作；重复执行
   `plugin:install` 会跳过已安装的文件。

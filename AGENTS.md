@@ -123,7 +123,7 @@ airway plugin:new <module-path>                       # scaffold a new plugin mo
 airway plugin:list                                    # registered plugins and mount paths
 airway version                                          # or -v / --version; prints the VERSION file contents
 airway --version | -v                                   # print VERSION contents without loading .env
-go run . plugin:install <name>                        # copy a plugin's embedded SQL migrations
+go run . plugin:install <module>                      # copy a plugin's embedded SQL migrations
 go run . repl                                         # interactive repo REPL
 ```
 

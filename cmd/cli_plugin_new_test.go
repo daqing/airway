@@ -51,6 +51,21 @@ func TestNewPluginDerivesNameFromModulePath(t *testing.T) {
 	}
 }
 
+func TestPluginNameFromModule(t *testing.T) {
+	cases := map[string]string{
+		"github.com/daqing/airway-im-plugin": "im",
+		"github.com/me/billing":              "billing",
+		"airway-im-plugin":                   "im",
+		"im":                                 "im",
+	}
+
+	for module, want := range cases {
+		if got := pluginNameFromModule(module); got != want {
+			t.Fatalf("pluginNameFromModule(%q) = %q, want %q", module, got, want)
+		}
+	}
+}
+
 func TestNewPluginRejectsExistingNonEmptyDirectory(t *testing.T) {
 	wd := useTempWorkingDir(t)
 	makeDirs(t, filepath.Join(wd, "im"))

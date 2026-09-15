@@ -20,7 +20,7 @@ go get github.com/example/airway-im-plugin
 #    )
 
 # 3. Copy the plugin's embedded SQL migrations into db/migrate (if it ships any)
-go run . plugin:install im
+go run . plugin:install github.com/example/airway-im-plugin
 
 # 4. Migrate as usual
 go run . db:migrate
@@ -30,7 +30,7 @@ Handy commands:
 
 ```bash
 go run . plugin:list            # registered plugins and their mount paths
-go run . plugin:install [name]  # copy a plugin's SQL migrations
+go run . plugin:install <module>  # copy a plugin's SQL migrations
 ```
 
 Plugins register at compile time, so run these commands through the project
@@ -139,7 +139,7 @@ conflicts disable plugin REPL models and log a warning.
   migrations) and they join the global migration list on import.
 - **SQL files** (`<version>_<name>.up.sql` / `.down.sql`) are embedded via
   `MigrationFS()` and copied into the host's `db/migrate/` by
-  `plugin:install <name>` (run as `go run . plugin:install <name>` in the host
+  `plugin:install <module>` (run as `go run . plugin:install <module>` in the host
   project) with fresh timestamps. After copying they
   are ordinary host migrations: `db:migrate`, `db:rollback` and `db:status`
   work on them unchanged, and re-running `plugin:install` skips files already

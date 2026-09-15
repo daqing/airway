@@ -26,7 +26,7 @@ airway db:rollback [step]
 airway db:status
 airway plugin:new <module-path>                           # scaffold a new plugin module
 airway plugin:list
-airway plugin:install [name]
+airway plugin:install <module>
 airway generate [action|api|model|migration|service|cmd] [params]
 airway schema:dump
 airway schema:show
@@ -254,16 +254,18 @@ Plugins are optional feature modules enabled with blank imports in
 
 ```bash
 go run . plugin:list           # list registered plugins and mount paths
-go run . plugin:install <name> # copy a plugin's embedded SQL migrations into db/migrate
+go run . plugin:install <module> # copy a plugin's embedded SQL migrations into db/migrate
 ```
 
 Plugins register at compile time, so run these through the project binary
 (`go run . ...` in the project directory): the globally installed `airway` can
 only list and install the plugins compiled into itself.
 
-`plugin:install` assigns fresh timestamps to the copied migrations and skips
-files that are already installed; afterwards they are ordinary migrations
-managed by `db:migrate` / `db:rollback` / `db:status`.
+`plugin:install` takes the plugin's module path (e.g.
+`github.com/daqing/airway-im-plugin`); the plugin name is derived from the
+last path segment, same as `plugin:new`. It assigns fresh timestamps to the
+copied migrations and skips files that are already installed; afterwards they
+are ordinary migrations managed by `db:migrate` / `db:rollback` / `db:status`.
 
 ## REPL
 

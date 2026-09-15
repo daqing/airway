@@ -83,7 +83,7 @@ func printUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "  airway schema:show")
 	_, _ = fmt.Fprintln(w, "  airway plugin:new <module-path>")
 	_, _ = fmt.Fprintln(w, "  airway plugin:list")
-	_, _ = fmt.Fprintln(w, "  airway plugin:install [name]")
+	_, _ = fmt.Fprintln(w, "  airway plugin:install <module>")
 	_, _ = fmt.Fprintln(w, "  airway upload [key] /path/to/file")
 	_, _ = fmt.Fprintln(w, "  airway repl                              interactive repo REPL (project binary only)")
 	_, _ = fmt.Fprintln(w, "  airway version                             print version (also -v, --version)")

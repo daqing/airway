@@ -21,7 +21,7 @@ func printCLIPluginUsage(w *os.File) {
 	_, _ = fmt.Fprintln(w, "usage:")
 	_, _ = fmt.Fprintln(w, "  airway plugin:new <module-path>")
 	_, _ = fmt.Fprintln(w, "  airway plugin:list")
-	_, _ = fmt.Fprintln(w, "  airway plugin:install [name]")
+	_, _ = fmt.Fprintln(w, "  airway plugin:install <module>")
 }
 
 func runCLIPluginList() error {
@@ -40,17 +40,23 @@ func runCLIPluginList() error {
 
 // runCLIPluginInstall copies a plugin's embedded SQL migrations into the
 // host's db/migrate directory with fresh timestamps, so they run through the
-// regular db:migrate / db:rollback / db:status machinery.
+// regular db:migrate / db:rollback / db:status machinery. The argument is the
+// plugin's module path (e.g. github.com/daqing/airway-im-plugin); the plugin
+// name is derived from its last segment, same as `plugin:new`.
 func runCLIPluginInstall(args []string) error {
 	if len(args) != 1 {
-		return fmt.Errorf("usage: airway plugin:install [name]")
+		return fmt.Errorf("usage: airway plugin:install <module>")
 	}
 
-	name := strings.TrimSpace(args[0])
+	module := strings.TrimSpace(args[0])
+	name := pluginNameFromModule(module)
+	if !pluginNamePattern.MatchString(name) {
+		return fmt.Errorf("cannot derive a plugin name from %q; use the plugin's module path (e.g. github.com/daqing/airway-im-plugin)", module)
+	}
 
 	p := plugin.Find(name)
 	if p == nil {
-		return fmt.Errorf("plugin %q is not registered; add its blank import to plugins.go", name)
+		return fmt.Errorf("plugin %q (%s) is not registered; run `go get %s`, add its blank import to plugins.go, and retry with the project binary", name, module, module)
 	}
 
 	provider, ok := p.(plugin.MigrationProvider)

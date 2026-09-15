@@ -26,7 +26,7 @@ import (
 The plugin mounts its routes at `/api/v1/{{plugin}}`. To ship SQL migrations,
 add `<version>_<name>.up.sql` / `.down.sql` files under `db/migrate/`, expose
 them with `plugin.MigrationProvider`, and install them in the host with
-`go run . plugin:install {{plugin}}`.
+`go run . plugin:install {{module}}`.
 
 See https://github.com/daqing/airway/blob/main/docs/plugin.md for the full
 plugin guide.
