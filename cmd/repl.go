@@ -139,18 +139,18 @@ func (r repoREPL) printHelp() {
   exit
 
 Expressions:
-  repo.FindOne("users", sql.Eq("id", 1))
-  repo.FindOne[models.User](pg.Select("id").Where(sql.Eq("id", 1)))
-  repo.Insert[models.User](pg.H{"id": 1234})
-  repo.FindOne[User](sql.Eq("id", 1))
-  repo.FindOne[struct{ ID int64; Email string }](pg.Select("id AS id, email AS email").From("users").Where(sql.Eq("id", 1)))
-	repo.Find("users", pg.Select("*").Where(sql.Eq("id", 1)))
-  repo.Find("users", sql.AllOf(sql.Eq("enabled", true), sql.Like("email", "%@example.com")))
-  repo.Insert("users", pg.H{"email": "dev@example.com", "enabled": true})
-  repo.Update("users", pg.H{"enabled": false}, sql.Eq("id", 1))
-  repo.Delete("users", sql.Eq("id", 1))
-  repo.Preview(pg.Select("*").From("users").Where(sql.Eq("id", 1)))
-  pg.Select("*").From("users").Where(sql.Eq("id", 1))
+  repo.FindOne("posts", sql.Eq("id", 1))
+  repo.FindOne[models.Post](pg.Select("id").Where(sql.Eq("id", 1)))
+  repo.Insert[models.Post](pg.H{"id": 1234})
+  repo.FindOne[Post](sql.Eq("id", 1))
+  repo.FindOne[struct{ ID int64; Title string }](pg.Select("id AS id, title AS title").From("posts").Where(sql.Eq("id", 1)))
+	repo.Find("posts", pg.Select("*").Where(sql.Eq("id", 1)))
+  repo.Find("posts", sql.AllOf(sql.Eq("published", true), sql.Like("title", "%hello%")))
+  repo.Insert("posts", pg.H{"title": "hello", "published": true})
+  repo.Update("posts", pg.H{"published": false}, sql.Eq("id", 1))
+  repo.Delete("posts", sql.Eq("id", 1))
+  repo.Preview(pg.Select("*").From("posts").Where(sql.Eq("id", 1)))
+  pg.Select("*").From("posts").Where(sql.Eq("id", 1))
 
 Available namespaces:
   repo, sql, pg, mysql, sqlite, models
@@ -172,7 +172,7 @@ Notes:
 	repo.Find/FindOne/Count/Exists also accept table + stmt and will bind the table when the stmt has no table yet
   repo.Find[T]/FindOne[T] support anonymous struct type arguments and use struct scan instead of map results
   when T implements TableName(), repo.Find[T]/FindOne[T] can infer the table and omit the first table argument
-  app/models types are also available as top-level type names such as User
+  app/models types are also available as top-level type names such as Post
   entering a builder expression directly prints the compiled SQL and args`)
 }
 

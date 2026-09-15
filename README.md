@@ -345,18 +345,18 @@ go run . repl --driver sqlite --dsn ./tmp/airway.db
 
 Run the REPL through your project binary as shown: it only sees the models
 compiled into the binary (registered via `lib/replreg`), so the globally
-installed `airway repl` only sees the framework's built-in models.
+installed `airway repl` does not see your project's models.
 
 Commands: `help`, `driver`, `tables`, `exit`. Type a Go expression to evaluate
 it — builders print the compiled SQL, `repo.*` calls run against the database:
 
 ```text
-repo.FindOne("users", sql.Eq("id", 1))
-repo.Find[models.User](pg.Select("id").Where(sql.Eq("id", 1)))
-repo.Insert[models.User](pg.H{"id": 1234, "email": "dev@example.com"})
-repo.Update("users", pg.H{"enabled": false}, sql.Eq("id", 1))
-repo.Delete("users", sql.Eq("id", 1))
-pg.Select("*").From("users").Where(sql.Eq("id", 1))
+repo.FindOne("posts", sql.Eq("id", 1))
+repo.Find[models.Post](pg.Select("id").Where(sql.Eq("id", 1)))
+repo.Insert[models.Post](pg.H{"id": 1234, "title": "hello"})
+repo.Update("posts", pg.H{"published": false}, sql.Eq("id", 1))
+repo.Delete("posts", sql.Eq("id", 1))
+pg.Select("*").From("posts").Where(sql.Eq("id", 1))
 ```
 
 Available namespaces: `repo`, `sql`, `pg`, `mysql`, `sqlite`, `models`.

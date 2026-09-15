@@ -229,7 +229,7 @@ func Index() templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "users, err := repo.<span class=\"syntax-blue\">FindBy</span>[models.User](")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "posts, err := repo.<span class=\"syntax-blue\">FindBy</span>[models.Post](")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -361,7 +361,7 @@ func Index() templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "render.<span class=\"syntax-blue\">OK</span>(c, users)")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "render.<span class=\"syntax-blue\">OK</span>(c, posts)")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -716,7 +716,7 @@ func Index() templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 51, "</span><code>repo.<span class=\"syntax-blue\">FindBy</span>[User](sql.H")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 51, "</span><code>repo.<span class=\"syntax-blue\">FindBy</span>[Post](sql.H")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

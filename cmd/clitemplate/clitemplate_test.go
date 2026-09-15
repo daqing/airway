@@ -24,7 +24,7 @@ func TestScaffoldWritesTemplateWithModuleReplaced(t *testing.T) {
 		".gitignore",
 		"config/routes.go",
 		"app/api/health_api/routes.go",
-		"app/models/user.go",
+		"app/models/registry.go",
 		"app/views/home/index.templ",
 		"app/views/home/index_templ.go",
 		"db/migrate/.keep",
