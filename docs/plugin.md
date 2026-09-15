@@ -11,7 +11,8 @@ need it.
 ## Using a Plugin (host application)
 
 ```bash
-# 1. Enable the plugin and copy its embedded SQL migrations into db/migrate.
+# 1. Enable the plugin, copy its embedded SQL migrations into db/migrate,
+#    and copy its deps/ directory into the project root.
 #    This single command runs `go get`, adds the blank import to plugins.go,
 #    and installs the migrations via the project binary.
 go run . plugin:install github.com/example/airway-im-plugin
@@ -24,7 +25,7 @@ Handy commands:
 
 ```bash
 go run . plugin:list              # registered plugins and their mount paths
-go run . plugin:install <module>  # enable a plugin and copy its SQL migrations
+go run . plugin:install <module>  # enable a plugin, copy its SQL migrations and deps/
 ```
 
 `plugin:install` enables the plugin for you: if the plugin is not compiled
@@ -76,6 +77,9 @@ airway-im-plugin/
     views/                # templ views (commit the generated *_templ.go)
   db/
     migrate/              # optional: embedded *.up.sql / *.down.sql files
+  deps/                   # optional: extra files copied into the host project
+                          # root by `plugin:install` (companion services,
+                          # deploy configs, ...)
 ```
 
 ### 1. Implement and register the Plugin
@@ -145,14 +149,43 @@ conflicts disable plugin REPL models and log a warning.
   work on them unchanged, and re-running `plugin:install` skips files already
   installed.
 
-### 4. Views and WebSocket
+### 4. Shipping extra project files with `deps/`
+
+Everything under the plugin's top-level `deps/` directory is copied verbatim
+into the host project root by `plugin:install` — use it for companion
+services, deploy configs, or any files the host project needs on disk.
+Existing destination files are skipped (never overwritten), so re-running
+`plugin:install` is safe; delete the installed copy first if you want to
+refresh it from a newer plugin version.
+
+Two Go module rules shape what you can ship:
+
+- **No nested `go.mod` inside `deps/`.** Module zips drop nested modules
+  entirely, so a real `go.mod` would never reach the host. Ship it as
+  `go.mod.templ` instead — the install strips one `.templ` suffix, restoring
+  `go.mod` in the host project. The suffix matches the templ engine's name,
+  leaving room for the install to render such files as templates in the
+  future. `go.sum` triggers no such rule: ship it under its own name.
+- **Never name the directory `vendor/`.** Module zips drop `vendor/`
+  wholesale, which is why the convention lives in `deps/`.
+
+One caveat if your plugin also uses templ views: `templ generate` parses
+every `.templ` file under its working directory, including `deps/`. Scope the
+generate directive to the views directory
+(`//go:generate go tool templ generate -path app/views`) so install templates
+are left alone.
+
+Don't commit build artifacts (compiled binaries, caches) under `deps/` — they
+would be copied into every host project.
+
+### 5. Views and WebSocket
 
 - templ views compile to Go, so a plugin keeps its own `app/views/` package
   and commits the generated `*_templ.go` files — no special handling needed.
 - Plugins may import `github.com/daqing/airway/app/websocket` to publish
   real-time events through the host's hub.
 
-### 5. Framework packages available to plugins
+### 6. Framework packages available to plugins
 
 Everything under `lib/` (`repo`, `sql`, `render`, `storage`, `validation`,
 `utils`, ...) plus `app/websocket` can be imported from a plugin module via

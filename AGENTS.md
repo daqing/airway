@@ -123,7 +123,7 @@ airway plugin:new <module-path>                       # scaffold a new plugin mo
 airway plugin:list                                    # registered plugins and mount paths
 airway version                                          # or -v / --version; prints the VERSION file contents
 airway --version | -v                                   # print VERSION contents without loading .env
-go run . plugin:install <module>                      # enable a plugin (go get + blank import) and copy its embedded SQL migrations
+go run . plugin:install <module>                      # enable a plugin (go get + blank import) and copy its embedded SQL migrations + deps/ directory
 go run . repl                                         # interactive repo REPL
 ```
 
@@ -146,7 +146,7 @@ Migration and schema commands read `AIRWAY_DB_DSN` first and fall back to the le
 - **HTML views:** server-rendered pages live under `app/views/<module>/` as templ files, one folder per API module (e.g. `app/views/home/` for `home_api`); a shared shell lives in `app/views/layouts/`. Actions render them with `render.HTML(c, view.Component())` (see `home_api`). Re-run `go generate ./...` when you edit a `.templ` file and keep the generated `*_templ.go`.
 - **Storage:** always go through `storage.Current()` — never touch local disk or cloud SDKs directly.
 - **Globals at boot:** `main.go` initializes the DB (`repo.SetupDB`), Redis (`redis_client.Setup`), and storage (`storage.Setup`) from environment variables; packages then use their `Current*()` accessors.
-- **Plugins:** optional feature modules (separate Go modules, e.g. an IM backend) implement `lib/plugin.Plugin` and self-register via `init()`; hosts enable them with blank imports in `plugins.go`. Routes mount through `plugin.MountAll` in `config/routes.go`, boot hooks run from `main.go` after infra setup, and `go run . plugin:install` enables a plugin (blank import + `go get`) and installs its SQL migrations in one step (see docs/plugin.md).
+- **Plugins:** optional feature modules (separate Go modules, e.g. an IM backend) implement `lib/plugin.Plugin` and self-register via `init()`; hosts enable them with blank imports in `plugins.go`. Routes mount through `plugin.MountAll` in `config/routes.go`, boot hooks run from `main.go` after infra setup, and `go run . plugin:install` enables a plugin (blank import + `go get`) and installs its SQL migrations plus its `deps/` directory (copied verbatim into the host project root, `.templ` suffix stripped, existing files skipped) in one step (see docs/plugin.md).
 - **Naming:** environment variables are prefixed `AIRWAY_`; CLI subcommands follow the Rails-like `db:migrate` / `schema:dump` style.
 - Format code with `gofmt`/`go fmt`; keep changes minimal and match the surrounding style.
 - **Git commit messages:** a concise one-line summary plus a short paragraph describing what the change accomplishes; leave implementation details (files, functions, internal mechanics) out of the message. Do not add AI attribution/signatures (such as `Co-Authored-By` or any other AI-related lines) to commit messages.

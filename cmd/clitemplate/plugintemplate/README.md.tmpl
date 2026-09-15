@@ -28,5 +28,11 @@ add `<version>_<name>.up.sql` / `.down.sql` files under `db/migrate/`, expose
 them with `plugin.MigrationProvider`, and install them in the host with
 `go run . plugin:install {{module}}`.
 
+To ship extra project files (companion services, deploy configs, ...), put
+them under `deps/` — `plugin:install` copies the whole tree verbatim into the
+host project root, skipping files that already exist. Ship files named
+`go.mod` as `go.mod.templ` (installed as `go.mod`): Go module zips drop
+nested modules, so a real `go.mod` inside `deps/` would never reach the host.
+
 See https://github.com/daqing/airway/blob/main/docs/plugin.md for the full
 plugin guide.

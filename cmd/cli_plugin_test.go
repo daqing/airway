@@ -149,3 +149,50 @@ func TestModulePathAt(t *testing.T) {
 		t.Fatal("expected an error for a directory without go.mod")
 	}
 }
+
+func TestInstallPluginDeps(t *testing.T) {
+	srcDir := filepath.Join(t.TempDir(), "deps")
+	makeDirs(t, filepath.Join(srcDir, "gateway"))
+	writeFile(t, filepath.Join(srcDir, ".keep"), "")
+	writeFile(t, filepath.Join(srcDir, "gateway", "main.go"), "package main\n")
+	writeFile(t, filepath.Join(srcDir, "gateway", "go.mod.templ"), "module gateway\n\ngo 1.26\n")
+	writeFile(t, filepath.Join(srcDir, "config.yaml"), "key: value\n")
+
+	dstRoot := t.TempDir()
+	if err := installPluginDepsFrom("im", srcDir, dstRoot); err != nil {
+		t.Fatalf("install plugin deps: %v", err)
+	}
+
+	if got := readFile(t, filepath.Join(dstRoot, "gateway", "main.go")); got != "package main\n" {
+		t.Fatalf("unexpected gateway/main.go content: %s", got)
+	}
+	// The .templ suffix is stripped on install.
+	if got := readFile(t, filepath.Join(dstRoot, "gateway", "go.mod")); got != "module gateway\n\ngo 1.26\n" {
+		t.Fatalf("unexpected gateway/go.mod content: %s", got)
+	}
+	if _, err := os.Stat(filepath.Join(dstRoot, "gateway", "go.mod.templ")); !os.IsNotExist(err) {
+		t.Fatal("expected no go.mod.templ in the destination")
+	}
+	// The scaffold's own deps/.keep is not copied into the host.
+	if _, err := os.Stat(filepath.Join(dstRoot, ".keep")); !os.IsNotExist(err) {
+		t.Fatal("expected no root .keep in the destination")
+	}
+	if got := readFile(t, filepath.Join(dstRoot, "config.yaml")); got != "key: value\n" {
+		t.Fatalf("unexpected config.yaml content: %s", got)
+	}
+
+	// Reinstalling skips existing files instead of overwriting local edits.
+	writeFile(t, filepath.Join(dstRoot, "config.yaml"), "key: edited\n")
+	if err := installPluginDepsFrom("im", srcDir, dstRoot); err != nil {
+		t.Fatalf("reinstall plugin deps: %v", err)
+	}
+	if got := readFile(t, filepath.Join(dstRoot, "config.yaml")); got != "key: edited\n" {
+		t.Fatalf("expected existing file untouched, got: %s", got)
+	}
+}
+
+func TestInstallPluginDepsWithoutDirIsNoOp(t *testing.T) {
+	if err := installPluginDepsFrom("im", filepath.Join(t.TempDir(), "deps"), t.TempDir()); err != nil {
+		t.Fatalf("expected missing deps dir to be a no-op, got: %v", err)
+	}
+}

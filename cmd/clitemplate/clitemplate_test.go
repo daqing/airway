@@ -97,6 +97,7 @@ func TestScaffoldPluginWritesTemplateWithPlaceholdersReplaced(t *testing.T) {
 		"app/api/im_api/index_action.go",
 		"app/models/.keep",
 		"db/migrate/.keep",
+		"deps/.keep",
 	} {
 		if _, err := os.Stat(filepath.Join(destDir, rel)); err != nil {
 			t.Fatalf("expected scaffolded file %s: %v", rel, err)

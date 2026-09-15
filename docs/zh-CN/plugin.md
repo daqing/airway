@@ -8,7 +8,8 @@ Plugin 是 Airway 的扩展机制，命名方式与 WordPress 的插件一致。
 ## 使用 Plugin（宿主项目）
 
 ```bash
-# 1. 启用 Plugin 并把它内嵌的 SQL 迁移复制到 db/migrate。
+# 1. 启用 Plugin，把它内嵌的 SQL 迁移复制到 db/migrate，
+#    并把它的 deps/ 目录复制到项目根目录。
 #    这一条命令会自动执行 `go get`、在 plugins.go 中添加 blank import，
 #    并通过项目二进制完成迁移安装。
 go run . plugin:install github.com/example/airway-im-plugin
@@ -21,7 +22,7 @@ go run . db:migrate
 
 ```bash
 go run . plugin:list              # 列出已注册的 Plugin 及其挂载路径
-go run . plugin:install <module>  # 启用 Plugin 并复制它的 SQL 迁移
+go run . plugin:install <module>  # 启用 Plugin 并复制它的 SQL 迁移和 deps/
 ```
 
 `plugin:install` 会自动完成启用步骤：如果 Plugin 没有编译进当前二进制，它会向
@@ -67,6 +68,8 @@ airway-im-plugin/
     views/                # templ 视图（提交生成的 *_templ.go）
   db/
     migrate/              # 可选：内嵌的 *.up.sql / *.down.sql 迁移文件
+  deps/                   # 可选：plugin:install 时原样复制到宿主项目根目录的
+                          # 额外文件（伴生服务、部署配置……）
 ```
 
 ### 1. 实现并注册 Plugin
@@ -132,14 +135,37 @@ REPL 模型名不能与宿主模型或其他 Plugin 的模型重名；冲突时 
   就是普通的宿主迁移：`db:migrate`、`db:rollback`、`db:status` 照常工作；重复执行
   `plugin:install` 会跳过已安装的文件。
 
-### 4. 视图与 WebSocket
+### 4. 用 `deps/` 分发额外的项目文件
+
+Plugin 顶层 `deps/` 目录下的所有内容会被 `plugin:install` 原样复制到宿主项目根目录
+——适合放伴生服务（如独立的 WebSocket gateway）、部署配置等宿主项目需要落在磁盘上的
+文件。目标位置已存在的文件会被跳过（绝不覆盖），因此重复执行 `plugin:install` 是安全的；
+想用新版 Plugin 刷新某个文件，先删掉已安装的副本再重新安装。
+
+两条 Go module 规则决定了你能放什么：
+
+- **`deps/` 内不能有嵌套的 `go.mod`。** module zip 会整体丢弃嵌套 module，真实的
+  `go.mod` 永远到不了宿主。请改存为 `go.mod.templ`——安装时会剥离一层 `.templ` 后缀，
+  在宿主项目中还原为 `go.mod`。后缀与 templ 模板引擎同名，也为未来安装时做动态模板
+  渲染留了余地。`go.sum` 不触发该规则，保持原名即可。
+- **目录绝不能叫 `vendor/`。** module zip 会整体丢弃 `vendor/`，这正是约定目录定为
+  `deps/` 的原因。
+
+注意：如果 Plugin 同时使用了 templ 视图，`templ generate` 会解析其工作目录下的所有
+`.templ` 文件（包括 `deps/` 里的）。请把 generate 指令限定到视图目录
+（`//go:generate go tool templ generate -path app/views`)，避免误解析安装模板。
+
+不要在 `deps/` 里提交构建产物（编译出的二进制、缓存等）——它们会被复制进每一个宿主
+项目。
+
+### 5. 视图与 WebSocket
 
 - templ 视图会编译为 Go 代码，Plugin 维护自己的 `app/views/` 包并提交生成的
   `*_templ.go` 文件即可，无需特殊处理。
 - Plugin 可以 import `github.com/daqing/airway/app/websocket`，通过宿主的 Hub 发布实时
   消息。
 
-### 5. Plugin 可用的框架包
+### 6. Plugin 可用的框架包
 
 `lib/` 下的所有包（`repo`、`sql`、`render`、`storage`、`validation`、`utils`……）以及
 `app/websocket`，都可以通过 `github.com/daqing/airway/...` 在 Plugin 模块中引用。
