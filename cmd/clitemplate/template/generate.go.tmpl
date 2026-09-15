@@ -6,4 +6,4 @@ package main
 //
 // The generated *_templ.go files are committed, so building and testing
 // doesn't require the templ CLI; regenerate whenever you edit a .templ file.
-//go:generate go tool templ generate
+//go:generate go tool templ generate -path app/views
