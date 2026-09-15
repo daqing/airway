@@ -55,9 +55,9 @@ airway db:rollback [step]
 airway db:status
 airway schema:dump
 airway schema:show
-airway engine new <module-path>                         # 生成新的 Engine 模块骨架
-airway engine:list
-airway engine:install [name]
+airway plugin:new <module-path>                         # 生成新的 Plugin 模块骨架
+airway plugin:list
+airway plugin:install <module>
 airway upload [key] /path/to/file
 airway repl                                             # 仅项目二进制可用
 airway version                                           # 或 -v / --version；打印 VERSION 文件内容
@@ -118,26 +118,26 @@ airway schema:dump   # 检查数据库并写入 db/schema.json
 airway schema:show   # 打印当前的 db/schema.json
 ```
 
-### Engine（引擎）
+### Plugin（插件）
 
-生成一个新的 Engine 模块骨架（用全局安装的 `airway` 即可运行——它只是写文件）：
-
-```bash
-airway engine new im                              # 目录：im，Engine 名称：im
-airway engine new github.com/me/airway-im-engine  # 名称从路径最后一段推导
-```
-
-Engine 是通过 `engines.go` 中的空白导入启用的可选功能模块
-（参见 [engine.md](engine.md)）：
+生成一个新的 Plugin 模块骨架（用全局安装的 `airway` 即可运行——它只是写文件）：
 
 ```bash
-go run . engine:list           # 列出已注册的 engine 及挂载路径
-go run . engine:install <name> # 把 engine 内嵌的 SQL 迁移复制到 db/migrate/
+airway plugin:new im                              # 目录：im，Plugin 名称：im
+airway plugin:new github.com/me/airway-im-plugin  # 名称从路径最后一段推导
 ```
 
-Engine 在编译期注册，因此请通过**项目二进制**运行这些命令
-（`go run . ...`）：全局安装的 `airway` 只能看到编译进它自身的 engine。
-`engine:install` 会为复制的迁移分配新的时间戳，并跳过已安装的文件；之后
+Plugin 是通过 `plugins.go` 中的空白导入启用的可选功能模块
+（参见 [plugin.md](plugin.md)）：
+
+```bash
+go run . plugin:list           # 列出已注册的 Plugin 及挂载路径
+go run . plugin:install <module> # 把 Plugin 内嵌的 SQL 迁移复制到 db/migrate/
+```
+
+Plugin 在编译期注册，因此请通过**项目二进制**运行这些命令
+（`go run . ...`）：全局安装的 `airway` 只能看到编译进它自身的 Plugin。
+`plugin:install` 会为复制的迁移分配新的时间戳，并跳过已安装的文件；之后
 它们就是普通迁移，由 `db:migrate` / `db:rollback` / `db:status` 管理。
 
 ### 文件上传
@@ -161,22 +161,21 @@ REPL 只能看到编译进当前二进制的模型——项目模型通过 `app/
 
 ## 全局 `airway` 与项目二进制的区别
 
-有些命令依赖编译进当前二进制的代码（模型、engine、Go DSL 迁移），请为每条
+有些命令依赖编译进当前二进制的代码（模型、Plugin、Go DSL 迁移），请为每条
 命令选择正确的二进制：
 
 | 命令 | 全局 `airway` | 项目二进制（`go run . ...`） |
 | --- | --- | --- |
 | `new`、`generate`、`server` | 可用 | 可用 |
-| `engine new` | 可用 | 可用 |
+| `plugin:new` | 可用 | 可用 |
 | `db:create` / `db:drop` / `db:migrate` / `db:rollback` / `db:status` | 可用（SQL 迁移） | 可用 |
 | `schema:dump` / `schema:show`、`upload`、`version` | 可用 | 可用 |
 | `repl` | 仅框架内置模型 | **推荐**——能看到你的项目模型 |
-| `engine:list` / `engine:install` | 仅编译进 `airway` 自身的 engine | **推荐**——能看到你项目的 engine |
+| `plugin:list` / `plugin:install` | 仅编译进 `airway` 自身的 Plugin | **推荐**——能看到你项目的 Plugin |
 
 ## 兼容性
 
 0.5 之前的 `airway cli <command>` 形式仍可作为 `airway <command>` 的别名
-使用。`airway plugin install` 已废弃——请改用 engine 机制
-（参见 [engine.md](engine.md)）。
+使用。
 
 另请参阅：[../cli.md](../cli.md) 获取完整的脚手架指南和逐步特性示例。

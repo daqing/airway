@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func TestInstallEngineMigrations(t *testing.T) {
+func TestInstallPluginMigrations(t *testing.T) {
 	migrations := fstest.MapFS{
 		"db/migrate/20240101000000_create_messages.up.sql": {
 			Data: []byte("CREATE TABLE messages (id INTEGER PRIMARY KEY);"),
@@ -28,8 +28,8 @@ func TestInstallEngineMigrations(t *testing.T) {
 	dstDir := filepath.Join(t.TempDir(), "db", "migrate")
 	now := time.Date(2026, 9, 11, 12, 0, 0, 0, time.UTC)
 
-	if err := installEngineMigrations("im", migrations, dstDir, now); err != nil {
-		t.Fatalf("install engine migrations: %v", err)
+	if err := installPluginMigrations("im", migrations, dstDir, now); err != nil {
+		t.Fatalf("install plugin migrations: %v", err)
 	}
 
 	up := readFile(t, filepath.Join(dstDir, "20260911120000_add_body_to_messages.up.sql"))
@@ -43,8 +43,8 @@ func TestInstallEngineMigrations(t *testing.T) {
 	}
 
 	// Installing again must skip instead of duplicating.
-	if err := installEngineMigrations("im", migrations, dstDir, now); err != nil {
-		t.Fatalf("reinstall engine migrations: %v", err)
+	if err := installPluginMigrations("im", migrations, dstDir, now); err != nil {
+		t.Fatalf("reinstall plugin migrations: %v", err)
 	}
 
 	entries, err := os.ReadDir(dstDir)
@@ -56,14 +56,14 @@ func TestInstallEngineMigrations(t *testing.T) {
 	}
 }
 
-func TestInstallEngineMigrationsRejectsMissingDown(t *testing.T) {
+func TestInstallPluginMigrationsRejectsMissingDown(t *testing.T) {
 	migrations := fstest.MapFS{
 		"20240101000000_create_messages.up.sql": {Data: []byte("SELECT 1;")},
 	}
 
 	dstDir := filepath.Join(t.TempDir(), "db", "migrate")
 
-	if err := installEngineMigrations("im", migrations, dstDir, time.Now()); err == nil {
+	if err := installPluginMigrations("im", migrations, dstDir, time.Now()); err == nil {
 		t.Fatal("expected an error for a migration without a down file")
 	}
 }

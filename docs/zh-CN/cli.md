@@ -8,8 +8,8 @@ go install github.com/daqing/airway@latest
 
 安装后即得到 `airway` 命令。命令执行时会优先自动加载当前项目根目录下的 `.env` 文件。
 在项目（或框架仓库）内部，同样的命令也可以用 `go run . <命令>` 的方式执行——其中
-`repl`、`engine:install` 等命令*建议*用这种方式运行，因为它们只能看到编译进当前
-二进制的模型和 Engine（详见下文）。
+`repl`、`plugin:install` 等命令*建议*用这种方式运行，因为它们只能看到编译进当前
+二进制的模型和 Plugin（详见下文）。
 
 旧形式 `airway cli <命令>` 仍作为兼容别名可用。
 
@@ -23,11 +23,10 @@ airway db:drop
 airway db:migrate [version]
 airway db:rollback [step]
 airway db:status
-airway engine new <module-path>                           # 生成新的 Engine 模块骨架
-airway engine:list
-airway engine:install [name]
+airway plugin:new <module-path>                           # 生成新的 Plugin 模块骨架
+airway plugin:list
+airway plugin:install <module>
 airway generate [action|api|model|migration|service|cmd] [params]
-airway plugin install /path/to/project  # 已废弃；请改用 Engine（docs/zh-CN/engine.md）
 airway schema:dump
 airway schema:show
 airway upload /path/to/file
@@ -221,31 +220,32 @@ airway db:status
 在本地开发场景下，CLI 会自动加载项目根目录的 `.env` 文件，因此通常直接把 `DSN` 写在 `.env` 里即可。
 迁移命令会复用 Airway 当前 DSN 所对应的数据库类型，因此支持项目当前支持的 PostgreSQL、MySQL 和 SQLite。
 
-## Engine 命令
+## Plugin 命令
 
-生成一个新的 Engine 模块骨架（独立的 Go module；见
-[Engine 扩展机制](engine.md)）：
+生成一个新的 Plugin 模块骨架（独立的 Go module；见
+[Plugin 扩展机制](plugin.md)）：
 
 ```bash
-airway engine new im                              # 目录：im，Engine 名称：im
-airway engine new github.com/me/airway-im-engine  # 名称从路径最后一段推导
+airway plugin:new im                              # 目录：im，Plugin 名称：im
+airway plugin:new github.com/me/airway-im-plugin  # 名称从路径最后一段推导
 ```
 
-与下面的命令不同，`engine new` 用全局安装的 `airway` 即可运行——它只是写文件，
+与下面的命令不同，`plugin:new` 用全局安装的 `airway` 即可运行——它只是写文件，
 不依赖编译期注册。
 
-Engine 是通过 `engines.go` 中的 blank import 启用的可选功能模块（见
-[Engine 扩展机制](engine.md)）：
+Plugin 是通过 `plugins.go` 中的 blank import 启用的可选功能模块（见
+[Plugin 扩展机制](plugin.md)）：
 
 ```bash
-go run . engine:list           # 列出已注册的 Engine 及挂载路径
-go run . engine:install <name> # 把 Engine 内嵌的 SQL 迁移复制到 db/migrate
+go run . plugin:list           # 列出已注册的 Plugin 及挂载路径
+go run . plugin:install <module> # 把 Plugin 内嵌的 SQL 迁移复制到 db/migrate
 ```
 
-Engine 在编译期注册，所以这些命令需要通过项目二进制运行（在项目目录中执行
-`go run . ...`）：全局安装的 `airway` 只能列出/安装编译进它自身的 Engine。
+Plugin 在编译期注册，所以这些命令需要通过项目二进制运行（在项目目录中执行
+`go run . ...`）：全局安装的 `airway` 只能列出/安装编译进它自身的 Plugin。
 
-`engine:install` 会为复制的迁移文件分配新的时间戳，并跳过已安装的文件；复制后它们就是
+`plugin:install` 的参数是 Plugin 的模块路径（如 `github.com/daqing/airway-im-plugin`)，
+插件名从路径最后一段推导（与 `plugin:new` 相同）。它会为复制的迁移文件分配新的时间戳，并跳过已安装的文件；复制后它们就是
 普通迁移，由 `db:migrate` / `db:rollback` / `db:status` 统一管理。
 
 ## REPL
@@ -258,24 +258,6 @@ REPL 只能看到编译进当前二进制、通过 `github.com/daqing/airway/lib
 注册的模型——项目模型的 init 通过 `app/models` 的 `registerREPLModel` 注册
 （该函数委托给 `lib/replreg`）。因此在项目中请使用 `go run . repl`；全局安装的
 `airway repl` 只能看到框架自带的模型。
-
-## 安装插件到其他 Airway 项目
-
-> **已废弃**：`plugin install` 将在未来版本移除。请改用 Engine 机制扩展功能（见 [Engine 扩展机制](engine.md)）。
-
-如果你当前仓库是一个插件项目，可以把它安装到另一个 Airway 项目：
-
-```bash
-airway plugin install /path/to/project
-```
-
-该命令会复制：
-
-- 当前项目的 `./app/*` 到目标项目的 `app/`
-- 当前项目的 `./cmd/*` 到目标项目的 `cmd/`
-- 当前项目的 `./db/migrate/*.sql` 到目标项目的 `db/migrate/`
-
-复制 migration 文件时，会自动补一个新的时间戳前缀，避免版本号冲突。
 
 ## 实战示例
 

@@ -58,9 +58,9 @@ airway db:rollback [step]
 airway db:status
 airway schema:dump
 airway schema:show
-airway engine new <module-path>                         # scaffold a new engine module
-airway engine:list
-airway engine:install [name]
+airway plugin:new <module-path>                         # scaffold a new plugin module
+airway plugin:list
+airway plugin:install <module>
 airway upload [key] /path/to/file
 airway repl                                             # project binary only
 airway version                                           # or -v / --version; prints the VERSION file contents
@@ -127,27 +127,27 @@ airway schema:dump   # inspect the database and write db/schema.json
 airway schema:show   # print the current db/schema.json
 ```
 
-### Engines
+### Plugins
 
-Scaffold a new engine module (works with the globally installed `airway` — it
+Scaffold a new plugin module (works with the globally installed `airway` — it
 only writes files):
 
 ```bash
-airway engine new im                              # directory: im, engine name: im
-airway engine new github.com/me/airway-im-engine  # name derived from the last path segment
+airway plugin:new im                              # directory: im, plugin name: im
+airway plugin:new github.com/me/airway-im-plugin  # name derived from the last path segment
 ```
 
-Engines are optional feature modules enabled via blank imports in
-`engines.go` (see [docs/engine.md](engine.md)):
+Plugins are optional feature modules enabled via blank imports in
+`plugins.go` (see [docs/plugin.md](plugin.md)):
 
 ```bash
-go run . engine:list           # list registered engines and mount paths
-go run . engine:install <name> # copy an engine's embedded SQL migrations into db/migrate/
+go run . plugin:list           # list registered plugins and mount paths
+go run . plugin:install <module> # copy a plugin's embedded SQL migrations into db/migrate/
 ```
 
-Engines register at compile time, so run these through the **project binary**
-(`go run . ...`): the globally installed `airway` can only see the engines
-compiled into itself. `engine:install` assigns fresh timestamps to the copied
+Plugins register at compile time, so run these through the **project binary**
+(`go run . ...`): the globally installed `airway` can only see the plugins
+compiled into itself. `plugin:install` assigns fresh timestamps to the copied
 migrations and skips files that are already installed; afterwards they are
 ordinary migrations managed by `db:migrate` / `db:rollback` / `db:status`.
 
@@ -175,22 +175,21 @@ models register via `registerREPLModel` in `app/models`, which delegates to
 ## Global `airway` vs. the project binary
 
 Some commands depend on code compiled into the running binary (models,
-engines, Go DSL migrations). Use the right binary for each:
+plugins, Go DSL migrations). Use the right binary for each:
 
 | Command | Global `airway` | Project binary (`go run . ...`) |
 | --- | --- | --- |
 | `new`, `generate`, `server` | yes | yes |
-| `engine new` | yes | yes |
+| `plugin:new` | yes | yes |
 | `db:create` / `db:drop` / `db:migrate` / `db:rollback` / `db:status` | yes (SQL migrations) | yes |
 | `schema:dump` / `schema:show`, `upload`, `version` | yes | yes |
 | `repl` | framework's built-in models only | **use this** — sees your project models |
-| `engine:list` / `engine:install` | engines compiled into `airway` itself | **use this** — sees your project's engines |
+| `plugin:list` / `plugin:install` | plugins compiled into `airway` itself | **use this** — sees your project's plugins |
 
 ## Compatibility
 
 The pre-0.5 form `airway cli <command>` still works as an alias for
-`airway <command>`. `airway plugin install` is deprecated — use engines
-instead (see [docs/engine.md](engine.md)).
+`airway <command>`.
 
 See also: [docs/cli.md](cli.md) for the full scaffolding guide with a
 step-by-step feature example.
