@@ -19,20 +19,30 @@ var timeNow = time.Now
 func currentModulePath() string {
 	const fallback = "github.com/daqing/airway"
 
-	data, err := os.ReadFile("go.mod")
+	module, err := modulePathAt(".")
 	if err != nil {
 		return fallback
+	}
+
+	return module
+}
+
+// modulePathAt reads the module path from the go.mod in dir.
+func modulePathAt(dir string) (string, error) {
+	data, err := os.ReadFile(filepath.Join(dir, "go.mod"))
+	if err != nil {
+		return "", err
 	}
 
 	for line := range strings.Lines(string(data)) {
 		if module, ok := strings.CutPrefix(strings.TrimSpace(line), "module "); ok {
 			if module = strings.TrimSpace(module); module != "" {
-				return module
+				return module, nil
 			}
 		}
 	}
 
-	return fallback
+	return "", fmt.Errorf("no module line in %s", filepath.Join(dir, "go.mod"))
 }
 
 func ensureDir(path string) error {

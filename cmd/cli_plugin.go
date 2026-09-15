@@ -2,7 +2,10 @@ package cmd
 
 import (
 	"fmt"
+	"go/ast"
 	"go/format"
+	"go/parser"
+	"go/token"
 	"io/fs"
 	"os"
 	"os/exec"
@@ -24,7 +27,7 @@ func printCLIPluginUsage(w *os.File) {
 	_, _ = fmt.Fprintln(w, "usage:")
 	_, _ = fmt.Fprintln(w, "  airway plugin:new <module-path>")
 	_, _ = fmt.Fprintln(w, "  airway plugin:list")
-	_, _ = fmt.Fprintln(w, "  airway plugin:install <module>")
+	_, _ = fmt.Fprintln(w, "  airway plugin:install <module>[@version] | <local-dir>")
 }
 
 func runCLIPluginList() error {
@@ -44,14 +47,30 @@ func runCLIPluginList() error {
 // runCLIPluginInstall copies a plugin's embedded SQL migrations into the
 // host's db/migrate directory with fresh timestamps, so they run through the
 // regular db:migrate / db:rollback / db:status machinery. The argument is the
-// plugin's module path (e.g. github.com/daqing/airway-im-plugin); the plugin
-// name is derived from its last segment, same as `plugin:new`.
+// plugin's module path (e.g. github.com/daqing/airway-im-plugin), optionally
+// with an @version suffix like `go get` accepts, or a local directory holding
+// the plugin's source (its go.mod supplies the module path, wired in through a
+// replace directive — no download needed). The plugin name is derived from the
+// module's last segment, same as `plugin:new`.
 func runCLIPluginInstall(args []string) error {
 	if len(args) != 1 {
-		return fmt.Errorf("usage: airway plugin:install <module>")
+		return fmt.Errorf("usage: airway plugin:install <module>[@version] | <local-dir>")
 	}
 
-	module := strings.TrimSpace(args[0])
+	ref := strings.TrimSpace(args[0])
+
+	module := ref
+	local := false
+	if info, err := os.Stat(ref); err == nil && info.IsDir() {
+		m, err := modulePathAt(ref)
+		if err != nil {
+			return fmt.Errorf("read plugin module path from %s: %w", ref, err)
+		}
+		module, local = m, true
+	} else {
+		module, _, _ = strings.Cut(ref, "@")
+	}
+
 	name := pluginNameFromModule(module)
 	if !pluginNamePattern.MatchString(name) {
 		return fmt.Errorf("cannot derive a plugin name from %q; use the plugin's module path (e.g. github.com/daqing/airway-im-plugin)", module)
@@ -63,7 +82,7 @@ func runCLIPluginInstall(args []string) error {
 			return fmt.Errorf("plugin %q (%s) is still not registered after enabling it; check that the module registers a plugin named %q", name, module, name)
 		}
 
-		return enablePluginAndRetry(name, module)
+		return enablePluginAndRetry(name, module, ref, local)
 	}
 
 	provider, ok := p.(plugin.MigrationProvider)
@@ -79,14 +98,16 @@ const pluginInstallRetryEnv = "AIRWAY_PLUGIN_INSTALL_RETRY"
 
 // enablePluginAndRetry makes plugin:install self-contained: when the plugin is
 // not compiled into the current binary, it adds the blank import to the host's
-// plugins.go, fetches the module with `go get`, and retries through the
-// project binary (`go run .`), which picks up the newly enabled plugin. The
-// retry env guard keeps the retried process from looping when the module does
-// not register a plugin with the expected name.
-func enablePluginAndRetry(name, module string) error {
+// plugins.go, wires the module into go.mod — `go mod edit -replace` + `go mod
+// tidy` for a local directory (no download), otherwise `go get ref` (ref may
+// carry an @version suffix) — and retries through the project binary
+// (`go run .`), which picks up the newly enabled plugin. The retry env guard
+// keeps the retried process from looping when the module does not register a
+// plugin with the expected name.
+func enablePluginAndRetry(name, module, ref string, local bool) error {
 	for _, file := range []string{"go.mod", "plugins.go"} {
 		if _, err := os.Stat(file); err != nil {
-			return fmt.Errorf("plugin %q (%s) is not registered; run `go get %s`, add its blank import to plugins.go, and retry with the project binary", name, module, module)
+			return fmt.Errorf("plugin %q (%s) is not registered; run `go get %s`, add its blank import to plugins.go, and retry with the project binary", name, module, ref)
 		}
 	}
 
@@ -98,12 +119,18 @@ func enablePluginAndRetry(name, module string) error {
 		fmt.Printf("Added _ %s to plugins.go\n", strconv.Quote(module))
 	}
 
-	fmt.Printf("Fetching %s\n", module)
-	get := exec.Command("go", "get", module)
-	get.Stdout = os.Stdout
-	get.Stderr = os.Stderr
-	if err := get.Run(); err != nil {
-		return fmt.Errorf("go get %s: %w", module, err)
+	if local {
+		if err := replacePluginWithLocalDir(module, ref); err != nil {
+			return err
+		}
+	} else {
+		fmt.Printf("Fetching %s\n", ref)
+		get := exec.Command("go", "get", ref)
+		get.Stdout = os.Stdout
+		get.Stderr = os.Stderr
+		if err := get.Run(); err != nil {
+			return fmt.Errorf("go get %s: %w", ref, err)
+		}
 	}
 
 	fmt.Println("Retrying plugin:install via the project binary...")
@@ -115,25 +142,69 @@ func enablePluginAndRetry(name, module string) error {
 	return retry.Run()
 }
 
+// replacePluginWithLocalDir points the module requirement at a local checkout
+// via a replace directive, then tidies so go.mod picks up the require entry
+// without contacting the network for this module.
+func replacePluginWithLocalDir(module, dir string) error {
+	abs, err := filepath.Abs(dir)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Replacing %s with local checkout %s\n", module, abs)
+	edit := exec.Command("go", "mod", "edit", "-replace", module+"="+abs)
+	edit.Stdout = os.Stdout
+	edit.Stderr = os.Stderr
+	if err := edit.Run(); err != nil {
+		return fmt.Errorf("go mod edit -replace %s=%s: %w", module, abs, err)
+	}
+
+	tidy := exec.Command("go", "mod", "tidy")
+	tidy.Stdout = os.Stdout
+	tidy.Stderr = os.Stderr
+	if err := tidy.Run(); err != nil {
+		return fmt.Errorf("go mod tidy: %w", err)
+	}
+
+	return nil
+}
+
 // ensurePluginImport adds a blank import for module to the host's plugins.go,
 // reusing an existing import block when present. It reports whether the file
-// changed; an already-present import is a no-op.
+// changed; an already-present import is a no-op. The file is parsed rather
+// than string-matched, because the scaffolded plugins.go shows a sample
+// import block inside a comment.
 func ensurePluginImport(path string, module string) (bool, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return false, err
 	}
 
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, path, data, parser.ImportsOnly)
+	if err != nil {
+		return false, fmt.Errorf("parse %s: %w", path, err)
+	}
+
 	quoted := strconv.Quote(module)
-	if strings.Contains(string(data), quoted) {
-		return false, nil
+	for _, imp := range file.Imports {
+		if imp.Path.Value == quoted {
+			return false, nil
+		}
 	}
 
 	var edited string
-	if idx := strings.Index(string(data), "import ("); idx >= 0 {
-		at := idx + len("import (")
+	for _, decl := range file.Decls {
+		gen, ok := decl.(*ast.GenDecl)
+		if !ok || gen.Tok != token.IMPORT || !gen.Lparen.IsValid() {
+			continue
+		}
+
+		at := fset.Position(gen.Lparen).Offset + 1
 		edited = string(data[:at]) + "\n\t_ " + quoted + string(data[at:])
-	} else {
+		break
+	}
+	if edited == "" {
 		edited = strings.TrimRight(string(data), "\n") + "\n\nimport (\n\t_ " + quoted + "\n)\n"
 	}
 

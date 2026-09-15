@@ -71,7 +71,20 @@ func TestInstallPluginMigrationsRejectsMissingDown(t *testing.T) {
 
 func TestEnsurePluginImportAppendsImportBlock(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "plugins.go")
-	writeFile(t, path, "package main\n\n// Plugins are enabled via blank imports.\n")
+	// The scaffolded plugins.go shows a sample import block inside a comment;
+	// the edit must not match it.
+	writeFile(t, path, `package main
+
+// Plugins are optional feature modules shipped as independent Go modules
+// (see docs/plugin.md). Enable one by adding a blank import below and
+// running `+"`go mod tidy`"+`:
+//
+//	import (
+//		_ "github.com/example/airway-im-plugin"
+//	)
+//
+// The plugin's package init registers it with lib/plugin.
+`)
 
 	added, err := ensurePluginImport(path, "github.com/daqing/airway-im-plugin")
 	if err != nil {
@@ -117,5 +130,22 @@ func TestEnsurePluginImportIsIdempotent(t *testing.T) {
 	}
 	if added {
 		t.Fatal("expected a no-op for an already-imported module")
+	}
+}
+
+func TestModulePathAt(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "go.mod"), "module github.com/daqing/airway-im-plugin\n\ngo 1.26\n")
+
+	module, err := modulePathAt(dir)
+	if err != nil {
+		t.Fatalf("module path: %v", err)
+	}
+	if module != "github.com/daqing/airway-im-plugin" {
+		t.Fatalf("modulePathAt = %q", module)
+	}
+
+	if _, err := modulePathAt(filepath.Join(dir, "missing")); err == nil {
+		t.Fatal("expected an error for a directory without go.mod")
 	}
 }
