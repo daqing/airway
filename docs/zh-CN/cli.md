@@ -43,12 +43,12 @@ airway new myapp                    # 目录名：myapp
 airway new github.com/me/myapp      # module 路径；目录取路径最后一段
 ```
 
-`airway new` 会以框架仓库的 `app/` 骨架为模板生成一个新项目，自动执行
-`go mod tidy`，并打印后续步骤：
+`airway new` 会以框架仓库的 `app/` 骨架为模板生成一个新项目，自动从
+`.env.example` 生成 `.env`，执行 `go mod tidy`，并打印后续步骤：
 
 ```bash
 cd myapp
-cp .env.example .env    # 配置 DSN 和 PORT
+# 编辑 .env —— 配置 DSN 和 PORT
 airway db:create
 airway db:migrate
 go run .                # 启动服务器（等同于 go run . server）

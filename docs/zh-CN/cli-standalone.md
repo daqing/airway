@@ -17,7 +17,7 @@ go install github.com/daqing/airway@latest
 ```bash
 airway new myapp                    # 或：airway new github.com/me/myapp
 cd myapp
-cp .env.example .env                # 配置 DSN 和 PORT
+# 编辑 .env（已从 .env.example 自动生成）—— 配置 DSN 和 PORT
 airway db:create
 airway db:migrate
 go run . server                     # 启动 HTTP 服务器

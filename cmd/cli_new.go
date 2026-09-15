@@ -60,6 +60,10 @@ func newProject(module string, tidy bool) error {
 		return fmt.Errorf("rewrite scaffold port: %w", err)
 	}
 
+	if err := copyScaffoldEnv(destDir); err != nil {
+		return fmt.Errorf("copy .env.example: %w", err)
+	}
+
 	fmt.Printf("Created a new Airway project in %s (module %s)\n", destDir, module)
 
 	if tidy {
@@ -74,12 +78,30 @@ func newProject(module string, tidy bool) error {
 
 	fmt.Println("\nNext steps:")
 	fmt.Printf("  cd %s\n", destDir)
-	fmt.Println("  cp .env.example .env   # set DSN and PORT")
+	fmt.Println("  # edit .env — set AIRWAY_DB_DSN and AIRWAY_PORT")
 	fmt.Println("  airway db:create")
 	fmt.Println("  airway db:migrate")
 	fmt.Println("  go run .               # start the HTTP server")
 
 	return nil
+}
+
+// copyScaffoldEnv seeds the new project's .env from its .env.example, so the
+// app runs without a manual copy step.
+func copyScaffoldEnv(destDir string) error {
+	data, err := os.ReadFile(filepath.Join(destDir, ".env.example"))
+	if err != nil {
+		return err
+	}
+
+	dst := filepath.Join(destDir, ".env")
+	if _, err := os.Stat(dst); err == nil {
+		return nil
+	} else if !os.IsNotExist(err) {
+		return err
+	}
+
+	return os.WriteFile(dst, data, 0o644)
 }
 
 // scaffoldPortFiles are the scaffolded files whose default port is rewritten

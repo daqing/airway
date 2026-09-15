@@ -37,6 +37,11 @@ func TestNewProjectScaffoldsModule(t *testing.T) {
 			t.Fatalf("expected scaffolded %s to use port 1905", rel)
 		}
 	}
+
+	envExample := readFile(t, filepath.Join(wd, "demo", ".env.example"))
+	if env := readFile(t, filepath.Join(wd, "demo", ".env")); env != envExample {
+		t.Fatalf("expected .env seeded from .env.example, got:\n%s", env)
+	}
 }
 
 func TestNewProjectRejectsExistingNonEmptyDirectory(t *testing.T) {

@@ -33,11 +33,10 @@ Airway 既是**框架/库**，也是一个**可直接运行的应用程序骨架
 go install github.com/daqing/airway@latest
 airway new myapp        # 或：airway new github.com/me/myapp（目录取路径最后一段）
 cd myapp
-cp .env.example .env
 ```
 
-`airway new` 会以框架的 `app/` 骨架为模板生成一个新项目，自动执行 `go mod tidy`，
-并打印后续步骤。如果你是想开发框架本身，可以改为克隆仓库：
+`airway new` 会以框架的 `app/` 骨架为模板生成一个新项目，自动从 `.env.example`
+生成 `.env`，执行 `go mod tidy`，并打印后续步骤。如果你是想开发框架本身，可以改为克隆仓库：
 
 ```bash
 git clone https://github.com/daqing/airway.git

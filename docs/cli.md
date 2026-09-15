@@ -45,11 +45,12 @@ airway new github.com/me/myapp      # module path; directory is the last path se
 ```
 
 `airway new` generates a fresh project skeleton based on the framework's `app/`
-scaffold, runs `go mod tidy`, and prints the follow-up steps:
+scaffold, seeds `.env` from `.env.example`, runs `go mod tidy`, and prints the
+follow-up steps:
 
 ```bash
 cd myapp
-cp .env.example .env    # set DSN and PORT
+# edit .env — set DSN and PORT
 airway db:create
 airway db:migrate
 go run .                # starts the server (same as: go run . server)

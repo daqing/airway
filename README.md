@@ -48,12 +48,11 @@ Airway is both a **framework/library** and a **runnable application skeleton**:
 go install github.com/daqing/airway@latest
 airway new myapp        # or: airway new github.com/me/myapp (directory = last path segment)
 cd myapp
-cp .env.example .env
 ```
 
 `airway new` generates a fresh project skeleton from the framework's `app/`
-scaffold, runs `go mod tidy`, and prints the follow-up steps. To hack on the
-framework itself instead, clone the repository:
+scaffold, seeds `.env` from `.env.example`, runs `go mod tidy`, and prints the
+follow-up steps. To hack on the framework itself instead, clone the repository:
 
 ```bash
 git clone https://github.com/daqing/airway.git

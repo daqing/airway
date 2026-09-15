@@ -17,7 +17,7 @@ commands also run as `go run . <command>`.
 ```bash
 airway new myapp                    # or: airway new github.com/me/myapp
 cd myapp
-cp .env.example .env                # set DSN and PORT
+# edit .env (already seeded from .env.example) — set DSN and PORT
 airway db:create
 airway db:migrate
 go run . server                     # start the HTTP server
