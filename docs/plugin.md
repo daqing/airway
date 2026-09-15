@@ -11,31 +11,31 @@ need it.
 ## Using a Plugin (host application)
 
 ```bash
-# 1. Install the module
-go get github.com/example/airway-im-plugin
-
-# 2. Enable it — add a blank import to plugins.go (project root, package main):
-#    import (
-#        _ "github.com/example/airway-im-plugin"
-#    )
-
-# 3. Copy the plugin's embedded SQL migrations into db/migrate (if it ships any)
+# 1. Enable the plugin and copy its embedded SQL migrations into db/migrate.
+#    This single command runs `go get`, adds the blank import to plugins.go,
+#    and installs the migrations via the project binary.
 go run . plugin:install github.com/example/airway-im-plugin
 
-# 4. Migrate as usual
+# 2. Migrate as usual
 go run . db:migrate
 ```
 
 Handy commands:
 
 ```bash
-go run . plugin:list            # registered plugins and their mount paths
-go run . plugin:install <module>  # copy a plugin's SQL migrations
+go run . plugin:list              # registered plugins and their mount paths
+go run . plugin:install <module>  # enable a plugin and copy its SQL migrations
 ```
 
-Plugins register at compile time, so run these commands through the project
-binary (`go run . ...` in the project directory): a globally installed `airway`
-CLI can only list and install the plugins compiled into itself.
+`plugin:install` enables the plugin for you: if the plugin is not compiled
+into the current binary, it adds the blank import to plugins.go, runs
+`go get <module>`, and retries via `go run .`. You can still do these steps by
+hand if you prefer.
+
+`plugin:list` only sees plugins compiled into the running binary, so run it
+through the project binary (`go run . ...` in the project directory): a
+globally installed `airway` CLI can only list the plugins compiled into
+itself.
 
 Routes registered by the plugin answer under its declared mount path (e.g.
 `/api/v1/im`). Plugin models that opt in appear in `go run . repl` alongside

@@ -8,30 +8,29 @@ Plugin 是 Airway 的扩展机制，命名方式与 WordPress 的插件一致。
 ## 使用 Plugin（宿主项目）
 
 ```bash
-# 1. 安装模块
-go get github.com/example/airway-im-plugin
-
-# 2. 启用 —— 在项目根目录 plugins.go（package main）中添加 blank import：
-#    import (
-#        _ "github.com/example/airway-im-plugin"
-#    )
-
-# 3. 把 Plugin 内嵌的 SQL 迁移复制到 db/migrate（如果有的话）
+# 1. 启用 Plugin 并把它内嵌的 SQL 迁移复制到 db/migrate。
+#    这一条命令会自动执行 `go get`、在 plugins.go 中添加 blank import，
+#    并通过项目二进制完成迁移安装。
 go run . plugin:install github.com/example/airway-im-plugin
 
-# 4. 照常执行迁移
+# 2. 照常执行迁移
 go run . db:migrate
 ```
 
 常用命令：
 
 ```bash
-go run . plugin:list            # 列出已注册的 Plugin 及其挂载路径
-go run . plugin:install <module>  # 复制 Plugin 的 SQL 迁移
+go run . plugin:list              # 列出已注册的 Plugin 及其挂载路径
+go run . plugin:install <module>  # 启用 Plugin 并复制它的 SQL 迁移
 ```
 
-Plugin 在编译期注册，所以这些命令需要通过项目二进制运行（在项目目录中执行
-`go run . ...`）：全局安装的 `airway` CLI 只能列出/安装编译进它自身的 Plugin。
+`plugin:install` 会自动完成启用步骤：如果 Plugin 没有编译进当前二进制，它会向
+plugins.go 添加 blank import、执行 `go get <module>`，然后通过 `go run .` 重试。
+这些步骤也仍然可以手动完成。
+
+`plugin:list` 只能看到编译进当前二进制的 Plugin，所以需要通过项目二进制运行
+（在项目目录中执行 `go run . ...`）：全局安装的 `airway` CLI 只能列出编译进它
+自身的 Plugin。
 
 Plugin 注册的路由在它声明的挂载路径下应答（例如 `/api/v1/im`）。选择暴露模型的
 Plugin，其模型会出现在 `go run . repl` 中，与宿主模型并列。

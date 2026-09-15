@@ -2,10 +2,13 @@ package cmd
 
 import (
 	"fmt"
+	"go/format"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -56,7 +59,11 @@ func runCLIPluginInstall(args []string) error {
 
 	p := plugin.Find(name)
 	if p == nil {
-		return fmt.Errorf("plugin %q (%s) is not registered; run `go get %s`, add its blank import to plugins.go, and retry with the project binary", name, module, module)
+		if os.Getenv(pluginInstallRetryEnv) != "" {
+			return fmt.Errorf("plugin %q (%s) is still not registered after enabling it; check that the module registers a plugin named %q", name, module, name)
+		}
+
+		return enablePluginAndRetry(name, module)
 	}
 
 	provider, ok := p.(plugin.MigrationProvider)
@@ -66,6 +73,80 @@ func runCLIPluginInstall(args []string) error {
 	}
 
 	return installPluginMigrations(name, provider.MigrationFS(), migrationDir, timeNow())
+}
+
+const pluginInstallRetryEnv = "AIRWAY_PLUGIN_INSTALL_RETRY"
+
+// enablePluginAndRetry makes plugin:install self-contained: when the plugin is
+// not compiled into the current binary, it adds the blank import to the host's
+// plugins.go, fetches the module with `go get`, and retries through the
+// project binary (`go run .`), which picks up the newly enabled plugin. The
+// retry env guard keeps the retried process from looping when the module does
+// not register a plugin with the expected name.
+func enablePluginAndRetry(name, module string) error {
+	for _, file := range []string{"go.mod", "plugins.go"} {
+		if _, err := os.Stat(file); err != nil {
+			return fmt.Errorf("plugin %q (%s) is not registered; run `go get %s`, add its blank import to plugins.go, and retry with the project binary", name, module, module)
+		}
+	}
+
+	added, err := ensurePluginImport("plugins.go", module)
+	if err != nil {
+		return err
+	}
+	if added {
+		fmt.Printf("Added _ %s to plugins.go\n", strconv.Quote(module))
+	}
+
+	fmt.Printf("Fetching %s\n", module)
+	get := exec.Command("go", "get", module)
+	get.Stdout = os.Stdout
+	get.Stderr = os.Stderr
+	if err := get.Run(); err != nil {
+		return fmt.Errorf("go get %s: %w", module, err)
+	}
+
+	fmt.Println("Retrying plugin:install via the project binary...")
+	retry := exec.Command("go", "run", ".", "plugin:install", module)
+	retry.Env = append(os.Environ(), pluginInstallRetryEnv+"=1")
+	retry.Stdin = os.Stdin
+	retry.Stdout = os.Stdout
+	retry.Stderr = os.Stderr
+	return retry.Run()
+}
+
+// ensurePluginImport adds a blank import for module to the host's plugins.go,
+// reusing an existing import block when present. It reports whether the file
+// changed; an already-present import is a no-op.
+func ensurePluginImport(path string, module string) (bool, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return false, err
+	}
+
+	quoted := strconv.Quote(module)
+	if strings.Contains(string(data), quoted) {
+		return false, nil
+	}
+
+	var edited string
+	if idx := strings.Index(string(data), "import ("); idx >= 0 {
+		at := idx + len("import (")
+		edited = string(data[:at]) + "\n\t_ " + quoted + string(data[at:])
+	} else {
+		edited = strings.TrimRight(string(data), "\n") + "\n\nimport (\n\t_ " + quoted + "\n)\n"
+	}
+
+	formatted, err := format.Source([]byte(edited))
+	if err != nil {
+		return false, fmt.Errorf("format %s after adding plugin import: %w", path, err)
+	}
+
+	if err := os.WriteFile(path, formatted, 0o644); err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
 
 func installPluginMigrations(pluginName string, migrations fs.FS, dstDir string, now time.Time) error {
