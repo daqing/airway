@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -8,6 +9,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/daqing/airway/cmd/clitemplate"
 )
@@ -98,14 +100,22 @@ func newProject(arg string, tidy bool) error {
 	}
 
 	if tidy {
+		if pinned && !airwayVersionResolvable(destDir) {
+			// The pinned version is not published yet (e.g. a locally built
+			// CLI ahead of the tags). Drop the pin upfront: letting tidy
+			// discover the failure itself would fall back from the proxy to
+			// a direct git fetch, which can hang for minutes on a slow or
+			// blocked network.
+			if err := unpinScaffoldAirwayVersion(destDir); err == nil {
+				pinned = false
+			}
+		}
+
 		err := tidyScaffold(destDir)
 		if err != nil && pinned {
-			// The pinned version may not be published yet (e.g. a locally
-			// built CLI ahead of the tags); drop the pin and let tidy fall
+			// Tidy failed with the pin in place; drop it and let tidy fall
 			// back to discovering a version from the proxy.
-			unpin := exec.Command("go", "mod", "edit", "-droprequire", "github.com/daqing/airway")
-			unpin.Dir = destDir
-			if unpinErr := unpin.Run(); unpinErr == nil {
+			if unpinErr := unpinScaffoldAirwayVersion(destDir); unpinErr == nil {
 				err = tidyScaffold(destDir)
 			}
 		}
@@ -128,14 +138,40 @@ func newProject(arg string, tidy bool) error {
 	return nil
 }
 
+// scaffoldCommandTimeout bounds every external command run during
+// scaffolding. Network-backed commands (`go mod tidy`, `go list`) can stall
+// for a long time when the module proxy falls back to direct VCS access on a
+// slow or blocked network, so they must not run without a deadline.
+const scaffoldCommandTimeout = 3 * time.Minute
+
+// runScaffoldCommand runs an external command in dir with a timeout and git
+// terminal prompts disabled (so git fails fast instead of blocking on a
+// credential prompt). When quiet is set, the command's output is discarded.
+func runScaffoldCommand(dir string, timeout time.Duration, quiet bool, name string, args ...string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, name, args...)
+	cmd.Dir = dir
+	cmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0")
+	if !quiet {
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+	}
+	if err := cmd.Run(); err != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			return fmt.Errorf("`%s %s` timed out after %s", name, strings.Join(args, " "), timeout)
+		}
+		return err
+	}
+
+	return nil
+}
+
 // initScaffoldGit initializes a git repository in the new project, so it is
 // ready for the first commit right after scaffolding.
 func initScaffoldGit(destDir string) error {
-	initCmd := exec.Command("git", "init")
-	initCmd.Dir = destDir
-	initCmd.Stdout = os.Stdout
-	initCmd.Stderr = os.Stderr
-	return initCmd.Run()
+	return runScaffoldCommand(destDir, scaffoldCommandTimeout, false, "git", "init")
 }
 
 // pinScaffoldAirwayVersion writes a require directive for the framework at
@@ -149,23 +185,48 @@ func pinScaffoldAirwayVersion(destDir string) (bool, error) {
 		return false, nil
 	}
 
-	edit := exec.Command("go", "mod", "edit", "-require", "github.com/daqing/airway@"+Version)
-	edit.Dir = destDir
-	edit.Stdout = os.Stdout
-	edit.Stderr = os.Stderr
-	if err := edit.Run(); err != nil {
+	if err := runScaffoldCommand(destDir, scaffoldCommandTimeout, false, "go", "mod", "edit", "-require", "github.com/daqing/airway@"+Version); err != nil {
 		return false, err
 	}
 
 	return true, nil
 }
 
+func unpinScaffoldAirwayVersion(destDir string) error {
+	if err := runScaffoldCommand(destDir, scaffoldCommandTimeout, false, "go", "mod", "edit", "-droprequire", "github.com/daqing/airway"); err == nil {
+		return nil
+	}
+
+	// `go mod edit` refuses to run when the pinned require itself makes
+	// go.mod unparsable (e.g. a dev version like v9.9.9); strip the require
+	// line textually instead.
+	goMod := filepath.Join(destDir, "go.mod")
+	data, err := os.ReadFile(goMod)
+	if err != nil {
+		return err
+	}
+
+	var kept []string
+	for _, line := range strings.Split(string(data), "\n") {
+		if strings.Contains(line, "github.com/daqing/airway") {
+			continue
+		}
+		kept = append(kept, line)
+	}
+
+	return os.WriteFile(goMod, []byte(strings.Join(kept, "\n")), 0o644)
+}
+
+// airwayVersionResolvable reports whether the CLI's own version can be
+// resolved from the module proxy. The query is short-timeout best-effort: on
+// any failure (including a stalled network) the caller drops the pin instead
+// of letting `go mod tidy` hang on a direct VCS fallback.
+func airwayVersionResolvable(destDir string) bool {
+	return runScaffoldCommand(destDir, 30*time.Second, true, "go", "list", "-m", "github.com/daqing/airway@"+Version) == nil
+}
+
 func tidyScaffold(destDir string) error {
-	tidyCmd := exec.Command("go", "mod", "tidy")
-	tidyCmd.Dir = destDir
-	tidyCmd.Stdout = os.Stdout
-	tidyCmd.Stderr = os.Stderr
-	return tidyCmd.Run()
+	return runScaffoldCommand(destDir, scaffoldCommandTimeout, false, "go", "mod", "tidy")
 }
 
 // copyScaffoldEnv seeds the new project's .env from its .env.example, so the

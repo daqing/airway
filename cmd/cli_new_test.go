@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestNewProjectScaffoldsModule(t *testing.T) {
@@ -118,6 +119,13 @@ func TestNewProjectRejectsInvalidModulePath(t *testing.T) {
 		if err := newProject(module, false); err == nil {
 			t.Fatalf("expected error for module path %q", module)
 		}
+	}
+}
+
+func TestRunScaffoldCommandTimesOut(t *testing.T) {
+	err := runScaffoldCommand(t.TempDir(), 50*time.Millisecond, false, "sleep", "10")
+	if err == nil || !strings.Contains(err.Error(), "timed out") {
+		t.Fatalf("expected timeout error, got: %v", err)
 	}
 }
 
