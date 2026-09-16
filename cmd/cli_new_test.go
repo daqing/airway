@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -41,6 +42,10 @@ func TestNewProjectScaffoldsModule(t *testing.T) {
 	envExample := readFile(t, filepath.Join(wd, "demo", ".env.example"))
 	if env := readFile(t, filepath.Join(wd, "demo", ".env")); env != envExample {
 		t.Fatalf("expected .env seeded from .env.example, got:\n%s", env)
+	}
+
+	if info, err := os.Stat(filepath.Join(wd, "demo", ".git")); err != nil || !info.IsDir() {
+		t.Fatalf("expected a git repository in the scaffolded project: %v", err)
 	}
 }
 

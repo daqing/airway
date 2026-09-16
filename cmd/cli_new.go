@@ -88,6 +88,10 @@ func newProject(module string, tidy bool) error {
 		}
 	}
 
+	if err := initScaffoldGit(destDir); err != nil {
+		fmt.Printf("WARNING: `git init` failed: %v\n", err)
+	}
+
 	fmt.Println("\nNext steps:")
 	fmt.Printf("  cd %s\n", destDir)
 	fmt.Println("  # edit .env — set AIRWAY_DB_DSN and AIRWAY_PORT")
@@ -96,6 +100,16 @@ func newProject(module string, tidy bool) error {
 	fmt.Println("  go run .               # start the HTTP server")
 
 	return nil
+}
+
+// initScaffoldGit initializes a git repository in the new project, so it is
+// ready for the first commit right after scaffolding.
+func initScaffoldGit(destDir string) error {
+	initCmd := exec.Command("git", "init")
+	initCmd.Dir = destDir
+	initCmd.Stdout = os.Stdout
+	initCmd.Stderr = os.Stderr
+	return initCmd.Run()
 }
 
 // pinScaffoldAirwayVersion writes a require directive for the framework at
