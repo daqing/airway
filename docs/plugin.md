@@ -12,9 +12,9 @@ need it.
 
 ```bash
 # 1. Enable the plugin, copy its embedded SQL migrations into db/migrate,
-#    and copy its deps/ directory into the project root.
+#    and merge its deps/ directory into the project's deps/ directory.
 #    This single command runs `go get`, adds the blank import to plugins.go,
-#    and installs the migrations via the project binary.
+#    and installs the migrations and deps/ in the same process.
 go run . plugin:install github.com/example/airway-im-plugin
 
 # 2. Migrate as usual
@@ -25,13 +25,16 @@ Handy commands:
 
 ```bash
 go run . plugin:list              # registered plugins and their mount paths
-go run . plugin:install <module>  # enable a plugin, copy its SQL migrations and deps/
+go run . plugin:install <module>  # enable a plugin, install its SQL migrations and deps/
 ```
 
 `plugin:install` enables the plugin for you: if the plugin is not compiled
 into the current binary, it adds the blank import to plugins.go, runs
-`go get <module>`, and retries via `go run .`. You can still do these steps by
-hand if you prefer.
+`go get <module>` (or wires a local directory through a `replace` directive),
+then reads the plugin's migrations and deps/ from its module directory on
+disk — everything happens in the same process, so the current CLI's installer
+logic is always the one used. You can still do these steps by hand if you
+prefer.
 
 `plugin:list` only sees plugins compiled into the running binary, so run it
 through the project binary (`go run . ...` in the project directory): a
@@ -77,9 +80,10 @@ airway-im-plugin/
     views/                # templ views (commit the generated *_templ.go)
   db/
     migrate/              # optional: embedded *.up.sql / *.down.sql files
-  deps/                   # optional: extra files copied into the host project
-                          # root by `plugin:install` (companion services,
-                          # deploy configs, ...)
+  deps/                   # optional: extra files merged into the host
+                          # project's deps/ directory by `plugin:install`;
+                          # namespace them under the plugin name
+                          # (deps/im/app/... for a plugin named im)
 ```
 
 ### 1. Implement and register the Plugin
@@ -151,12 +155,18 @@ conflicts disable plugin REPL models and log a warning.
 
 ### 4. Shipping extra project files with `deps/`
 
-Everything under the plugin's top-level `deps/` directory is copied verbatim
-into the host project root by `plugin:install` — use it for companion
+Everything under the plugin's top-level `deps/` directory is merged into the
+host project's `deps/` directory by `plugin:install` — use it for companion
 services, deploy configs, or any files the host project needs on disk.
+Namespace the files under your plugin's name (`deps/im/app/...` for a plugin
+named `im`) so several plugins can install side by side without collisions.
 Existing destination files are skipped (never overwritten), so re-running
 `plugin:install` is safe; delete the installed copy first if you want to
 refresh it from a newer plugin version.
+
+The scaffolded host project ships an empty `deps/` directory; the install
+creates it when missing, so projects scaffolded by older Airway versions work
+unchanged.
 
 Two Go module rules shape what you can ship:
 
@@ -176,7 +186,7 @@ generate directive to the views directory
 are left alone.
 
 Don't commit build artifacts (compiled binaries, caches) under `deps/` — they
-would be copied into every host project.
+would be merged into every host project's `deps/`.
 
 ### 5. Views and WebSocket
 

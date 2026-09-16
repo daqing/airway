@@ -44,15 +44,21 @@ func runCLIPluginList() error {
 	return nil
 }
 
-// runCLIPluginInstall copies a plugin's embedded SQL migrations into the
-// host's db/migrate directory with fresh timestamps, so they run through the
-// regular db:migrate / db:rollback / db:status machinery, and copies the
-// plugin's deps/ directory verbatim into the host project root. The argument
-// is the plugin's module path (e.g. github.com/daqing/airway-im-plugin),
+// runCLIPluginInstall copies a plugin's SQL migrations into the host's
+// db/migrate directory with fresh timestamps, so they run through the
+// regular db:migrate / db:rollback / db:status machinery, and merges the
+// plugin's deps/ directory into the host project's deps/ directory. The
+// argument is the plugin's module path (e.g. github.com/daqing/airway-im-plugin),
 // optionally with an @version suffix like `go get` accepts, or a local
 // directory holding the plugin's source (its go.mod supplies the module path,
 // wired in through a replace directive — no download needed). The plugin name
 // is derived from the module's last segment, same as `plugin:new`.
+//
+// When the plugin is not compiled into the current binary, it is enabled
+// first (blank import + go get / replace), and the install then continues in
+// this same process, reading migrations and deps/ from the plugin module's
+// on-disk directory — so the current CLI's installer logic is always the one
+// used, never a possibly stale project binary.
 func runCLIPluginInstall(args []string) error {
 	if len(args) != 1 {
 		return fmt.Errorf("usage: airway plugin:install <module>[@version] | <local-dir>")
@@ -79,38 +85,31 @@ func runCLIPluginInstall(args []string) error {
 
 	p := plugin.Find(name)
 	if p == nil {
-		if os.Getenv(pluginInstallRetryEnv) != "" {
-			return fmt.Errorf("plugin %q (%s) is still not registered after enabling it; check that the module registers a plugin named %q", name, module, name)
+		if err := enablePlugin(name, module, ref, local); err != nil {
+			return err
 		}
-
-		return enablePluginAndRetry(name, module, ref, local)
 	}
 
 	if provider, ok := p.(plugin.MigrationProvider); ok {
 		if err := installPluginMigrations(name, provider.MigrationFS(), migrationDir, timeNow()); err != nil {
 			return err
 		}
-	} else {
-		fmt.Printf("Plugin %s has no SQL migrations to install\n", name)
+	} else if err := installPluginMigrationsFromModule(name, module); err != nil {
+		return err
 	}
 
-	return installPluginDeps(name, module, ".")
+	return installPluginDeps(name, module)
 }
 
-const pluginInstallRetryEnv = "AIRWAY_PLUGIN_INSTALL_RETRY"
-
-// enablePluginAndRetry makes plugin:install self-contained: when the plugin is
-// not compiled into the current binary, it adds the blank import to the host's
-// plugins.go, wires the module into go.mod — `go mod edit -replace` + `go mod
-// tidy` for a local directory (no download), otherwise `go get ref` (ref may
-// carry an @version suffix) — and retries through the project binary
-// (`go run .`), which picks up the newly enabled plugin. The retry env guard
-// keeps the retried process from looping when the module does not register a
-// plugin with the expected name.
-func enablePluginAndRetry(name, module, ref string, local bool) error {
+// enablePlugin makes plugin:install self-contained: when the plugin is not
+// compiled into the current binary, it adds the blank import to the host's
+// plugins.go and wires the module into go.mod — `go mod edit -replace` +
+// `go mod tidy` for a local directory (no download), otherwise `go get ref`
+// (ref may carry an @version suffix).
+func enablePlugin(name, module, ref string, local bool) error {
 	for _, file := range []string{"go.mod", "plugins.go"} {
 		if _, err := os.Stat(file); err != nil {
-			return fmt.Errorf("plugin %q (%s) is not registered; run `go get %s`, add its blank import to plugins.go, and retry with the project binary", name, module, ref)
+			return fmt.Errorf("plugin %q (%s) is not registered; run from the host project root (go.mod and plugins.go are required), or add its blank import to plugins.go, run `go get %s`, and retry", name, module, ref)
 		}
 	}
 
@@ -136,13 +135,7 @@ func enablePluginAndRetry(name, module, ref string, local bool) error {
 		}
 	}
 
-	fmt.Println("Retrying plugin:install via the project binary...")
-	retry := exec.Command("go", "run", ".", "plugin:install", module)
-	retry.Env = append(os.Environ(), pluginInstallRetryEnv+"=1")
-	retry.Stdin = os.Stdin
-	retry.Stdout = os.Stdout
-	retry.Stderr = os.Stderr
-	return retry.Run()
+	return nil
 }
 
 // replacePluginWithLocalDir points the module requirement at a local checkout
@@ -356,25 +349,45 @@ func pluginMigrationInstalled(dstDir string, name string) bool {
 	return false
 }
 
-// pluginDepsDir is the directory inside a plugin module whose contents are
-// copied verbatim into the host project by `plugin:install` (companion
-// services, deploy configs, ...). It must not be named "vendor" — module zips
-// drop vendor/ entirely — and must not contain nested go.mod files, which
-// module zips drop as nested modules; ship them as go.mod.templ instead,
-// installed as go.mod.
-const pluginDepsDir = "deps"
-
-// installPluginDeps copies the plugin's deps/ directory into dstRoot (the
-// host project root). The plugin module directory is resolved through the
-// host's module graph, so proxy downloads and local replace directives behave
-// the same.
-func installPluginDeps(name, module, dstRoot string) error {
+// installPluginMigrationsFromModule installs migrations for a plugin that is
+// not compiled into the current binary: it reads the plugin's db/migrate
+// directory from its on-disk module directory (the same files a
+// MigrationProvider would embed), so the install completes in this process
+// instead of re-executing through a possibly stale project binary.
+func installPluginMigrationsFromModule(name, module string) error {
 	dir, err := pluginModuleDir(module)
 	if err != nil {
 		return fmt.Errorf("locate plugin module %s: %w", module, err)
 	}
 
-	return installPluginDepsFrom(name, filepath.Join(dir, pluginDepsDir), dstRoot)
+	migrateDir := filepath.Join(dir, "db", "migrate")
+	if info, err := os.Stat(migrateDir); err != nil || !info.IsDir() {
+		fmt.Printf("Plugin %s has no SQL migrations to install\n", name)
+		return nil
+	}
+
+	return installPluginMigrations(name, os.DirFS(migrateDir), migrationDir, timeNow())
+}
+
+// pluginDepsDir is the directory inside a plugin module whose contents are
+// merged into the host project's deps/ directory by `plugin:install`
+// (companion services, deploy configs, ...). It must not be named "vendor" —
+// module zips drop vendor/ entirely — and must not contain nested go.mod
+// files, which module zips drop as nested modules; ship them as go.mod.templ
+// instead, installed as go.mod.
+const pluginDepsDir = "deps"
+
+// installPluginDeps merges the plugin's deps/ directory into the host
+// project's deps/ directory. The plugin module directory is resolved through
+// the host's module graph, so proxy downloads and local replace directives
+// behave the same.
+func installPluginDeps(name, module string) error {
+	dir, err := pluginModuleDir(module)
+	if err != nil {
+		return fmt.Errorf("locate plugin module %s: %w", module, err)
+	}
+
+	return installPluginDepsFrom(name, filepath.Join(dir, pluginDepsDir), pluginDepsDir)
 }
 
 // pluginModuleDir returns the on-disk directory of a module in the build list
@@ -396,15 +409,23 @@ func pluginModuleDir(module string) (string, error) {
 	return dir, nil
 }
 
-// installPluginDepsFrom copies every file under srcDir into dstRoot,
-// preserving relative paths and stripping a single .templ suffix (so a plugin
-// can ship go.mod.templ without tripping Go's nested-module rules, and a
-// future install can render such files as templates). Existing destination
-// files are left untouched, mirroring the migration installer's skip
-// behavior. A plugin without a deps/ directory installs nothing.
+// installPluginDepsFrom copies every file under srcDir into dstRoot (the
+// host project's deps/ directory), preserving relative paths and stripping a
+// single .templ suffix (so a plugin can ship go.mod.templ without tripping
+// Go's nested-module rules, and a future install can render such files as
+// templates). Existing destination files are left untouched, mirroring the
+// migration installer's skip behavior. A plugin without a deps/ directory
+// installs nothing.
 func installPluginDepsFrom(name, srcDir, dstRoot string) error {
 	if info, err := os.Stat(srcDir); err != nil || !info.IsDir() {
 		return nil
+	}
+
+	// Hosts scaffolded by older Airway versions may not have a deps/
+	// directory; create it even when the plugin's deps/ holds nothing
+	// but .keep, so the host always ends up with one.
+	if err := ensureDir(dstRoot); err != nil {
+		return err
 	}
 
 	return filepath.WalkDir(srcDir, func(path string, entry os.DirEntry, err error) error {
@@ -420,7 +441,7 @@ func installPluginDepsFrom(name, srcDir, dstRoot string) error {
 			return err
 		}
 		// The scaffolded deps/.keep only holds the plugin's own empty dir;
-		// it has no meaning in the host project.
+		// the host project ships its own deps/.keep.
 		if rel == ".keep" {
 			return nil
 		}

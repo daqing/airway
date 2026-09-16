@@ -152,42 +152,89 @@ func TestModulePathAt(t *testing.T) {
 
 func TestInstallPluginDeps(t *testing.T) {
 	srcDir := filepath.Join(t.TempDir(), "deps")
-	makeDirs(t, filepath.Join(srcDir, "gateway"))
+	makeDirs(t, filepath.Join(srcDir, "im", "app"))
+	makeDirs(t, filepath.Join(srcDir, "im", "gateway"))
 	writeFile(t, filepath.Join(srcDir, ".keep"), "")
-	writeFile(t, filepath.Join(srcDir, "gateway", "main.go"), "package main\n")
-	writeFile(t, filepath.Join(srcDir, "gateway", "go.mod.templ"), "module gateway\n\ngo 1.26\n")
-	writeFile(t, filepath.Join(srcDir, "config.yaml"), "key: value\n")
+	writeFile(t, filepath.Join(srcDir, "im", "app", "docker-compose.yml"), "services: {}\n")
+	writeFile(t, filepath.Join(srcDir, "im", "gateway", "main.go"), "package main\n")
+	writeFile(t, filepath.Join(srcDir, "im", "gateway", "go.mod.templ"), "module gateway\n\ngo 1.26\n")
 
-	dstRoot := t.TempDir()
+	// The scaffolded host project ships an empty deps/ directory.
+	dstRoot := filepath.Join(t.TempDir(), "deps")
+	makeDirs(t, dstRoot)
+	writeFile(t, filepath.Join(dstRoot, ".keep"), "host\n")
+
 	if err := installPluginDepsFrom("im", srcDir, dstRoot); err != nil {
 		t.Fatalf("install plugin deps: %v", err)
 	}
 
-	if got := readFile(t, filepath.Join(dstRoot, "gateway", "main.go")); got != "package main\n" {
-		t.Fatalf("unexpected gateway/main.go content: %s", got)
+	if got := readFile(t, filepath.Join(dstRoot, "im", "app", "docker-compose.yml")); got != "services: {}\n" {
+		t.Fatalf("unexpected im/app/docker-compose.yml content: %s", got)
+	}
+	if got := readFile(t, filepath.Join(dstRoot, "im", "gateway", "main.go")); got != "package main\n" {
+		t.Fatalf("unexpected im/gateway/main.go content: %s", got)
 	}
 	// The .templ suffix is stripped on install.
-	if got := readFile(t, filepath.Join(dstRoot, "gateway", "go.mod")); got != "module gateway\n\ngo 1.26\n" {
-		t.Fatalf("unexpected gateway/go.mod content: %s", got)
+	if got := readFile(t, filepath.Join(dstRoot, "im", "gateway", "go.mod")); got != "module gateway\n\ngo 1.26\n" {
+		t.Fatalf("unexpected im/gateway/go.mod content: %s", got)
 	}
-	if _, err := os.Stat(filepath.Join(dstRoot, "gateway", "go.mod.templ")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(dstRoot, "im", "gateway", "go.mod.templ")); !os.IsNotExist(err) {
 		t.Fatal("expected no go.mod.templ in the destination")
 	}
-	// The scaffold's own deps/.keep is not copied into the host.
-	if _, err := os.Stat(filepath.Join(dstRoot, ".keep")); !os.IsNotExist(err) {
-		t.Fatal("expected no root .keep in the destination")
-	}
-	if got := readFile(t, filepath.Join(dstRoot, "config.yaml")); got != "key: value\n" {
-		t.Fatalf("unexpected config.yaml content: %s", got)
+	// The plugin's own deps/.keep is skipped; the host's stays untouched.
+	if got := readFile(t, filepath.Join(dstRoot, ".keep")); got != "host\n" {
+		t.Fatalf("expected the host's deps/.keep untouched, got: %s", got)
 	}
 
 	// Reinstalling skips existing files instead of overwriting local edits.
-	writeFile(t, filepath.Join(dstRoot, "config.yaml"), "key: edited\n")
+	writeFile(t, filepath.Join(dstRoot, "im", "app", "docker-compose.yml"), "services: edited\n")
 	if err := installPluginDepsFrom("im", srcDir, dstRoot); err != nil {
 		t.Fatalf("reinstall plugin deps: %v", err)
 	}
-	if got := readFile(t, filepath.Join(dstRoot, "config.yaml")); got != "key: edited\n" {
+	if got := readFile(t, filepath.Join(dstRoot, "im", "app", "docker-compose.yml")); got != "services: edited\n" {
 		t.Fatalf("expected existing file untouched, got: %s", got)
+	}
+}
+
+func TestInstallPluginDepsCreatesMissingHostDir(t *testing.T) {
+	srcDir := filepath.Join(t.TempDir(), "deps")
+	makeDirs(t, filepath.Join(srcDir, "im", "app"))
+	writeFile(t, filepath.Join(srcDir, "im", "app", "docker-compose.yml"), "services: {}\n")
+
+	// Hosts scaffolded by older Airway versions have no deps/ directory.
+	dstRoot := filepath.Join(t.TempDir(), "deps")
+
+	if err := installPluginDepsFrom("im", srcDir, dstRoot); err != nil {
+		t.Fatalf("install plugin deps: %v", err)
+	}
+
+	if got := readFile(t, filepath.Join(dstRoot, "im", "app", "docker-compose.yml")); got != "services: {}\n" {
+		t.Fatalf("unexpected im/app/docker-compose.yml content: %s", got)
+	}
+}
+
+func TestInstallPluginDepsCreatesHostDirForKeepOnlyDeps(t *testing.T) {
+	srcDir := filepath.Join(t.TempDir(), "deps")
+	makeDirs(t, srcDir)
+	writeFile(t, filepath.Join(srcDir, ".keep"), "")
+
+	// Even a .keep-only plugin deps/ must leave the host with a deps/ directory.
+	dstRoot := filepath.Join(t.TempDir(), "deps")
+
+	if err := installPluginDepsFrom("im", srcDir, dstRoot); err != nil {
+		t.Fatalf("install plugin deps: %v", err)
+	}
+
+	if info, err := os.Stat(dstRoot); err != nil || !info.IsDir() {
+		t.Fatalf("expected the host deps/ directory to be created: %v", err)
+	}
+
+	entries, err := os.ReadDir(dstRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 0 {
+		t.Fatalf("expected the host deps/ directory to stay empty, got %d entries", len(entries))
 	}
 }
 

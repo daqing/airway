@@ -66,12 +66,24 @@ func newProject(module string, tidy bool) error {
 
 	fmt.Printf("Created a new Airway project in %s (module %s)\n", destDir, module)
 
+	pinned, err := pinScaffoldAirwayVersion(destDir)
+	if err != nil {
+		return fmt.Errorf("pin airway version in go.mod: %w", err)
+	}
+
 	if tidy {
-		tidyCmd := exec.Command("go", "mod", "tidy")
-		tidyCmd.Dir = destDir
-		tidyCmd.Stdout = os.Stdout
-		tidyCmd.Stderr = os.Stderr
-		if err := tidyCmd.Run(); err != nil {
+		err := tidyScaffold(destDir)
+		if err != nil && pinned {
+			// The pinned version may not be published yet (e.g. a locally
+			// built CLI ahead of the tags); drop the pin and let tidy fall
+			// back to discovering a version from the proxy.
+			unpin := exec.Command("go", "mod", "edit", "-droprequire", "github.com/daqing/airway")
+			unpin.Dir = destDir
+			if unpinErr := unpin.Run(); unpinErr == nil {
+				err = tidyScaffold(destDir)
+			}
+		}
+		if err != nil {
 			fmt.Printf("WARNING: `go mod tidy` failed: %v\nRun it manually inside %s before building.\n", err, destDir)
 		}
 	}
@@ -84,6 +96,36 @@ func newProject(module string, tidy bool) error {
 	fmt.Println("  go run .               # start the HTTP server")
 
 	return nil
+}
+
+// pinScaffoldAirwayVersion writes a require directive for the framework at
+// the CLI's own version into the scaffolded go.mod, so the first
+// `go mod tidy` downloads a known version instead of searching the proxy for
+// a module that provides each airway package (which needs direct network
+// access when the module is not proxied). Dev builds without a VERSION file
+// skip this step. It reports whether a pin was written.
+func pinScaffoldAirwayVersion(destDir string) (bool, error) {
+	if !strings.HasPrefix(Version, "v") {
+		return false, nil
+	}
+
+	edit := exec.Command("go", "mod", "edit", "-require", "github.com/daqing/airway@"+Version)
+	edit.Dir = destDir
+	edit.Stdout = os.Stdout
+	edit.Stderr = os.Stderr
+	if err := edit.Run(); err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+func tidyScaffold(destDir string) error {
+	tidyCmd := exec.Command("go", "mod", "tidy")
+	tidyCmd.Dir = destDir
+	tidyCmd.Stdout = os.Stdout
+	tidyCmd.Stderr = os.Stderr
+	return tidyCmd.Run()
 }
 
 // copyScaffoldEnv seeds the new project's .env from its .env.example, so the

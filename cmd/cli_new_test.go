@@ -44,6 +44,40 @@ func TestNewProjectScaffoldsModule(t *testing.T) {
 	}
 }
 
+func TestNewProjectPinsAirwayVersion(t *testing.T) {
+	wd := useTempWorkingDir(t)
+
+	oldVersion := Version
+	Version = "v9.9.9"
+	t.Cleanup(func() { Version = oldVersion })
+
+	if err := newProject("pinned", false); err != nil {
+		t.Fatalf("new project: %v", err)
+	}
+
+	goMod := readFile(t, filepath.Join(wd, "pinned", "go.mod"))
+	if !strings.Contains(goMod, "require github.com/daqing/airway v9.9.9") {
+		t.Fatalf("expected pinned airway require in go.mod, got:\n%s", goMod)
+	}
+}
+
+func TestNewProjectSkipsPinForDevBuild(t *testing.T) {
+	wd := useTempWorkingDir(t)
+
+	oldVersion := Version
+	Version = "dev"
+	t.Cleanup(func() { Version = oldVersion })
+
+	if err := newProject("devbuild", false); err != nil {
+		t.Fatalf("new project: %v", err)
+	}
+
+	goMod := readFile(t, filepath.Join(wd, "devbuild", "go.mod"))
+	if strings.Contains(goMod, "require github.com/daqing/airway") {
+		t.Fatalf("expected no airway require for dev builds, got:\n%s", goMod)
+	}
+}
+
 func TestNewProjectRejectsExistingNonEmptyDirectory(t *testing.T) {
 	wd := useTempWorkingDir(t)
 	makeDirs(t, filepath.Join(wd, "demo"))
