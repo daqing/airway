@@ -32,6 +32,7 @@ Airway 既是**框架/库**，也是一个**可直接运行的应用程序骨架
 ```bash
 go install github.com/daqing/airway@latest
 airway new myapp        # 或：airway new github.com/me/myapp（目录取路径最后一段）
+                        # 或：airway new /path/to/myapp（本地路径，module 取路径最后一段）
 cd myapp
 ```
 

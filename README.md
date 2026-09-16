@@ -47,6 +47,7 @@ Airway is both a **framework/library** and a **runnable application skeleton**:
 ```bash
 go install github.com/daqing/airway@latest
 airway new myapp        # or: airway new github.com/me/myapp (directory = last path segment)
+                        # or: airway new /path/to/myapp (local path; module = last path segment)
 cd myapp
 ```
 

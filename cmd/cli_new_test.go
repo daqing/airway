@@ -93,10 +93,28 @@ func TestNewProjectRejectsExistingNonEmptyDirectory(t *testing.T) {
 	}
 }
 
+func TestNewProjectFromAbsolutePath(t *testing.T) {
+	wd := useTempWorkingDir(t)
+
+	destDir := filepath.Join(wd, "nested", "foobar")
+	if err := newProject(destDir, false); err != nil {
+		t.Fatalf("new project: %v", err)
+	}
+
+	goMod := readFile(t, filepath.Join(destDir, "go.mod"))
+	if !strings.Contains(goMod, "module foobar") {
+		t.Fatalf("expected module path from the last path segment, got:\n%s", goMod)
+	}
+
+	if _, err := os.Stat(filepath.Join(destDir, "main.go")); err != nil {
+		t.Fatalf("expected project scaffolded at %s: %v", destDir, err)
+	}
+}
+
 func TestNewProjectRejectsInvalidModulePath(t *testing.T) {
 	useTempWorkingDir(t)
 
-	for _, module := range []string{"", "/leading-slash", "UPPER Case", "has space"} {
+	for _, module := range []string{"", "UPPER Case", "has space", "/tmp/UPPER Case"} {
 		if err := newProject(module, false); err == nil {
 			t.Fatalf("expected error for module path %q", module)
 		}
@@ -110,7 +128,7 @@ func TestRunNewHelpPrintsUsage(t *testing.T) {
 		}
 	})
 
-	if !strings.Contains(output, "airway new <module-path>") {
+	if !strings.Contains(output, "airway new <module-path | directory>") {
 		t.Fatalf("expected new usage output, got:\n%s", output)
 	}
 }

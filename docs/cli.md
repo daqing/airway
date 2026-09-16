@@ -17,7 +17,7 @@ The legacy form `airway cli <command>` still works as a compatibility alias.
 ## Command Overview
 
 ```bash
-airway new <module-path>                                # scaffold a new project skeleton
+airway new <module-path | directory>                    # scaffold a new project skeleton
 airway server                                           # start the HTTP server
 airway db:create
 airway db:drop
@@ -42,6 +42,7 @@ Running `airway` with no arguments prints usage.
 ```bash
 airway new myapp                    # directory: myapp
 airway new github.com/me/myapp      # module path; directory is the last path segment
+airway new /path/to/myapp           # create at that local path; module: myapp
 ```
 
 `airway new` generates a fresh project skeleton based on the framework's `app/`

@@ -15,7 +15,7 @@ commands also run as `go run . <command>`.
 ## Quick start: from zero to a running app
 
 ```bash
-airway new myapp                    # or: airway new github.com/me/myapp
+airway new myapp                    # or: airway new github.com/me/myapp, or a local path like /path/to/myapp
 cd myapp
 # edit .env (already seeded from .env.example) — set DSN and PORT
 airway db:create
@@ -48,7 +48,7 @@ run with no arguments.)
 ## Command reference
 
 ```bash
-airway new <module-path>                                # scaffold a new project
+airway new <module-path | directory>                    # scaffold a new project
 airway server                                           # start the HTTP server
 airway generate [action|api|model|migration|service|cmd] [params]
 airway db:create

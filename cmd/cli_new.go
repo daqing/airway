@@ -14,6 +14,37 @@ import (
 
 var modulePathPattern = regexp.MustCompile(`^[a-z0-9]+([\w./-]*[\w.])?$`)
 
+// resolveNewTarget maps the `airway new` argument to the destination directory
+// and the Go module path. An absolute filesystem path (e.g.
+// /path/to/foobar) creates the project at that location, with the last path
+// segment as the module path; anything else is treated as the module path
+// itself, and the project is created in a subdirectory of the current
+// directory named after its last segment.
+func resolveNewTarget(arg string) (destDir string, module string, err error) {
+	arg = strings.TrimSpace(arg)
+	if arg == "" {
+		return "", "", fmt.Errorf("invalid module path %q", arg)
+	}
+
+	if filepath.IsAbs(arg) {
+		destDir = filepath.Clean(arg)
+		module = filepath.Base(destDir)
+	} else {
+		module = arg
+		dirName := module
+		if idx := strings.LastIndex(module, "/"); idx >= 0 {
+			dirName = module[idx+1:]
+		}
+		destDir = filepath.Join(".", dirName)
+	}
+
+	if !modulePathPattern.MatchString(module) {
+		return "", "", fmt.Errorf("invalid module path %q", module)
+	}
+
+	return destDir, module, nil
+}
+
 func runCLINew(args []string) error {
 	if len(args) == 1 && isHelpArg(args[0]) {
 		printCLINewUsage(os.Stdout)
@@ -21,23 +52,18 @@ func runCLINew(args []string) error {
 	}
 
 	if len(args) != 1 {
-		return fmt.Errorf("usage: airway new <module-path>")
+		return fmt.Errorf("usage: airway new <module-path | directory>")
 	}
 
 	return newProject(strings.TrimSpace(args[0]), true)
 }
 
-func newProject(module string, tidy bool) error {
-	if !modulePathPattern.MatchString(module) {
-		return fmt.Errorf("invalid module path %q", module)
+func newProject(arg string, tidy bool) error {
+	destDir, module, err := resolveNewTarget(arg)
+	if err != nil {
+		return err
 	}
 
-	dirName := module
-	if idx := strings.LastIndex(module, "/"); idx >= 0 {
-		dirName = module[idx+1:]
-	}
-
-	destDir := filepath.Join(".", dirName)
 	if info, err := os.Stat(destDir); err == nil {
 		if !info.IsDir() {
 			return fmt.Errorf("%s already exists and is not a directory", destDir)
@@ -194,9 +220,10 @@ func rewriteScaffoldPort(destDir string) error {
 
 func printCLINewUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "usage:")
-	_, _ = fmt.Fprintln(w, "  airway new <module-path>")
+	_, _ = fmt.Fprintln(w, "  airway new <module-path | directory>")
 	_, _ = fmt.Fprintln(w, "")
 	_, _ = fmt.Fprintln(w, "examples:")
 	_, _ = fmt.Fprintln(w, "  airway new myapp")
 	_, _ = fmt.Fprintln(w, "  airway new github.com/me/myapp")
+	_, _ = fmt.Fprintln(w, "  airway new /path/to/myapp    # create at that path; module: myapp")
 }

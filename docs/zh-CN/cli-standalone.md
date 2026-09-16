@@ -15,7 +15,7 @@ go install github.com/daqing/airway@latest
 ## 快速上手：从零到运行中的应用
 
 ```bash
-airway new myapp                    # 或：airway new github.com/me/myapp
+airway new myapp                    # 或：airway new github.com/me/myapp，或本地路径 /path/to/myapp
 cd myapp
 # 编辑 .env（已从 .env.example 自动生成）—— 配置 DSN 和 PORT
 airway db:create
@@ -45,7 +45,7 @@ module 路径，并自动执行 `go mod tidy`。目标目录取 module 路径的
 ## 命令一览
 
 ```bash
-airway new <module-path>                                # 生成新项目骨架
+airway new <module-path | directory>                    # 生成新项目骨架
 airway server                                           # 启动 HTTP 服务器
 airway generate [action|api|model|migration|service|cmd] [params]
 airway db:create

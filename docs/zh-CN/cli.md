@@ -16,7 +16,7 @@ go install github.com/daqing/airway@latest
 ## 命令总览
 
 ```bash
-airway new <module-path>                                # 生成新项目骨架
+airway new <module-path | directory>                    # 生成新项目骨架
 airway server                                           # 启动 HTTP 服务
 airway db:create
 airway db:drop
@@ -41,6 +41,7 @@ airway version                                           # 或 -v / --version；
 ```bash
 airway new myapp                    # 目录名：myapp
 airway new github.com/me/myapp      # module 路径；目录取路径最后一段
+airway new /path/to/myapp           # 本地路径；在该位置创建项目，module 为 myapp
 ```
 
 `airway new` 会以框架仓库的 `app/` 骨架为模板生成一个新项目，自动从
