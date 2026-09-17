@@ -97,6 +97,35 @@ func TestIndexRendersAllFeatureCards(t *testing.T) {
 	}
 }
 
+func TestIndexRendersFrontendSection(t *testing.T) {
+	html := renderToString(t, Index(3))
+
+	for _, want := range []string{
+		`id="frontend"`,
+		"03 / THE FRONTEND, WITHOUT NODE.JS",
+		`id="frontend-title"`,
+		`id="tab-island"`,
+		`id="tab-ui"`,
+		`id="tab-js"`,
+		`id="panel-island"`,
+		"data-island",
+		"island-data-1",
+		"application/json",
+		"js:add",
+		"js:install",
+		"js:build",
+		"generate island chart",
+		"generate scaffold post title:string",
+		"airway-ui on a preact/compat base",
+		`href="` + repositoryURL + `/blob/main/docs/frontend.md"`,
+		`href="#frontend"`,
+	} {
+		if !strings.Contains(html, want) {
+			t.Errorf("expected output to contain %q", want)
+		}
+	}
+}
+
 func TestFeatureRendersCardContent(t *testing.T) {
 	html := renderToString(t, feature("07", "A test title", "A test description.", "#test-anchor", "Read more", "terminal"))
 
