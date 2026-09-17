@@ -13,7 +13,7 @@ generate:
 
 # Regenerate the views, then keep them fresh while you edit .templ files.
 generate-watch:
-  go tool templ generate -watch
+  go tool templ generate -path app/views -watch
 
 # Format the .templ view sources (use `go tool templ fmt -fail app/views` in CI).
 templ-fmt:

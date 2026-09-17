@@ -2,8 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"io"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -21,20 +19,30 @@ var timeNow = time.Now
 func currentModulePath() string {
 	const fallback = "github.com/daqing/airway"
 
-	data, err := os.ReadFile("go.mod")
+	module, err := modulePathAt(".")
 	if err != nil {
 		return fallback
+	}
+
+	return module
+}
+
+// modulePathAt reads the module path from the go.mod in dir.
+func modulePathAt(dir string) (string, error) {
+	data, err := os.ReadFile(filepath.Join(dir, "go.mod"))
+	if err != nil {
+		return "", err
 	}
 
 	for line := range strings.Lines(string(data)) {
 		if module, ok := strings.CutPrefix(strings.TrimSpace(line), "module "); ok {
 			if module = strings.TrimSpace(module); module != "" {
-				return module
+				return module, nil
 			}
 		}
 	}
 
-	return fallback
+	return "", fmt.Errorf("no module line in %s", filepath.Join(dir, "go.mod"))
 }
 
 func ensureDir(path string) error {
@@ -64,115 +72,6 @@ func writeTemplateFile(tplText string, out string, data any) error {
 	defer file.Close()
 
 	return tpl.Execute(file, data)
-}
-
-func copyDirContents(srcDir string, dstDir string) error {
-	entries, err := os.ReadDir(srcDir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil
-		}
-		return err
-	}
-
-	if err := ensureDir(dstDir); err != nil {
-		return err
-	}
-
-	for _, entry := range entries {
-		srcPath := filepath.Join(srcDir, entry.Name())
-		dstPath := filepath.Join(dstDir, entry.Name())
-
-		if entry.IsDir() {
-			if err := copyDir(srcPath, dstPath); err != nil {
-				return err
-			}
-			continue
-		}
-
-		if err := copyFile(srcPath, dstPath); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func copyDir(srcDir string, dstDir string) error {
-	return filepath.WalkDir(srcDir, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-
-		rel, err := filepath.Rel(srcDir, path)
-		if err != nil {
-			return err
-		}
-		targetPath := filepath.Join(dstDir, rel)
-
-		if d.IsDir() {
-			return ensureDir(targetPath)
-		}
-
-		return copyFile(path, targetPath)
-	})
-}
-
-func copyMigrationFiles(srcDir string, dstDir string, prefix string) error {
-	entries, err := os.ReadDir(srcDir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil
-		}
-		return err
-	}
-
-	if err := ensureDir(dstDir); err != nil {
-		return err
-	}
-
-	for _, entry := range entries {
-		if entry.IsDir() || filepath.Ext(entry.Name()) != ".sql" {
-			continue
-		}
-
-		srcPath := filepath.Join(srcDir, entry.Name())
-		dstPath := filepath.Join(dstDir, prefix+"_"+entry.Name())
-		if err := copyFile(srcPath, dstPath); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func copyFile(src string, dst string) error {
-	if err := ensureDir(filepath.Dir(dst)); err != nil {
-		return err
-	}
-
-	srcFile, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer srcFile.Close()
-
-	info, err := srcFile.Stat()
-	if err != nil {
-		return err
-	}
-
-	dstFile, err := os.OpenFile(dst, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, info.Mode())
-	if err != nil {
-		return err
-	}
-	defer dstFile.Close()
-
-	if _, err := io.Copy(dstFile, srcFile); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func parsePositiveInt(value string) (int, error) {

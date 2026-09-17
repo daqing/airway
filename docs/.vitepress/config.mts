@@ -66,7 +66,7 @@ export default defineConfig({
           {
             text: 'Guide',
             items: [
-              { text: 'Engines', link: '/engine' },
+              { text: 'Plugins', link: '/plugin' },
               { text: 'Storage', link: '/storage' },
               { text: 'Templates', link: '/template' },
             ],
@@ -95,7 +95,7 @@ export default defineConfig({
           {
             text: '指南',
             items: [
-              { text: 'Engine 扩展机制', link: '/zh-CN/engine' },
+              { text: 'Plugin 扩展机制', link: '/zh-CN/plugin' },
               { text: 'SQL 构建器', link: '/zh-CN/sql-builder' },
               { text: '存储', link: '/zh-CN/storage' },
               { text: '模板', link: '/zh-CN/template' },

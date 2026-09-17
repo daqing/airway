@@ -32,12 +32,12 @@ Airway 既是**框架/库**，也是一个**可直接运行的应用程序骨架
 ```bash
 go install github.com/daqing/airway@latest
 airway new myapp        # 或：airway new github.com/me/myapp（目录取路径最后一段）
+                        # 或：airway new /path/to/myapp（本地路径，module 取路径最后一段）
 cd myapp
-cp .env.example .env
 ```
 
-`airway new` 会以框架的 `app/` 骨架为模板生成一个新项目，自动执行 `go mod tidy`，
-并打印后续步骤。如果你是想开发框架本身，可以改为克隆仓库：
+`airway new` 会以框架的 `app/` 骨架为模板生成一个新项目，自动从 `.env.example`
+生成 `.env`，执行 `go mod tidy`，并打印后续步骤。如果你是想开发框架本身，可以改为克隆仓库：
 
 ```bash
 git clone https://github.com/daqing/airway.git
@@ -156,9 +156,9 @@ airway upload [key] /path/to/file          # 通过已配置的存储上传文�
 airway version                                           # 或 -v / --version；打印 VERSION 文件内容
 ```
 
-旧形式 `airway cli <命令>` 仍作为兼容别名可用。由于模型和 Engine 在编译期注册，
-`repl` 与 `engine:install` 建议通过项目二进制运行（`go run . repl`、
-`go run . engine:install <name>`）——全局安装的 `airway` 只能看到编译进它自身的内容。
+旧形式 `airway cli <命令>` 仍作为兼容别名可用。由于模型和 Plugin 在编译期注册，
+`repl` 与 `plugin:install` 建议通过项目二进制运行（`go run . repl`、
+`go run . plugin:install <module>`）——全局安装的 `airway` 只能看到编译进它自身的内容。
 
 数据库相关命令读取 `DSN`/`AIRWAY_DSN`；为了向后兼容，仍支持旧的 `AIRWAY_DB_DSN` 与 `AIRWAY_PG`。完整的[CLI 指南](cli.md)。
 

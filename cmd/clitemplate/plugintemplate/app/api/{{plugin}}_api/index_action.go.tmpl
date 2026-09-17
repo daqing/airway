@@ -1,4 +1,4 @@
-package {{engine}}_api
+package {{plugin}}_api
 
 import (
 	"github.com/gin-gonic/gin"
@@ -7,5 +7,5 @@ import (
 )
 
 func IndexAction(c *gin.Context) {
-	render.OK(c, gin.H{"engine": "{{engine}}"})
+	render.OK(c, gin.H{"plugin": "{{plugin}}"})
 }

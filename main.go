@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/daqing/airway/cmd"
-	"github.com/daqing/airway/lib/engine"
+	"github.com/daqing/airway/lib/plugin"
 	"github.com/daqing/airway/lib/redis_client"
 	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/storage"
@@ -75,8 +75,8 @@ func runServer() {
 		os.Exit(4)
 	}
 
-	if err := engine.BootAll(); err != nil {
-		log.Printf("engine boot failed: %v", err)
+	if err := plugin.BootAll(); err != nil {
+		log.Printf("plugin boot failed: %v", err)
 		os.Exit(5)
 	}
 

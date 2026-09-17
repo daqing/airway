@@ -1,9 +1,11 @@
 package cmd
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestNewProjectScaffoldsModule(t *testing.T) {
@@ -37,6 +39,49 @@ func TestNewProjectScaffoldsModule(t *testing.T) {
 			t.Fatalf("expected scaffolded %s to use port 1905", rel)
 		}
 	}
+
+	envExample := readFile(t, filepath.Join(wd, "demo", ".env.example"))
+	if env := readFile(t, filepath.Join(wd, "demo", ".env")); env != envExample {
+		t.Fatalf("expected .env seeded from .env.example, got:\n%s", env)
+	}
+
+	if info, err := os.Stat(filepath.Join(wd, "demo", ".git")); err != nil || !info.IsDir() {
+		t.Fatalf("expected a git repository in the scaffolded project: %v", err)
+	}
+}
+
+func TestNewProjectPinsAirwayVersion(t *testing.T) {
+	wd := useTempWorkingDir(t)
+
+	oldVersion := Version
+	Version = "v9.9.9"
+	t.Cleanup(func() { Version = oldVersion })
+
+	if err := newProject("pinned", false); err != nil {
+		t.Fatalf("new project: %v", err)
+	}
+
+	goMod := readFile(t, filepath.Join(wd, "pinned", "go.mod"))
+	if !strings.Contains(goMod, "require github.com/daqing/airway v9.9.9") {
+		t.Fatalf("expected pinned airway require in go.mod, got:\n%s", goMod)
+	}
+}
+
+func TestNewProjectSkipsPinForDevBuild(t *testing.T) {
+	wd := useTempWorkingDir(t)
+
+	oldVersion := Version
+	Version = "dev"
+	t.Cleanup(func() { Version = oldVersion })
+
+	if err := newProject("devbuild", false); err != nil {
+		t.Fatalf("new project: %v", err)
+	}
+
+	goMod := readFile(t, filepath.Join(wd, "devbuild", "go.mod"))
+	if strings.Contains(goMod, "require github.com/daqing/airway") {
+		t.Fatalf("expected no airway require for dev builds, got:\n%s", goMod)
+	}
 }
 
 func TestNewProjectRejectsExistingNonEmptyDirectory(t *testing.T) {
@@ -49,13 +94,38 @@ func TestNewProjectRejectsExistingNonEmptyDirectory(t *testing.T) {
 	}
 }
 
+func TestNewProjectFromAbsolutePath(t *testing.T) {
+	wd := useTempWorkingDir(t)
+
+	destDir := filepath.Join(wd, "nested", "foobar")
+	if err := newProject(destDir, false); err != nil {
+		t.Fatalf("new project: %v", err)
+	}
+
+	goMod := readFile(t, filepath.Join(destDir, "go.mod"))
+	if !strings.Contains(goMod, "module foobar") {
+		t.Fatalf("expected module path from the last path segment, got:\n%s", goMod)
+	}
+
+	if _, err := os.Stat(filepath.Join(destDir, "main.go")); err != nil {
+		t.Fatalf("expected project scaffolded at %s: %v", destDir, err)
+	}
+}
+
 func TestNewProjectRejectsInvalidModulePath(t *testing.T) {
 	useTempWorkingDir(t)
 
-	for _, module := range []string{"", "/leading-slash", "UPPER Case", "has space"} {
+	for _, module := range []string{"", "UPPER Case", "has space", "/tmp/UPPER Case"} {
 		if err := newProject(module, false); err == nil {
 			t.Fatalf("expected error for module path %q", module)
 		}
+	}
+}
+
+func TestRunScaffoldCommandTimesOut(t *testing.T) {
+	err := runScaffoldCommand(t.TempDir(), 50*time.Millisecond, false, "sleep", "10")
+	if err == nil || !strings.Contains(err.Error(), "timed out") {
+		t.Fatalf("expected timeout error, got: %v", err)
 	}
 }
 
@@ -66,7 +136,7 @@ func TestRunNewHelpPrintsUsage(t *testing.T) {
 		}
 	})
 
-	if !strings.Contains(output, "airway new <module-path>") {
+	if !strings.Contains(output, "airway new <module-path | directory>") {
 		t.Fatalf("expected new usage output, got:\n%s", output)
 	}
 }

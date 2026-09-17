@@ -6,7 +6,7 @@ database driver is inferred from the DSN at runtime.
 
 - **[中文文档](docs/zh-CN/README.md)**
 - **[CLI 脚手架指南](docs/cli.md)** / **[文件存储指南](docs/storage.md)**
-- **[Engine 扩展机制](docs/engine.md)** / **[Engine 扩展机制（中文）](docs/zh-CN/engine.md)**
+- **[Plugin 扩展机制](docs/plugin.md)** / **[Plugin 扩展机制（中文）](docs/zh-CN/plugin.md)**
 - **[SQL Builder DSL 指南（中文）](docs/zh-CN/sql-builder.md)**
 
 ## What Airway is
@@ -33,9 +33,9 @@ Airway is both a **framework/library** and a **runnable application skeleton**:
 - **HTML views with [templ](https://templ.guide/)**: pages as `.templ`
   templates under `app/views/`, rendered from actions via `lib/render.HTML`.
 - **Scaffolding CLI** (`airway generate ...`, `db:migrate`, ...).
-- **Engines**: Rails Engine-style feature modules shipped as independent Go
+- **Plugins**: WordPress-style feature modules shipped as independent Go
   modules — install with `go get`, enable with one blank import in
-  `engines.go` (see [docs/engine.md](docs/engine.md)).
+  `plugins.go` (see [docs/plugin.md](docs/plugin.md)).
 - **Repo REPL** with typed scan and Go-expression evaluation.
 - **Optional sub-path prefix** (`URL_PREFIX`) for deploying behind a reverse
   proxy, e.g. `http://host:1900/airway/...`.
@@ -47,13 +47,13 @@ Airway is both a **framework/library** and a **runnable application skeleton**:
 ```bash
 go install github.com/daqing/airway@latest
 airway new myapp        # or: airway new github.com/me/myapp (directory = last path segment)
+                        # or: airway new /path/to/myapp (local path; module = last path segment)
 cd myapp
-cp .env.example .env
 ```
 
 `airway new` generates a fresh project skeleton from the framework's `app/`
-scaffold, runs `go mod tidy`, and prints the follow-up steps. To hack on the
-framework itself instead, clone the repository:
+scaffold, seeds `.env` from `.env.example`, runs `go mod tidy`, and prints the
+follow-up steps. To hack on the framework itself instead, clone the repository:
 
 ```bash
 git clone https://github.com/daqing/airway.git
@@ -204,9 +204,9 @@ airway version
 ```
 
 The legacy form `airway cli <command>` still works as a compatibility alias.
-Because models and engines are registered at compile time, prefer the project
-binary for `repl` and `engine:install` (`go run . repl`,
-`go run . engine:install <name>`) — the globally installed `airway` only sees
+Because models and plugins are registered at compile time, prefer the project
+binary for `repl` and `plugin:install` (`go run . repl`,
+`go run . plugin:install <module>`) — the globally installed `airway` only sees
 what is compiled into itself.
 
 Database commands read `DSN`/`AIRWAY_DSN`; the legacy `AIRWAY_DB_DSN` and

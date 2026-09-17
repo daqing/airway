@@ -28,6 +28,7 @@ func TestScaffoldWritesTemplateWithModuleReplaced(t *testing.T) {
 		"app/views/home/index.templ",
 		"app/views/home/index_templ.go",
 		"db/migrate/.keep",
+		"deps/.keep",
 	} {
 		if _, err := os.Stat(filepath.Join(destDir, rel)); err != nil {
 			t.Fatalf("expected scaffolded file %s: %v", rel, err)
@@ -46,7 +47,7 @@ func TestScaffoldWritesTemplateWithModuleReplaced(t *testing.T) {
 	if !strings.Contains(routes, `"github.com/example/demo/app/api/home_api"`) {
 		t.Fatalf("expected project import rewritten, got:\n%s", routes)
 	}
-	if !strings.Contains(routes, `"github.com/daqing/airway/lib/engine"`) {
+	if !strings.Contains(routes, `"github.com/daqing/airway/lib/plugin"`) {
 		t.Fatalf("expected framework imports untouched, got:\n%s", routes)
 	}
 }
@@ -82,21 +83,22 @@ func TestScaffoldLeavesNoPlaceholdersBehind(t *testing.T) {
 	}
 }
 
-func TestScaffoldEngineWritesTemplateWithPlaceholdersReplaced(t *testing.T) {
-	destDir := filepath.Join(t.TempDir(), "airway-im-engine")
+func TestScaffoldPluginWritesTemplateWithPlaceholdersReplaced(t *testing.T) {
+	destDir := filepath.Join(t.TempDir(), "airway-im-plugin")
 
-	if err := ScaffoldEngine(destDir, "github.com/example/airway-im-engine", "im"); err != nil {
-		t.Fatalf("scaffold engine: %v", err)
+	if err := ScaffoldPlugin(destDir, "github.com/example/airway-im-plugin", "im"); err != nil {
+		t.Fatalf("scaffold plugin: %v", err)
 	}
 
 	for _, rel := range []string{
 		"go.mod",
-		"engine.go",
+		"plugin.go",
 		"README.md",
 		"app/api/im_api/routes.go",
 		"app/api/im_api/index_action.go",
 		"app/models/.keep",
 		"db/migrate/.keep",
+		"deps/.keep",
 	} {
 		if _, err := os.Stat(filepath.Join(destDir, rel)); err != nil {
 			t.Fatalf("expected scaffolded file %s: %v", rel, err)
@@ -104,16 +106,16 @@ func TestScaffoldEngineWritesTemplateWithPlaceholdersReplaced(t *testing.T) {
 	}
 
 	goMod := readFile(t, filepath.Join(destDir, "go.mod"))
-	if !strings.Contains(goMod, "module github.com/example/airway-im-engine") {
+	if !strings.Contains(goMod, "module github.com/example/airway-im-plugin") {
 		t.Fatalf("expected module path in go.mod, got:\n%s", goMod)
 	}
 
-	engineFile := readFile(t, filepath.Join(destDir, "engine.go"))
-	if !strings.Contains(engineFile, `"github.com/example/airway-im-engine/app/api/im_api"`) {
-		t.Fatalf("expected engine import rewritten, got:\n%s", engineFile)
+	pluginFile := readFile(t, filepath.Join(destDir, "plugin.go"))
+	if !strings.Contains(pluginFile, `"github.com/example/airway-im-plugin/app/api/im_api"`) {
+		t.Fatalf("expected plugin import rewritten, got:\n%s", pluginFile)
 	}
-	if !strings.Contains(engineFile, `{ return "im" }`) {
-		t.Fatalf("expected engine name replaced, got:\n%s", engineFile)
+	if !strings.Contains(pluginFile, `{ return "im" }`) {
+		t.Fatalf("expected plugin name replaced, got:\n%s", pluginFile)
 	}
 
 	err := filepath.WalkDir(destDir, func(path string, entry os.DirEntry, err error) error {
@@ -129,14 +131,14 @@ func TestScaffoldEngineWritesTemplateWithPlaceholdersReplaced(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		if strings.Contains(string(data), ModulePlaceholder) || strings.Contains(string(data), EnginePlaceholder) {
+		if strings.Contains(string(data), ModulePlaceholder) || strings.Contains(string(data), PluginPlaceholder) {
 			t.Fatalf("unresolved placeholder in %s", path)
 		}
 
 		return nil
 	})
 	if err != nil {
-		t.Fatalf("walk scaffolded engine: %v", err)
+		t.Fatalf("walk scaffolded plugin: %v", err)
 	}
 }
 

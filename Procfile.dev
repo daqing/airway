@@ -1,3 +1,3 @@
 web: AIRWAY_ENV=local air
-templ: go tool templ generate -watch
+templ: go tool templ generate -path app/views -watch
 

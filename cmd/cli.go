@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/daqing/airway/lib/utils"
@@ -40,14 +39,14 @@ func runCLI(args []string) error {
 		return runCLIDBDrop(xargs)
 	case "db:create":
 		return runCLIDBCreate(xargs)
-	case "engine":
-		return runCLIEngine(xargs)
-	case "engine:list":
-		return runCLIEngineList()
-	case "engine:install":
-		return runCLIEngineInstall(xargs)
-	case "plugin", "plugin:install":
-		return runCLIPlugin(command, xargs)
+	case "plugin":
+		return runCLIPlugin(xargs)
+	case "plugin:new":
+		return runCLIPluginNew(xargs)
+	case "plugin:list":
+		return runCLIPluginList()
+	case "plugin:install":
+		return runCLIPluginInstall(xargs)
 	case "upload":
 		return runUpload(xargs)
 	case "help", "-h", "--help":
@@ -56,30 +55,6 @@ func runCLI(args []string) error {
 	default:
 		return fmt.Errorf("unknown command: %s", command)
 	}
-}
-
-func runCLIPlugin(command string, args []string) error {
-	if command == "plugin" {
-		if len(args) == 0 {
-			return fmt.Errorf("usage: airway plugin install /path/to/project")
-		}
-
-		subcommand := strings.ToLower(strings.TrimSpace(args[0]))
-		if subcommand != "install" {
-			return fmt.Errorf("unknown plugin command: %s", subcommand)
-		}
-
-		args = args[1:]
-	}
-
-	if len(args) != 1 {
-		return fmt.Errorf("usage: airway plugin install /path/to/project")
-	}
-
-	fmt.Println("WARNING: `cli plugin install` is deprecated and will be removed in a future release.")
-	fmt.Println("Use engines instead: ship the module as a Go module and enable it with a blank import in engines.go (see docs/engine.md).")
-	fmt.Println("Install current plugin to", args[0])
-	return installPlugin(args[0], timeNow().Format("20060102150405"))
 }
 
 func cliDSN() (string, error) {
@@ -106,9 +81,9 @@ func printUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "  airway db:status")
 	_, _ = fmt.Fprintln(w, "  airway schema:dump")
 	_, _ = fmt.Fprintln(w, "  airway schema:show")
-	_, _ = fmt.Fprintln(w, "  airway engine new <module-path>")
-	_, _ = fmt.Fprintln(w, "  airway engine:list")
-	_, _ = fmt.Fprintln(w, "  airway engine:install [name]")
+	_, _ = fmt.Fprintln(w, "  airway plugin:new <module-path>")
+	_, _ = fmt.Fprintln(w, "  airway plugin:list")
+	_, _ = fmt.Fprintln(w, "  airway plugin:install <module>")
 	_, _ = fmt.Fprintln(w, "  airway upload [key] /path/to/file")
 	_, _ = fmt.Fprintln(w, "  airway repl                              interactive repo REPL (project binary only)")
 	_, _ = fmt.Fprintln(w, "  airway version                             print version (also -v, --version)")
@@ -158,32 +133,4 @@ func isHelpArg(value string) bool {
 	default:
 		return false
 	}
-}
-
-func installPlugin(projectPath string, timestamp string) error {
-	projectPath = strings.TrimSpace(projectPath)
-	if projectPath == "" {
-		return fmt.Errorf("project path must not be empty")
-	}
-
-	absProjectPath, err := filepath.Abs(projectPath)
-	if err != nil {
-		return err
-	}
-
-	for _, relativeDir := range []string{"app", "cmd"} {
-		srcDir := filepath.Join(".", relativeDir)
-		dstDir := filepath.Join(absProjectPath, relativeDir)
-		if err := copyDirContents(srcDir, dstDir); err != nil {
-			return fmt.Errorf("copy %s to %s: %w", srcDir, dstDir, err)
-		}
-	}
-
-	srcMigrateDir := filepath.Join(".", "db", "migrate")
-	dstMigrateDir := filepath.Join(absProjectPath, "db", "migrate")
-	if err := copyMigrationFiles(srcMigrateDir, dstMigrateDir, timestamp); err != nil {
-		return fmt.Errorf("copy migrations to %s: %w", dstMigrateDir, err)
-	}
-
-	return nil
 }

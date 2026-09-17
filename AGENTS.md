@@ -28,8 +28,8 @@ The project supports PostgreSQL, SQLite 3, and MySQL 8 from the same codebase; t
 main.go          Entry point. `server` runs the HTTP server; other subcommands
                  dispatch to the CLI; no arguments prints usage.
 app.go           App struct: builds the Gin engine, middleware, routes.
-engines.go       Optional engines are enabled here via blank imports (Go modules
-                 registered through lib/engine; see docs/engine.md).
+plugins.go       Optional plugins are enabled here via blank imports (Go modules
+                 registered through lib/plugin; see docs/plugin.md).
 generate.go      Holds the //go:generate directive that regenerates *_templ.go
                  from the .templ views under app/views.
 config/          Route registration. config/routes.go wires all app API modules.
@@ -45,11 +45,10 @@ app/
                  Each folder is its own package; *_templ.go is committed.
 cmd/             CLI commands: scaffolding generators, `new` (project
                  scaffolding), db create/drop/migrate/rollback/status, schema
-                 dump/show, engine new/list/install, plugin install (deprecated),
-                 upload, REPL, version.
+                 dump/show, plugin:new/list/install, upload, REPL, version.
   clitemplate/   Embedded templates used by `airway new` (template/) and
-                 `airway engine new` (enginetemplate/). Template files end in
-                 .tmpl, with `{{module}}` / `{{engine}}` placeholders; keep the
+                 `airway plugin:new` (plugintemplate/). Template files end in
+                 .tmpl, with `{{module}}` / `{{plugin}}` placeholders; keep the
                  project template in sync when changing skeleton files under
                  app/ etc.
 db/
@@ -62,16 +61,16 @@ lib/
   repo/          Repository/ORM layer: generics-based CRUD (FindBy[User], etc.),
                  Preload (eager loading), Joins, transactions.
   migrate/       Migration internals (dialect compiler, schema state).
-  engine/        Engine extension mechanism: registry, mounting, boot hooks,
-                 REPL models. Engines are separate Go modules enabled by blank
-                 imports in engines.go (see docs/engine.md).
+  plugin/        Plugin extension mechanism: registry, mounting, boot hooks,
+                 REPL models. Plugins are separate Go modules enabled by blank
+                 imports in plugins.go (see docs/plugin.md).
   storage/       Unified file storage (local, s3, r2, cos). Access via
                  storage.Current() after boot.
   redis_client/  Redis setup helper.
   render/        Response helpers: JSON (ok, error, found) and HTML via templ.
   utils/         Env/config helpers, password hashing, tokens, dates, markdown.
   validation/    Input validation helpers.
-docs/            Guides: cli.md, engine.md, storage.md,
+docs/            Guides: cli.md, plugin.md, storage.md,
                  docker-compose.yml.example, zh-CN/ (Chinese docs).
   homegen/       //go:build ignore script run by the docs workflow after the
                  VitePress build; renders the app/views/home templ landing page
@@ -120,20 +119,24 @@ airway db:rollback [step]
 airway db:status
 airway schema:dump | schema:show                      # writes/reads db/schema.json
 airway upload [key] /path/to/file                     # upload via configured storage
-airway engine new <module-path>                       # scaffold a new engine module
-airway engine:list                                    # registered engines and mount paths
-airway plugin install /path/to/project                # deprecated; use engines instead
+airway plugin:new <module-path>                       # scaffold a new plugin module
+airway plugin:list                                    # registered plugins and mount paths
 airway version                                          # or -v / --version; prints the VERSION file contents
 airway --version | -v                                   # print VERSION contents without loading .env
-go run . engine:install <name>                        # copy an engine's embedded SQL migrations
+go run . plugin:install <module>                      # enable a plugin (go get + blank import) and install its SQL migrations + deps/ directory
 go run . repl                                         # interactive repo REPL
 ```
 
-`engine:install` and `repl` only see engines/models compiled into the running
-binary, so run them via the project binary (`go run . ...`); the globally
-installed `airway` only knows what is compiled into itself. Generators read the
-module path from the current directory's `go.mod`, so generated code imports the
-project's own packages.
+`plugin:install` is self-contained: when the plugin is not compiled into the
+current binary, it adds the blank import to `plugins.go`, runs `go get` (or a
+`replace` for a local directory), and then reads the plugin's migrations and
+`deps/` from its module directory on disk — all in the same process, so the
+current CLI's installer logic is always the one used. `repl` only sees
+plugins/models compiled into the
+running binary, so run it via the project binary (`go run . ...`); the
+globally installed `airway` only knows what is compiled into itself.
+Generators read the module path from the current directory's `go.mod`, so
+generated code imports the project's own packages.
 
 Migration and schema commands read `AIRWAY_DB_DSN` first and fall back to the legacy `AIRWAY_PG`.
 
@@ -146,7 +149,7 @@ Migration and schema commands read `AIRWAY_DB_DSN` first and fall back to the le
 - **HTML views:** server-rendered pages live under `app/views/<module>/` as templ files, one folder per API module (e.g. `app/views/home/` for `home_api`); a shared shell lives in `app/views/layouts/`. Actions render them with `render.HTML(c, view.Component())` (see `home_api`). Re-run `go generate ./...` when you edit a `.templ` file and keep the generated `*_templ.go`.
 - **Storage:** always go through `storage.Current()` — never touch local disk or cloud SDKs directly.
 - **Globals at boot:** `main.go` initializes the DB (`repo.SetupDB`), Redis (`redis_client.Setup`), and storage (`storage.Setup`) from environment variables; packages then use their `Current*()` accessors.
-- **Engines:** optional feature modules (separate Go modules, e.g. an IM backend) implement `lib/engine.Engine` and self-register via `init()`; hosts enable them with blank imports in `engines.go`. Routes mount through `engine.MountAll` in `config/routes.go`, boot hooks run from `main.go` after infra setup, and engine SQL migrations install via `go run . engine:install` (engines register at compile time, so this needs the project binary; see docs/engine.md).
+- **Plugins:** optional feature modules (separate Go modules, e.g. an IM backend) implement `lib/plugin.Plugin` and self-register via `init()`; hosts enable them with blank imports in `plugins.go`. Routes mount through `plugin.MountAll` in `config/routes.go`, boot hooks run from `main.go` after infra setup, and `go run . plugin:install` enables a plugin (blank import + `go get`) and installs its SQL migrations plus its `deps/` directory (merged into the host project's `deps/` directory, namespaced under the plugin name, `.templ` suffix stripped, existing files skipped) in one step (see docs/plugin.md).
 - **Naming:** environment variables are prefixed `AIRWAY_`; CLI subcommands follow the Rails-like `db:migrate` / `schema:dump` style.
 - Format code with `gofmt`/`go fmt`; keep changes minimal and match the surrounding style.
 - **Git commit messages:** a concise one-line summary plus a short paragraph describing what the change accomplishes; leave implementation details (files, functions, internal mechanics) out of the message. Do not add AI attribution/signatures (such as `Co-Authored-By` or any other AI-related lines) to commit messages.
