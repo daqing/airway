@@ -1,0 +1,54 @@
+name: frontend-no-node
+
+# Verifies the frontend pipeline needs no Node toolchain: scaffold a fresh
+# project, install JS deps, generate a CRUD scaffold and build everything
+# inside a pure-Go container.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    container:
+      image: golang:1.26-alpine
+    env:
+      JS_REGISTRY: https://registry.npmmirror.com
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: git metadata for scaffolding
+        run: apk add --no-cache git
+
+      - name: build the airway CLI
+        run: go build -o /usr/local/bin/airway .
+
+      - name: new project + frontend deps (no Node)
+        run: |
+          airway new /tmp/demo
+          cd /tmp/demo
+          go mod edit -replace github.com/daqing/airway=$GITHUB_WORKSPACE
+          go mod tidy
+          airway js:install
+
+      - name: scaffold CRUD + build + migrate
+        run: |
+          cd /tmp/demo
+          sed -i 's|^# DSN="sqlite://./tmp/airway.db"|DSN="sqlite://./tmp/airway.db"|' .env
+          airway generate scaffold post title:string
+          go generate ./...
+          airway js:build
+          airway db:migrate
+          go build ./...
+
+      - name: serve and probe
+        run: |
+          cd /tmp/demo
+          AIRWAY_ENV=local DSN="sqlite://./tmp/airway.db" STORAGE_DRIVER=local AIRWAY_PORT=1905 \
+            ./demo server &
+          sleep 3
+          curl -sf http://127.0.0.1:1905/posts > /dev/null
+          curl -sf http://127.0.0.1:1905/assets/app.js > /dev/null
+          curl -sf -X POST -H 'Content-Type: application/json' -d '{"title":"ci"}' \
+            http://127.0.0.1:1905/api/v1/posts | grep '"code":0'

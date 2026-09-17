@@ -1,11 +1,16 @@
 package home
 
-import "github.com/daqing/airway/app/views/layouts"
+import (
+	"github.com/daqing/airway/app/assets"
+	"github.com/daqing/airway/app/views/layouts"
+)
 
 const repositoryURL = "https://github.com/daqing/airway"
 
 // Index renders the framework homepage without a database dependency.
-templ Index() {
+// counterStart seeds the demo island's props, showing how actions pass
+// data into islands.
+templ Index(counterStart int) {
 	@layouts.Base("Airway — The full-stack Go web framework", "An open-source full-stack Go web framework inspired by Rails. Build with typed repositories, templ views, migrations, WebSockets, and unified file storage.") {
 		@styles()
 		<div class="home-page" id="top">
@@ -48,6 +53,9 @@ templ Index() {
 								Explore the docs
 								@arrow("up")
 							</a>
+						</div>
+						<div class="hero-island">
+							@assets.Island("counter", map[string]any{"start": counterStart, "label": "try an island"})
 						</div>
 						<div class="hero-meta"><span>@checkIcon()
 Open source</span><span>@checkIcon()

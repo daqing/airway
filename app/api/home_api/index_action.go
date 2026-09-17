@@ -8,5 +8,7 @@ import (
 )
 
 func IndexAction(c *gin.Context) {
-	render.HTML(c, home.Index())
+	// counterStart feeds the demo island's initial props — the island
+	// pattern: server renders the skeleton, props ride along as JSON.
+	render.HTML(c, home.Index(3))
 }

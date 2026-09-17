@@ -5,7 +5,9 @@ import (
 	"log"
 	"os"
 
+	"github.com/daqing/airway/app/websocket"
 	"github.com/daqing/airway/cmd"
+	"github.com/daqing/airway/lib/jsbuild"
 	"github.com/daqing/airway/lib/plugin"
 	"github.com/daqing/airway/lib/redis_client"
 	"github.com/daqing/airway/lib/repo"
@@ -73,6 +75,14 @@ func runServer() {
 	if _, err := storage.Setup(storage.FromEnv()); err != nil {
 		log.Printf("storage setup failed: %v", err)
 		os.Exit(4)
+	}
+
+	// In local development the frontend bundle is rebuilt in memory and
+	// served with livereload; production serves the embedded dist bundle.
+	if appConfig.IsLocal {
+		if _, err := jsbuild.StartDefault(".", websocket.Broadcast); err != nil {
+			log.Printf("frontend dev server disabled: %v", err)
+		}
 	}
 
 	if err := plugin.BootAll(); err != nil {

@@ -41,3 +41,9 @@ func Publish(c *gin.Context) {
 	hub.ch <- message
 	c.JSON(http.StatusOK, gin.H{"status": "Message sent"})
 }
+
+// Broadcast sends msg to every connected WebSocket client. Used by the
+// frontend dev server to push livereload notifications.
+func Broadcast(msg string) {
+	hub.ch <- msg
+}

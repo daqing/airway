@@ -27,7 +27,10 @@ airway db:status
 airway plugin:new <module-path>                           # scaffold a new plugin module
 airway plugin:list
 airway plugin:install <module>
-airway generate [action|api|model|migration|service|cmd] [params]
+airway js:add <pkg>[@version]                          # add a frontend npm dependency (no Node required)
+airway js:install                                      # install js.pkg.json deps into app/assets/js/vendor/
+airway js:build                                        # bundle the frontend into app/assets/dist
+airway generate [action|api|model|migration|service|island|scaffold|cmd] [params]
 airway schema:dump
 airway schema:show
 airway upload /path/to/file
@@ -269,6 +272,38 @@ last path segment, same as `plugin:new`. It assigns fresh timestamps to the
 copied migrations and skips files that are already installed; afterwards they
 are ordinary migrations managed by `db:migrate` / `db:rollback` / `db:status`.
 
+## Frontend Dependency Commands
+
+Frontend npm dependencies are managed without a Node toolchain: the CLI
+talks to an npm-compatible registry directly and unpacks packages into
+`app/assets/js/vendor/` (node_modules-compatible layout for esbuild).
+
+```bash
+airway js:add preact                          # latest version, pinned exactly
+airway js:add @tanstack/react-table@9.2.4     # explicit version
+airway js:install                             # install per js.pkg.json (idempotent)
+airway js:build                               # bundle app/assets/js/app.tsx into app/assets/dist
+```
+
+With `AIRWAY_ENV=local`, `airway server` additionally builds the bundle in
+memory: `/assets/*` serves the freshest build with ETag revalidation, and
+editing any `.ts/.tsx/.css` file under `app/assets/js` (vendor/ excluded)
+triggers an incremental rebuild plus a livereload page refresh via the app's
+WebSocket. `just build` runs `js:build` before compiling the binary; the
+`dist/` output is committed, so deploying never requires the bundler.
+
+`js.pkg.json` at the project root has two sections: `deps` (direct
+dependencies, exact versions — hand-editable) and `lock` (the fully resolved
+tree including transitive dependencies, each with a sha512 integrity; written
+by `js:add` / `js:install`). `js:install` installs exactly the locked
+versions and re-resolves only when the lock is missing or stale; already
+installed packages are skipped.
+
+The registry defaults to `https://registry.npmjs.org`; set
+`AIRWAY_JS_REGISTRY` (or `JS_REGISTRY`) to use a mirror, e.g.
+`https://registry.npmmirror.com`. The `vendor/` directory is committed so a
+fresh clone builds offline.
+
 ## REPL
 
 ```bash
@@ -418,3 +453,22 @@ At that point you have the full skeleton for:
 - `generate api` creates files, but you still need to wire the generated `Routes(...)` into your router setup.
 - `generate service` assumes your project has an `app/services` package.
 - Generated files are starting points. They are meant to be edited after creation.
+
+## Scaffold a CRUD resource
+
+`airway generate scaffold post title:string` produces the whole vertical
+slice — model with fields, a dialect-aware migration (the auto-increment
+primary key follows your configured DSN), the CRUD service, a JSON API
+under `/api/v1/posts`, a templ page at `/posts`, and a CRUD island
+(DataTable + modal form, wired to the API through `apiFetch`). It also
+registers the routes in `config/routes.go`. Afterwards run:
+
+```bash
+go generate ./...     # compile the .templ view
+airway js:build       # bundle the new island
+airway db:migrate     # create the table
+airway server         # visit /posts
+```
+
+`airway generate island chart` scaffolds a single interactive island under
+`app/assets/js/islands/`; embed it with `@assets.Island("chart", props)`.

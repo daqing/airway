@@ -43,9 +43,13 @@ app/
   views/         Server-rendered HTML pages as templ templates, one folder per
                  API module (e.g. app/views/home/index.templ for home_api).
                  Each folder is its own package; *_templ.go is committed.
+  assets/        Frontend pipeline: js/ (TS/TSX sources, vendor/ installed by
+                 js:install), dist/ (committed js:build output embedded via
+                 //go:embed and served at /assets/*).
 cmd/             CLI commands: scaffolding generators, `new` (project
                  scaffolding), db create/drop/migrate/rollback/status, schema
-                 dump/show, plugin:new/list/install, upload, REPL, version.
+                 dump/show, plugin:new/list/install, js:add/install/build,
+                 upload, REPL, version.
   clitemplate/   Embedded templates used by `airway new` (template/) and
                  `airway plugin:new` (plugintemplate/). Template files end in
                  .tmpl, with `{{module}}` / `{{plugin}}` placeholders; keep the
@@ -60,6 +64,10 @@ lib/
                  lib/sql/{pg,mysql,sqlite}.
   repo/          Repository/ORM layer: generics-based CRUD (FindBy[User], etc.),
                  Preload (eager loading), Joins, transactions.
+  jspkg/         Node-free npm dependency management behind js:add/js:install
+                 (registry client, semver range resolution, js.pkg.json lock).
+  jsbuild/       esbuild-in-Go bundling behind js:build: production builds into
+                 app/assets/dist plus the in-memory dev server with livereload.
   migrate/       Migration internals (dialect compiler, schema state).
   plugin/        Plugin extension mechanism: registry, mounting, boot hooks,
                  REPL models. Plugins are separate Go modules enabled by blank
@@ -86,13 +94,14 @@ Prerequisites: copy `.env.example` to `.env` and set `AIRWAY_DB_DSN` and `AIRWAY
 ```bash
 just dev                 # Start dev server with live reload (overmind + air, AIRWAY_ENV=local)
 go run . server          # Run the HTTP server directly (requires AIRWAY_ENV and .env)
-go build -o ./bin/airway .  # Build binary (pure-Go SQLite driver)
+just build               # js:build the frontend bundle, then compile the binary
+go build -o ./bin/airway .  # Build binary only (pure-Go SQLite driver; embeds committed dist/)
 go test ./...            # Run the test suite
 go vet ./...             # Lint
 go generate ./...        # Regenerate *_templ.go from the .templ views (just generate)
 ```
 
-The generated `*_templ.go` files are committed, so plain `go build`/`go test` never need the templ CLI; run `go generate ./...` after editing any `.templ` view and commit the refreshed output.
+The generated `*_templ.go` files are committed, so plain `go build`/`go test` never need the templ CLI; run `go generate ./...` after editing any `.templ` view and commit the refreshed output. Likewise `app/assets/dist/` is committed: run `go run . js:build` after changing `app/assets/js/` and commit the rebuilt bundle (under AIRWAY_ENV=local the server rebuilds it in memory with livereload instead).
 
 Other `just` recipes: `just install-deps` (installs air, tmux, overmind), `just docker` (builds the Docker image).
 
@@ -112,6 +121,7 @@ airway generate api admin                             # new API namespace under 
 airway generate action admin show                     # new action in an existing API module
 airway generate model post                            # new model in app/models/
 airway generate service post title:string             # CRUD service in app/services/
+airway generate scaffold post title:string             # full CRUD: model, migration, JSON API, templ page, island
 airway generate migration create_posts                # new .up.sql/.down.sql pair in db/migrate/
 airway db:create | db:drop
 airway db:migrate [version]                           # apply migrations
@@ -119,6 +129,9 @@ airway db:rollback [step]
 airway db:status
 airway schema:dump | schema:show                      # writes/reads db/schema.json
 airway upload [key] /path/to/file                     # upload via configured storage
+airway js:add <pkg>[@version]                         # add a frontend npm dependency (no Node required)
+airway js:install                                     # install js.pkg.json deps into app/assets/js/vendor/
+airway js:build                                       # bundle the frontend into app/assets/dist
 airway plugin:new <module-path>                       # scaffold a new plugin module
 airway plugin:list                                    # registered plugins and mount paths
 airway version                                          # or -v / --version; prints the VERSION file contents
@@ -147,6 +160,8 @@ Migration and schema commands read `AIRWAY_DB_DSN` first and fall back to the le
 - **Data access:** prefer the generics API in `lib/repo` (`repo.FindBy[T]`, `repo.CreateFrom[T]`, `repo.UpdateByID[T]`, `repo.DeleteByID[T]`, `repo.Preload(...)`, `repo.Join(...)`) and the `lib/sql` builder for conditions (`sql.Eq`, `sql.And`, `sql.Gt`, ...). Use `repo.Preload` instead of hand-written loops to avoid N+1 queries.
 - **Responses:** use the `lib/render` helpers rather than hand-rolled JSON.
 - **HTML views:** server-rendered pages live under `app/views/<module>/` as templ files, one folder per API module (e.g. `app/views/home/` for `home_api`); a shared shell lives in `app/views/layouts/`. Actions render them with `render.HTML(c, view.Component())` (see `home_api`). Re-run `go generate ./...` when you edit a `.templ` file and keep the generated `*_templ.go`.
+- **Interactive islands:** embed Preact TSX components in templ views with `@assets.Island("name", props)`; the component file is `app/assets/js/islands/<name>.tsx` (default-export; file path = island name, case-sensitive). `base.templ` loads the bundle via `assets.Scripts()` and styles via `assets.Stylesheet()`. After changing frontend sources run `go run . js:build` and commit the dist output (see PLAN.md Phase 3).
+- **airway-ui components:** build islands from the library under `app/assets/js/ui/` (Button, inputs + Field, Form on react-hook-form, DataTable on TanStack Table, Modal, Toast via `useToast`, Tabs, Pagination, `apiFetch`/`useApiQuery`); live reference at `/ui`. Frontend sources import `react` (aliased onto preact/compat at build time) — React semantics apply, so custom inputs used with `register()` must forwardRef.
 - **Storage:** always go through `storage.Current()` — never touch local disk or cloud SDKs directly.
 - **Globals at boot:** `main.go` initializes the DB (`repo.SetupDB`), Redis (`redis_client.Setup`), and storage (`storage.Setup`) from environment variables; packages then use their `Current*()` accessors.
 - **Plugins:** optional feature modules (separate Go modules, e.g. an IM backend) implement `lib/plugin.Plugin` and self-register via `init()`; hosts enable them with blank imports in `plugins.go`. Routes mount through `plugin.MountAll` in `config/routes.go`, boot hooks run from `main.go` after infra setup, and `go run . plugin:install` enables a plugin (blank import + `go get`) and installs its SQL migrations plus its `deps/` directory (merged into the host project's `deps/` directory, namespaced under the plugin name, `.templ` suffix stripped, existing files skipped) in one step (see docs/plugin.md).
@@ -170,6 +185,7 @@ All configuration is via environment variables (see `.env.example`):
 - `AIRWAY_ENV` — `local` enables `.env` loading and Gin debug mode; anything else runs Gin in release mode.
 - `AIRWAY_DB_DSN` — database URL; driver inferred from scheme: `postgres://...`, `sqlite://./tmp/airway.db`, `sqlite://:memory:`, `mysql://...` (native Go MySQL driver DSN format also accepted).
 - `AIRWAY_REDIS` — optional Redis URL.
+- `AIRWAY_JS_REGISTRY` — npm registry for `js:add` / `js:install` (default `https://registry.npmjs.org`); set a mirror such as `https://registry.npmmirror.com` when the default is slow.
 - `AIRWAY_PORT` — listen port (default example: `1900`).
 - `URL_PREFIX` — optional public sub-path prefix (e.g. `/airway`) under which the app is served behind a reverse proxy; empty means the root. `AIRWAY_URL_PREFIX` is accepted as an alias.
 - `STORAGE_DRIVER` — `local` (default), `s3`, `r2`, or `cos`; with `STORAGE_ROOT` for local, or `STORAGE_BUCKET` / `STORAGE_ACCESS_KEY` / `STORAGE_SECRET_KEY` / `STORAGE_REGION` / `STORAGE_ENDPOINT` / optional `STORAGE_PUBLIC_URL` (CDN base; disables presigned URLs) for cloud drivers.

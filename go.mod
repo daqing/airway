@@ -4,6 +4,7 @@ go 1.26.2
 
 require (
 	github.com/a-h/templ v0.3.1020
+	github.com/evanw/esbuild v0.28.2
 	github.com/fatih/structs v1.1.0
 	github.com/gin-contrib/cors v1.4.0
 	github.com/gin-gonic/gin v1.9.1

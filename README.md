@@ -6,6 +6,7 @@ database driver is inferred from the DSN at runtime.
 
 - **[中文文档](docs/zh-CN/README.md)**
 - **[CLI 脚手架指南](docs/cli.md)** / **[文件存储指南](docs/storage.md)**
+- **[Frontend guide](docs/frontend.md)** / **[前端指南（中文）](docs/zh-CN/frontend.md)**
 - **[Plugin 扩展机制](docs/plugin.md)** / **[Plugin 扩展机制（中文）](docs/zh-CN/plugin.md)**
 - **[SQL Builder DSL 指南（中文）](docs/zh-CN/sql-builder.md)**
 
@@ -32,6 +33,11 @@ Airway is both a **framework/library** and a **runnable application skeleton**:
 - **Gin web server + WebSocket** pub/sub.
 - **HTML views with [templ](https://templ.guide/)**: pages as `.templ`
   templates under `app/views/`, rendered from actions via `lib/render.HTML`.
+- **Frontend without Node**: npm dependencies managed by the CLI
+  (`js:add` / `js:install`, `js.pkg.json` lock), bundled with an embedded
+  esbuild (`js:build`), dev-time in-memory rebuilds with livereload, and
+  interactive **Preact islands** built on the bundled airway-ui component
+  library — all committed and embedded into the single Go binary.
 - **Scaffolding CLI** (`airway generate ...`, `db:migrate`, ...).
 - **Plugins**: WordPress-style feature modules shipped as independent Go
   modules — install with `go get`, enable with one blank import in
@@ -98,6 +104,7 @@ accepts a short name or its `AIRWAY_` alias, with the alias taking precedence.
 | `PORT` / `AIRWAY_PORT` | HTTP listen port (default `1900`). |
 | `REDIS` / `AIRWAY_REDIS` | Optional Redis URL for cache/queue. |
 | `URL_PREFIX` / `AIRWAY_URL_PREFIX` | Optional public sub-path prefix, e.g. `/airway`. Empty serves at the root. |
+| `AIRWAY_JS_REGISTRY` | npm registry for `js:add` / `js:install` (default `https://registry.npmjs.org`; set a mirror like `https://registry.npmmirror.com` if needed). |
 | `AIRWAY_ENV` | `local` loads `.env` and uses Gin debug mode; anything else runs release mode. |
 | `STORAGE_DRIVER` | `local` (default), `s3`, `r2` or `cos`. |
 | `STORAGE_ROOT` | Local storage root (default `./data/storage`). |
@@ -135,6 +142,7 @@ Registered in `config/routes.go`:
 | Method | Path | Description |
 | --- | --- | --- |
 | GET | `/` | Home page (HTML, rendered from a templ view). |
+| GET | `/ui` | airway-ui component showcase (interactive island). |
 | GET | `/health` | Health check. |
 | GET | `/ws` | WebSocket connection. |
 | POST | `/ws/publish` | Publish a message to connected clients (form field `message`). |
@@ -179,6 +187,69 @@ go generate ./...   # or: just generate
 The generated `*_templ.go` files are committed, so building and testing never
 require the templ CLI.
 
+### Interactive islands
+
+Pages stay server-rendered; interactive regions are islands — Preact TSX
+components mounted on `data-island` nodes with server-provided props:
+
+```go
+// in a .templ view (see app/views/home for a live example)
+@assets.Island("counter", map[string]any{"start": 3})
+```
+
+The component lives at `app/assets/js/islands/counter.tsx` (default-export
+it; the file path is the island name) and is bundled automatically — no
+manual registration. In local development the bundle rebuilds in memory and
+the browser reloads on change; in production it is embedded in the binary
+behind a cache-busted URL. Pages render completely without JavaScript: the
+mount point just stays empty.
+
+**airway-ui** is the bundled component library islands build on: buttons,
+inputs, forms (react-hook-form), tables (TanStack Table), modals, toasts,
+tabs and a fetch layer aligned with `lib/render`'s JSON envelope — visual
+layer self-made, logic layers from the preact/compat ecosystem. See it all
+live at [`/ui`](http://127.0.0.1:1900/ui) on a running server.
+
+## Frontend strategy
+
+Status: implemented end to end — see the [frontend guide](docs/frontend.md).
+The pipeline ships in the CLI (`js:add`/`js:install`/`js:build`,
+`generate island`/`scaffold`), the project template, and this repository
+itself (the homepage counter and the `/ui` component showcase are
+islands).
+
+Frontend code lives in the same repository as the Go code, gets a
+component-based workflow comparable to a modern UI framework, and **does not
+introduce a Node.js toolchain**:
+
+- **templ renders the skeleton** — page structure, SEO, first paint.
+- **Interactive regions are islands** — Preact TSX components under
+  `app/assets/js/`, mounted on elements marked with `data-island`; initial
+  data is serialized next to the mount point.
+- **esbuild embedded as a Go library** — the CLI links
+  `github.com/evanw/esbuild/pkg/api` directly: `airway js:build` compiles
+  TS/TSX, the dev server serves rebuilt bundles from memory, and production
+  bundles are embedded into the single Go binary via `go:embed`.
+- **A home-grown `airway-ui` component library** on a `preact/compat` base, so
+  logic-heavy React-ecosystem libraries (TanStack Table/Query/Form, React Hook
+  Form) stay usable while the visual layer stays self-made.
+
+Rejected alternatives:
+
+- **htmx + Alpine.js (HTML over the wire)** — fine for progressive
+  enhancement, but it offers no component-based reactive programming model;
+  interactivity caps out well short of a real component library.
+- **Vite + Vue 3 sub-project embedded via `go:embed`** — drags a full Node
+  toolchain into the repository; at that point a real frontend/backend split
+  with Vue is the more honest architecture.
+- **LiveView-style server-driven UI** — little practical value for a Go
+  framework; when an application genuinely needs heavy frontend engineering,
+  splitting the frontend out with Vue is the right answer.
+
+Escape hatch: applications that outgrow islands (complex SPAs, rich editors)
+should split the frontend into its own Vue project and consume Airway purely
+as a JSON API.
+
 ## CLI
 
 The Airway CLI is a single `airway` binary (install with
@@ -193,6 +264,8 @@ airway generate api admin                  # new API namespace under app/api/
 airway generate action admin show          # new action in an existing API module
 airway generate model post                 # new model in app/models/
 airway generate service post title:string  # CRUD service in app/services/
+airway generate island chart               # interactive island component
+airway generate scaffold post title:string # full CRUD: model+migration+API+page+island
 airway generate migration create_posts     # new .up.sql/.down.sql pair in db/migrate/
 airway db:create | db:drop
 airway db:migrate [version]                # apply migrations
@@ -200,6 +273,9 @@ airway db:rollback [step]
 airway db:status
 airway schema:dump | schema:show           # writes / reads db/schema.json
 airway upload [key] /path/to/file          # upload via the configured storage
+airway js:add <pkg>[@version]              # add a frontend npm dependency (no Node required)
+airway js:install                          # install js.pkg.json deps into app/assets/js/vendor/
+airway js:build                            # bundle app/assets/js into app/assets/dist (esbuild)
 airway version
 ```
 
