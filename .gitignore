@@ -20,3 +20,5 @@ node_modules/
 spike/frontend/vendor/
 docs/.vitepress/dist/
 docs/.vitepress/cache/
+
+.zcode
