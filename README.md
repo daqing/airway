@@ -180,12 +180,30 @@ go generate ./...   # or: just generate
 The generated `*_templ.go` files are committed, so building and testing never
 require the templ CLI.
 
+### Interactive islands
+
+Pages stay server-rendered; interactive regions are islands — Preact TSX
+components mounted on `data-island` nodes with server-provided props:
+
+```go
+// in a .templ view (see app/views/home for a live example)
+@assets.Island("counter", map[string]any{"start": 3})
+```
+
+The component lives at `app/assets/js/islands/counter.tsx` (default-export
+it; the file path is the island name) and is bundled automatically — no
+manual registration. In local development the bundle rebuilds in memory and
+the browser reloads on change; in production it is embedded in the binary
+behind a cache-busted URL. Pages render completely without JavaScript: the
+mount point just stays empty.
+
 ## Frontend strategy
 
 Status: rolling out per [PLAN.md](PLAN.md) — dependency management
-(`js:add`/`js:install`) and the build pipeline (`js:build`, in-memory dev
-serving with livereload, embedded single-binary assets) are implemented;
-the island runtime and component library are next.
+(`js:add`/`js:install`), the build pipeline (`js:build`, in-memory dev
+serving with livereload, embedded single-binary assets) and the island
+runtime (interactive Preact components inside templ pages) are implemented;
+the airway-ui component library and scaffolding integration are next.
 
 Frontend code lives in the same repository as the Go code, gets a
 component-based workflow comparable to a modern UI framework, and **does not

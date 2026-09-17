@@ -1,0 +1,11 @@
+{
+  "deps": {
+    "preact": "10.29.8"
+  },
+  "lock": {
+    "preact": {
+      "version": "10.29.8",
+      "integrity": "sha512-ej2aVZ+vZ8WO7tvlQWRM9N63A0KzF9q4mWJfDUHgYaIofWY9hu74QdnQrjoPMmZi2/nZ5gN0bJCQF49xQqx09Q=="
+    }
+  }
+}

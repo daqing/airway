@@ -258,27 +258,51 @@ bundle `@tanstack/react-table` + `./legacy` 出口 + preact（311KB，
 
 任务：
 
-- [ ] 协议定稿：`<div data-island="OrderList" data-island-id="<n>">`
-  挂载点 + 相邻 `<script type="application/json" id="island-data-<n>">`
-  初始数据（由 `templ.JSONScript` 生成，处理 `</script>` 转义）。
-- [ ] runtime：`app.tsx` 扫描 `[data-island]`，按注册表取出组件、解析
-  props、`render()` 挂载；未注册/失败时 console 明确报错。
-- [ ] 注册表代码生成：esbuild plugin（Go 侧 OnLoad）扫描
-  `app/assets/js/islands/` 自动生成 `registry.gen.ts`，新增岛屿零手工
-  注册。
-- [ ] templ helper：`lib/island`（或 app 内共享包）
-  `island.Component(name string, props any) templ.Component` —— 输出挂载
-  点 + JSONScript；生产读 `dist/manifest.json` 注入 `<script src>`，
-  local 注入 dev 入口 + livereload。
-- [ ] `base.templ` 集成：head 尾部 `assets.Scripts()` helper，页面无感。
-- [ ] demo：home 页加一个 counter 岛屿（props 由 action 传入），作为
-  协议参考实现。
-- [ ] 单测：helper 渲染断言（挂载点、JSON 转义、script 注入的
-  生产/local 两种形态）。
+- [x] 协议定稿：`<div data-island="counter" data-island-id="1"></div>`
+  挂载点 + 相邻 `<script type="application/json" id="island-data-1">`
+  初始数据（`templ.JSONScript` 生成，实测 `</script>` 转义为
+  `\u003c/script\u003e`、name 属性 HTML 转义）。**岛屿名 = islands/
+  下文件路径去扩展名，大小写敏感**（验收时踩过：`Counter` ≠
+  `counter`）。
+- [x] runtime：`app/assets/js/app.tsx` 扫描 `[data-island]`，按注册表取
+  组件、解析 props、挂载；未注册时 console 报
+  `[island] no island registered for "X"`。修复关键 bug：必须
+  `render(h(component, props), el)`——直接调用 `component(props)` 会在
+  Preact 组件上下文外执行 hooks（`__H` of undefined）。
+- [x] 注册表代码生成：esbuild Go plugin（虚拟模块
+  `airway-islands-registry`，OnLoad 每次构建重扫 `islands/`，`_` 前缀
+  文件/目录视为 partial 跳过）；新增岛屿文件零手工注册，dev 下经
+  mtime watcher 触发重建后自动进 bundle（有测试覆盖）。不生成落盘的
+  `registry.gen.ts`（计划写法），虚拟模块每次构建重生成更干净。
+- [x] templ helper：`app/assets.Island(name, props)` 输出挂载点 +
+  JSONScript；`app/assets.Scripts()` 生产读 embed manifest 注入
+  `?v=<hash>`，local 注入 dev 入口。放 `app/assets` 包而非计划写的
+  `lib/island`——helper 需读 embed manifest，属应用层。
+- [x] `base.templ` 集成：head 尾部 `@assets.Scripts()`，页面无感。
+- [x] demo：home 页 hero 区 counter 岛屿，props（start=3、label）由
+  action 传入（`home.Index(3)`），作为协议参考实现。
+- [x] 单测：`lib/jsbuild`（registry 生成、partial/嵌套跳过、Build 端到
+  端含岛屿代码、dev 新增岛屿文件→重建→进 bundle）；`app/assets`
+  （挂载点/props 配对、name 与 `</script>` 转义、id 唯一、Scripts 的
+  生产/local 两形态）。
 
 **验收**：在一个现有 templ 页面里写 `{{ island.Component("Counter",
 map[string]any{"start": 3}) }}`（等价 Go 调用），页面出现可交互组件；
 禁用 JS 时页面骨架仍完整。
+
+### Phase 3 结论（2026-09-17 执行，验收通过）
+
+- **dev（内存构建）**：浏览器实机——home 页 counter 岛屿渲染（props
+  `{"label":"try an island","start":3}` 从服务端 JSON 传入），点击
+  +/− 计数 3→5→2 响应式更新。
+- **生产（嵌入 bundle）**：`js:build` + 纯二进制空目录运行，页面加载
+  `app.js?v=dbc9e9bbb5069528`，counter 渲染并可交互（3→4）。
+- **无 JS 骨架**：curl 生产页面，挂载点为空 div、props 为惰性 JSON，
+  页面结构（标题/features/链接）完整——禁用 JS 页面不破。
+- 框架仓库自身启用 dogfooding：根目录 `js.pkg.json`（preact@10.29.8）
+  + `js:install`，vendor/（1.9MB，131 文件）按 Phase 1 决策提交。
+- `go build` / `go vet` / `go test ./...` 全绿（28 包；home 视图测试
+  适配 `Index(counterStart)` 签名）。
 
 ## Phase 4 — airway-ui 组件库
 

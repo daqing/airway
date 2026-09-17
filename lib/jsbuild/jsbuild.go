@@ -76,6 +76,7 @@ func options(root string, write bool) api.BuildOptions {
 		JSXImportSource:   "preact",
 		Alias:             Alias(),
 		NodePaths:         []string{filepath.Join(root, VendorDir)},
+		Plugins:           []api.Plugin{islandsPlugin(filepath.Join(root, SourceDir, "islands"))},
 		Define:            map[string]string{"process.env.NODE_ENV": `"production"`},
 		MinifyWhitespace:  true,
 		MinifySyntax:      true,
