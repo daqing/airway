@@ -386,23 +386,43 @@ preact/compat 生态。
 
 任务：
 
-- [ ] `airway generate island <name>`：生成 `islands/<name>.tsx` 骨架
-  （props 类型 + demo 渲染），自动进入注册表。
-- [ ] `airway generate scaffold <res> <field:type ...>`：在现有产出
-  （model + migration + service + JSON API）之上，新增 templ 列表页
-  （Table 岛屿）与新建/编辑页（Form 岛屿），props 从 action 传入。
+- [x] `airway generate island <name>`：生成骨架（`cmd/cli_scaffold.go`），
+  经注册表 plugin 自动进 bundle（无需手工注册）。
+- [x] `airway generate scaffold <res> <field:type ...>`：一次产出带字段
+  model、按 DSN 方言生成自增主键的迁移、service、JSON CRUD API、
+  templ 页 + CRUD 岛屿（DataTable + Modal 表单，走 apiFetch），并
+  **自动注册** config/routes.go（失败回退打印手工片段）。
 - [ ] `cmd/clitemplate` 同步：项目模板包含 `app/assets/` 骨架、预置
   `js.pkg.json`、带 `assets.Scripts()` 的 `base.templ`、示例岛屿；
   修改框架侧骨架时保持模板同步（现有惯例）。
-- [ ] `airway new` 产出后开箱即跑：README 的 Quick start 增加一步
-  `airway js:install`（或 new 时自动完成）。
+- [x] `airway new` 的 Next steps 已提示 `airway js:install`
+  （Phase 1 落地）。
 - [ ] 端到端手验（作为验收脚本写进 docs）：
   `airway new demo && cd demo && airway js:install && airway generate
   scaffold posts title:string && airway db:migrate && airway server`
   → 浏览器完成一次创建/编辑/删除。
-- [ ] CI 无 Node 验证 job：`golang:alpine` 容器内跑通上述流程。
+- [x] CI 无 Node 验证 job：`.github/workflows/frontend.yml`
+  （golang:1.26-alpine：new → js:install → scaffold → build →
+  migrate → serve → probe）。
 
 **验收**：全新项目、无 Node 环境，scaffold 产出可交互 CRUD 页面。
+
+### Phase 5 结论（2026-09-17 执行，验收通过）
+
+- 端到端实机（全程无 Node）：`airway new demo` → `js:install`（9 包）→
+  `generate scaffold post title:string` → `go generate` → `js:build` →
+  `db:migrate` → `server`，浏览器在 /posts 完成 Create/Update/Delete
+  （四条 toast 对应，数据经 API 落 SQLite：seed → created → edited →
+  deleted，最终表内容与操作一致）。
+- scaffold 迁移的 id 列按当前 DSN 方言生成（BIGSERIAL /
+  AUTO_INCREMENT / AUTOINCREMENT）。
+- 顺带修复既有 bug：`generate service` 模板仍用旧版 lib/sql API
+  （sql.InsertInto 等），已改为 generics API
+  （repo.CreateFrom/UpdateByID/DeleteByID/FindByID）。
+- 已知限制：框架 v0.9.0 发布前，新项目需
+  `go mod edit -replace github.com/daqing/airway=<本地框架路径>` 才能
+  用到 jsbuild/jspkg 等新包（Phase 6 发布后消除）；scaffold 重跑在
+  文件已存在时报错退出（writeTemplateFile 的既有防覆盖语义）。
 
 ## Phase 6 — 文档与发布
 

@@ -30,7 +30,7 @@ airway plugin:install <module>
 airway js:add <pkg>[@version]                          # add a frontend npm dependency (no Node required)
 airway js:install                                      # install js.pkg.json deps into app/assets/js/vendor/
 airway js:build                                        # bundle the frontend into app/assets/dist
-airway generate [action|api|model|migration|service|cmd] [params]
+airway generate [action|api|model|migration|service|island|scaffold|cmd] [params]
 airway schema:dump
 airway schema:show
 airway upload /path/to/file
@@ -453,3 +453,22 @@ At that point you have the full skeleton for:
 - `generate api` creates files, but you still need to wire the generated `Routes(...)` into your router setup.
 - `generate service` assumes your project has an `app/services` package.
 - Generated files are starting points. They are meant to be edited after creation.
+
+## Scaffold a CRUD resource
+
+`airway generate scaffold post title:string` produces the whole vertical
+slice — model with fields, a dialect-aware migration (the auto-increment
+primary key follows your configured DSN), the CRUD service, a JSON API
+under `/api/v1/posts`, a templ page at `/posts`, and a CRUD island
+(DataTable + modal form, wired to the API through `apiFetch`). It also
+registers the routes in `config/routes.go`. Afterwards run:
+
+```bash
+go generate ./...     # compile the .templ view
+airway js:build       # bundle the new island
+airway db:migrate     # create the table
+airway server         # visit /posts
+```
+
+`airway generate island chart` scaffolds a single interactive island under
+`app/assets/js/islands/`; embed it with `@assets.Island("chart", props)`.

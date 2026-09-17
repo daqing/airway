@@ -121,6 +121,7 @@ airway generate api admin                             # new API namespace under 
 airway generate action admin show                     # new action in an existing API module
 airway generate model post                            # new model in app/models/
 airway generate service post title:string             # CRUD service in app/services/
+airway generate scaffold post title:string             # full CRUD: model, migration, JSON API, templ page, island
 airway generate migration create_posts                # new .up.sql/.down.sql pair in db/migrate/
 airway db:create | db:drop
 airway db:migrate [version]                           # apply migrations
