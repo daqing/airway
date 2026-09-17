@@ -179,6 +179,42 @@ go generate ./...   # or: just generate
 The generated `*_templ.go` files are committed, so building and testing never
 require the templ CLI.
 
+## Frontend strategy
+
+Status: decided, not yet implemented — this section records the direction.
+
+Frontend code lives in the same repository as the Go code, gets a
+component-based workflow comparable to a modern UI framework, and **does not
+introduce a Node.js toolchain**:
+
+- **templ renders the skeleton** — page structure, SEO, first paint.
+- **Interactive regions are islands** — Preact TSX components under
+  `app/assets/js/`, mounted on elements marked with `data-island`; initial
+  data is serialized next to the mount point.
+- **esbuild embedded as a Go library** — the CLI links
+  `github.com/evanw/esbuild/pkg/api` directly: `airway js:build` compiles
+  TS/TSX, the dev server serves rebuilt bundles from memory, and production
+  bundles are embedded into the single Go binary via `go:embed`.
+- **A home-grown `airway-ui` component library** on a `preact/compat` base, so
+  logic-heavy React-ecosystem libraries (TanStack Table/Query/Form, React Hook
+  Form) stay usable while the visual layer stays self-made.
+
+Rejected alternatives:
+
+- **htmx + Alpine.js (HTML over the wire)** — fine for progressive
+  enhancement, but it offers no component-based reactive programming model;
+  interactivity caps out well short of a real component library.
+- **Vite + Vue 3 sub-project embedded via `go:embed`** — drags a full Node
+  toolchain into the repository; at that point a real frontend/backend split
+  with Vue is the more honest architecture.
+- **LiveView-style server-driven UI** — little practical value for a Go
+  framework; when an application genuinely needs heavy frontend engineering,
+  splitting the frontend out with Vue is the right answer.
+
+Escape hatch: applications that outgrow islands (complex SPAs, rich editors)
+should split the frontend into its own Vue project and consume Airway purely
+as a JSON API.
+
 ## CLI
 
 The Airway CLI is a single `airway` binary (install with
