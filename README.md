@@ -6,6 +6,7 @@ database driver is inferred from the DSN at runtime.
 
 - **[中文文档](docs/zh-CN/README.md)**
 - **[CLI 脚手架指南](docs/cli.md)** / **[文件存储指南](docs/storage.md)**
+- **[Frontend guide](docs/frontend.md)** / **[前端指南（中文）](docs/zh-CN/frontend.md)**
 - **[Plugin 扩展机制](docs/plugin.md)** / **[Plugin 扩展机制（中文）](docs/zh-CN/plugin.md)**
 - **[SQL Builder DSL 指南（中文）](docs/zh-CN/sql-builder.md)**
 
@@ -32,6 +33,11 @@ Airway is both a **framework/library** and a **runnable application skeleton**:
 - **Gin web server + WebSocket** pub/sub.
 - **HTML views with [templ](https://templ.guide/)**: pages as `.templ`
   templates under `app/views/`, rendered from actions via `lib/render.HTML`.
+- **Frontend without Node**: npm dependencies managed by the CLI
+  (`js:add` / `js:install`, `js.pkg.json` lock), bundled with an embedded
+  esbuild (`js:build`), dev-time in-memory rebuilds with livereload, and
+  interactive **Preact islands** built on the bundled airway-ui component
+  library — all committed and embedded into the single Go binary.
 - **Scaffolding CLI** (`airway generate ...`, `db:migrate`, ...).
 - **Plugins**: WordPress-style feature modules shipped as independent Go
   modules — install with `go get`, enable with one blank import in
@@ -206,11 +212,11 @@ live at [`/ui`](http://127.0.0.1:1900/ui) on a running server.
 
 ## Frontend strategy
 
-Status: rolling out per [PLAN.md](PLAN.md) — dependency management
-(`js:add`/`js:install`), the build pipeline (`js:build`, in-memory dev
-serving with livereload, embedded single-binary assets), the island
-runtime and the airway-ui component library (`/ui` showcase) are
-implemented; scaffolding integration and docs are next.
+Status: implemented end to end — see the [frontend guide](docs/frontend.md).
+The pipeline ships in the CLI (`js:add`/`js:install`/`js:build`,
+`generate island`/`scaffold`), the project template, and this repository
+itself (the homepage counter and the `/ui` component showcase are
+islands).
 
 Frontend code lives in the same repository as the Go code, gets a
 component-based workflow comparable to a modern UI framework, and **does not

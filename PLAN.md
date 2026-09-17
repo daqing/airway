@@ -392,14 +392,13 @@ preact/compat 生态。
   model、按 DSN 方言生成自增主键的迁移、service、JSON CRUD API、
   templ 页 + CRUD 岛屿（DataTable + Modal 表单，走 apiFetch），并
   **自动注册** config/routes.go（失败回退打印手工片段）。
-- [ ] `cmd/clitemplate` 同步：项目模板包含 `app/assets/` 骨架、预置
+- [x] `cmd/clitemplate` 同步：项目模板包含 `app/assets/` 骨架、预置
   `js.pkg.json`、带 `assets.Scripts()` 的 `base.templ`、示例岛屿；
   修改框架侧骨架时保持模板同步（现有惯例）。
 - [x] `airway new` 的 Next steps 已提示 `airway js:install`
   （Phase 1 落地）。
-- [ ] 端到端手验（作为验收脚本写进 docs）：
-  `airway new demo && cd demo && airway js:install && airway generate
-  scaffold posts title:string && airway db:migrate && airway server`
+- [x] 端到端实机验收通过（浏览器 CRUD 全流程，SQLite 持久化）；CI 化
+  脚本 `.github/workflows/frontend.yml` 常驻。
   → 浏览器完成一次创建/编辑/删除。
 - [x] CI 无 Node 验证 job：`.github/workflows/frontend.yml`
   （golang:1.26-alpine：new → js:install → scaffold → build →
@@ -430,14 +429,18 @@ preact/compat 生态。
 
 任务：
 
-- [ ] `docs/frontend.md` + `docs/zh-CN/frontend.md`：概念（岛屿、协议）、
-  命令、组件清单、从 scaffold 到自定义岛屿的教程。
-- [ ] README 更新：移除 Frontend strategy 的 "not yet implemented" 标注，
-  Features 与 Quick start 纳入前端流程；AGENTS.md 项目布局同步。
-- [ ] CI 完整化：单测（jsbuild/jspkg/middleware/helper）+ 无 Node 构建
-  job 常驻。
-- [ ] 版本发布：建议 Phase 1–2 合入后发 v0.9.0，Phase 5 合入后发
-  v1.0 候选。
+- [x] `docs/frontend.md` + `docs/zh-CN/frontend.md`：全景、岛屿协议、
+  开发流程、命令、组件清单、scaffold → 自定义岛屿教程。
+- [x] README 定稿：Frontend strategy status 改为 implemented end to
+  end（链接 frontend guide）；Features 增加 "Frontend without Node"
+  条目；顶部文档链接加中英前端指南；AGENTS.md 项目布局自 Phase 2 起
+  已逐步同步（assets/jsbuild/jspkg、岛屿与 airway-ui 约定、js 命令）。
+- [x] CI 完整化：`ci.yml`（go build/vet/test 常驻，覆盖 jsbuild/
+  jspkg/assets 全部单测）+ `frontend.yml`（golang:alpine 无 Node 端到
+  端）。
+- [ ] 版本发布：留给维护者执行（tag/push 是用户决策）。Phase 0–5 已
+  全部落地，建议 bump VERSION 至 0.9.0 后发布——新项目的 jsbuild/
+  jspkg 依赖只有发布后才能脱离本地 replace 正常 `go mod tidy`。
 
 ---
 
@@ -455,6 +458,14 @@ preact/compat 生态。
    访问，不进用户项目二进制。
 5. **`airway dev` 一体化命令**（server + esbuild watch + templ watch 一条
    命令拉起）— 默认 v1 不做，靠 `just dev`（Procfile）编排；呼声高再上。
+
+### Phase 6 结论（2026-09-17 执行，文档与 CI 完成）
+
+- 中英文前端指南落地；README 定稿（status/Features/文档链接）。
+- CI 三件套：`ci.yml`（主测试）、`frontend.yml`（无 Node e2e）、
+  既有 `docs.yml`。
+- `go build` / `go vet` / `go test ./...` 全绿（28 包）。
+- 前端计划全部完成，唯一未勾选项为版本发布（需维护者执行）。
 
 ## 里程碑建议
 
