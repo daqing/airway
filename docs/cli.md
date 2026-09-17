@@ -27,6 +27,8 @@ airway db:status
 airway plugin:new <module-path>                           # scaffold a new plugin module
 airway plugin:list
 airway plugin:install <module>
+airway js:add <pkg>[@version]                          # add a frontend npm dependency (no Node required)
+airway js:install                                      # install js.pkg.json deps into app/assets/js/vendor/
 airway generate [action|api|model|migration|service|cmd] [params]
 airway schema:dump
 airway schema:show
@@ -268,6 +270,30 @@ only list and install the plugins compiled into itself.
 last path segment, same as `plugin:new`. It assigns fresh timestamps to the
 copied migrations and skips files that are already installed; afterwards they
 are ordinary migrations managed by `db:migrate` / `db:rollback` / `db:status`.
+
+## Frontend Dependency Commands
+
+Frontend npm dependencies are managed without a Node toolchain: the CLI
+talks to an npm-compatible registry directly and unpacks packages into
+`app/assets/js/vendor/` (node_modules-compatible layout for esbuild).
+
+```bash
+airway js:add preact                          # latest version, pinned exactly
+airway js:add @tanstack/react-table@9.2.4     # explicit version
+airway js:install                             # install per js.pkg.json (idempotent)
+```
+
+`js.pkg.json` at the project root has two sections: `deps` (direct
+dependencies, exact versions — hand-editable) and `lock` (the fully resolved
+tree including transitive dependencies, each with a sha512 integrity; written
+by `js:add` / `js:install`). `js:install` installs exactly the locked
+versions and re-resolves only when the lock is missing or stale; already
+installed packages are skipped.
+
+The registry defaults to `https://registry.npmjs.org`; set
+`AIRWAY_JS_REGISTRY` (or `JS_REGISTRY`) to use a mirror, e.g.
+`https://registry.npmmirror.com`. The `vendor/` directory is committed so a
+fresh clone builds offline.
 
 ## REPL
 

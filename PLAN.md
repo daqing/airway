@@ -148,26 +148,50 @@ npm registry（HTTP API + tarball）交互，安装到项目本地。
 
 任务：
 
-- [ ] 定义 `js.pkg.json`：依赖清单，**精确版本**（lock 语义，无 semver
-  range 解析，v1 不做 ranges）。
-- [ ] `cmd/jspkg` 实现 `airway js:add <pkg>[@<version>]`：从 registry 取
-  元数据、下载 `dist.tarball`、解包（gzipped tar，纯 Go）到
-  `app/assets/js/vendor/`（node_modules 兼容布局，保留包内 package.json
-  供 esbuild 解析 exports/main），并写入 `js.pkg.json`。
-- [ ] `airway js:install`：按 `js.pkg.json` 幂等重装（本地已有且校验
-  一致则跳过）。
-- [ ] registry 可配置：`AIRWAY_JS_REGISTRY`（默认
-  `https://registry.npmjs.org`，可切 npmmirror 等镜像）。
-- [ ] 基础依赖预置：`airway new` 生成的项目 `js.pkg.json` 预置 preact、
-  preact/compat、`@tanstack/preact-query`、`react-hook-form`、
-  airway-ui 基础包（对齐「前端库支持矩阵」）。
-- [ ] 单测：tarball 解包、精确版本匹配、镜像 URL 拼接、幂等安装
-  （本地 fixture，不依赖网络）。
-- [ ] 决策并落地：`vendor/` 提交进仓库（默认：提交，保证 clone 即可
-  离线构建；缺点是仓库变大）。
+- [x] 定义 `js.pkg.json`：`deps` 为直接依赖的**精确版本**（lock 语义）；
+  `lock` 为全解析树（含传递依赖 + sha512 integrity）。传递依赖来自 npm
+  的 range 语法，绕不开——已实现最小 range 解析（精确 / `^` / `~` /
+  比较符 / x-range / `||` / AND，prerelease 门控），见 `lib/jspkg/semver.go`。
+- [x] 实现 `airway js:add <pkg>[@<version>]`：落地为 `lib/jspkg` 包（可
+  复用）+ `cmd/cli_js_cmd.go` 命令入口（跟随 cmd/ 平铺惯例；注意 Go
+  文件不能命名为 `*_js.go`——`_js` 后缀会被解析为 GOOS=js 隐式构建
+  约束而静默排除）。从 registry 取元数据、下载 `dist.tarball`、解包
+  到 `app/assets/js/vendor/`（node_modules 兼容布局），校验 SRI
+  integrity 后写入 `js.pkg.json`。
+- [x] `airway js:install`：按 lock 精确安装；本地版本一致跳过（实测
+  幂等重装零下载）；lock 缺失/过期时按 deps 重新解析。
+- [x] registry 可配置：`AIRWAY_JS_REGISTRY`（别名 `JS_REGISTRY`），默认
+  `https://registry.npmjs.org`。
+- [x] 基础依赖预置：`airway new` 的模板含 `js.pkg.json`（预置 preact、
+  `@tanstack/preact-query`、`react-hook-form` 及完整 lock）；airway-ui
+  基础包推迟到 Phase 4 诞生时加入。Next steps 提示 `airway js:install`。
+- [x] 单测（`lib/jspkg/jspkg_test.go`，全部离线）：semver 表驱动、
+  spec 解析、tarball 解包、SRI 校验、镜像 URL、httptest fixture 的
+  依赖树解析 / 幂等安装 / scoped 包。
+- [x] 决策落地：`vendor/` 提交进仓库——模板 `.gitignore` 不排除
+  `app/assets/js/vendor/`。
 
 **验收**：`airway js:add @tanstack/react-table@<版本>` 后，TS 里
 `import ... from "@tanstack/react-table"` 能被 js:build 成功解析。
+
+### Phase 1 结论（2026-09-17 执行，验收通过）
+
+真实环境（npmmirror，全程无 Node）端到端验证：`js:add preact` +
+`js:add @tanstack/react-table@9.2.4` 递归锁定 6 包（react-store /
+store / table-core / use-sync-external-store 含在内），二次 add 复用
+已装包；esbuild 以 vendor 为 NodePaths、react→preact/compat 别名成功
+bundle `@tanstack/react-table` + `./legacy` 出口 + preact（311KB，
+零错误零警告）。`airway new` 脚手架验证含预置 `js.pkg.json`
+（3 deps + 4 lock 条目）。`go build` / `go vet` / `go test ./...` 全绿
+（26 包）。
+
+与计划的偏差（均为实施中发现的设计修正）：
+
+- 位置：`lib/jspkg` 库 + `cmd/cli_js_cmd.go`，不是 `cmd/jspkg` 子包。
+- lock 携带 npm SRI（sha512）integrity，跨镜像安装可验证内容一致。
+- 扁平 vendor 布局下同包多 range 冲突策略：选满足全部 ranges 的最高
+  版本，无共同版本时报错（npm 会嵌套 node_modules，v1 不做）。
+- 预置依赖暂不含 airway-ui（Phase 4）。
 
 ## Phase 2 — 构建管线与开发流程
 

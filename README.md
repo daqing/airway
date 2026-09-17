@@ -98,6 +98,7 @@ accepts a short name or its `AIRWAY_` alias, with the alias taking precedence.
 | `PORT` / `AIRWAY_PORT` | HTTP listen port (default `1900`). |
 | `REDIS` / `AIRWAY_REDIS` | Optional Redis URL for cache/queue. |
 | `URL_PREFIX` / `AIRWAY_URL_PREFIX` | Optional public sub-path prefix, e.g. `/airway`. Empty serves at the root. |
+| `AIRWAY_JS_REGISTRY` | npm registry for `js:add` / `js:install` (default `https://registry.npmjs.org`; set a mirror like `https://registry.npmmirror.com` if needed). |
 | `AIRWAY_ENV` | `local` loads `.env` and uses Gin debug mode; anything else runs release mode. |
 | `STORAGE_DRIVER` | `local` (default), `s3`, `r2` or `cos`. |
 | `STORAGE_ROOT` | Local storage root (default `./data/storage`). |
@@ -236,6 +237,8 @@ airway db:rollback [step]
 airway db:status
 airway schema:dump | schema:show           # writes / reads db/schema.json
 airway upload [key] /path/to/file          # upload via the configured storage
+airway js:add <pkg>[@version]              # add a frontend npm dependency (no Node required)
+airway js:install                          # install js.pkg.json deps into app/assets/js/vendor/
 airway version
 ```
 
