@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/daqing/airway/lib/jsbuild"
 	"github.com/daqing/airway/lib/jspkg"
 	"github.com/daqing/airway/lib/utils"
 )
@@ -34,6 +35,20 @@ func runCLIJsInstall(args []string) error {
 	})
 }
 
+func runCLIJsBuild(args []string) error {
+	if len(args) > 0 && isHelpArg(args[0]) {
+		printCLIJsBuildUsage(os.Stdout)
+		return nil
+	}
+
+	m, err := jsbuild.Build(".")
+	if err != nil {
+		return err
+	}
+	log.Printf("built %s/%s: %d file(s), hash %s", jsbuild.DistDir, jsbuild.EntryJS, len(m.Files), m.Hash)
+	return nil
+}
+
 // jsRegistry resolves the registry URL: AIRWAY_JS_REGISTRY (or short
 // JS_REGISTRY) first, then the npm default.
 func jsRegistry() string {
@@ -55,4 +70,9 @@ func printCLIJsAddUsage(w io.Writer) {
 func printCLIJsInstallUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "usage:")
 	_, _ = fmt.Fprintln(w, "  airway js:install   install js.pkg.json dependencies into app/assets/js/vendor/")
+}
+
+func printCLIJsBuildUsage(w io.Writer) {
+	_, _ = fmt.Fprintln(w, "usage:")
+	_, _ = fmt.Fprintln(w, "  airway js:build   bundle app/assets/js/app.tsx into app/assets/dist (esbuild, no Node)")
 }

@@ -43,9 +43,13 @@ app/
   views/         Server-rendered HTML pages as templ templates, one folder per
                  API module (e.g. app/views/home/index.templ for home_api).
                  Each folder is its own package; *_templ.go is committed.
+  assets/        Frontend pipeline: js/ (TS/TSX sources, vendor/ installed by
+                 js:install), dist/ (committed js:build output embedded via
+                 //go:embed and served at /assets/*).
 cmd/             CLI commands: scaffolding generators, `new` (project
                  scaffolding), db create/drop/migrate/rollback/status, schema
-                 dump/show, plugin:new/list/install, upload, REPL, version.
+                 dump/show, plugin:new/list/install, js:add/install/build,
+                 upload, REPL, version.
   clitemplate/   Embedded templates used by `airway new` (template/) and
                  `airway plugin:new` (plugintemplate/). Template files end in
                  .tmpl, with `{{module}}` / `{{plugin}}` placeholders; keep the
@@ -60,6 +64,10 @@ lib/
                  lib/sql/{pg,mysql,sqlite}.
   repo/          Repository/ORM layer: generics-based CRUD (FindBy[User], etc.),
                  Preload (eager loading), Joins, transactions.
+  jspkg/         Node-free npm dependency management behind js:add/js:install
+                 (registry client, semver range resolution, js.pkg.json lock).
+  jsbuild/       esbuild-in-Go bundling behind js:build: production builds into
+                 app/assets/dist plus the in-memory dev server with livereload.
   migrate/       Migration internals (dialect compiler, schema state).
   plugin/        Plugin extension mechanism: registry, mounting, boot hooks,
                  REPL models. Plugins are separate Go modules enabled by blank
@@ -86,13 +94,14 @@ Prerequisites: copy `.env.example` to `.env` and set `AIRWAY_DB_DSN` and `AIRWAY
 ```bash
 just dev                 # Start dev server with live reload (overmind + air, AIRWAY_ENV=local)
 go run . server          # Run the HTTP server directly (requires AIRWAY_ENV and .env)
-go build -o ./bin/airway .  # Build binary (pure-Go SQLite driver)
+just build               # js:build the frontend bundle, then compile the binary
+go build -o ./bin/airway .  # Build binary only (pure-Go SQLite driver; embeds committed dist/)
 go test ./...            # Run the test suite
 go vet ./...             # Lint
 go generate ./...        # Regenerate *_templ.go from the .templ views (just generate)
 ```
 
-The generated `*_templ.go` files are committed, so plain `go build`/`go test` never need the templ CLI; run `go generate ./...` after editing any `.templ` view and commit the refreshed output.
+The generated `*_templ.go` files are committed, so plain `go build`/`go test` never need the templ CLI; run `go generate ./...` after editing any `.templ` view and commit the refreshed output. Likewise `app/assets/dist/` is committed: run `go run . js:build` after changing `app/assets/js/` and commit the rebuilt bundle (under AIRWAY_ENV=local the server rebuilds it in memory with livereload instead).
 
 Other `just` recipes: `just install-deps` (installs air, tmux, overmind), `just docker` (builds the Docker image).
 
@@ -121,6 +130,7 @@ airway schema:dump | schema:show                      # writes/reads db/schema.j
 airway upload [key] /path/to/file                     # upload via configured storage
 airway js:add <pkg>[@version]                         # add a frontend npm dependency (no Node required)
 airway js:install                                     # install js.pkg.json deps into app/assets/js/vendor/
+airway js:build                                       # bundle the frontend into app/assets/dist
 airway plugin:new <module-path>                       # scaffold a new plugin module
 airway plugin:list                                    # registered plugins and mount paths
 airway version                                          # or -v / --version; prints the VERSION file contents

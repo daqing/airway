@@ -200,30 +200,57 @@ bundle `@tanstack/react-table` + `./legacy` 出口 + preact（311KB，
 
 任务：
 
-- [ ] `cmd/jsbuild` 实现 `airway js:build`：
-  入口 `app/assets/js/app.tsx`，`vendor/` 为 node 解析路径，
-  统一注入 `react`→`preact/compat` 别名；minify、sourcemap、
-  `Target: ES2020`。
-- [ ] 固定文件名（`app.js`）+ `manifest.json`（入口、构建 hash、chunk
-  列表）；缓存策略用查询串 `?v=<hash>`，避免 hash 文件名导致每次构建
-  大 diff。
-- [ ] 产物写入 `app/assets/dist/` 并提交；`internal/assets` 用
-  `//go:embed all:dist` 暴露 `http.Handler`，gin 挂 `/assets/*`（含
-  `URL_PREFIX` 前缀适配）。
-- [ ] dev 内存构建：`AIRWAY_ENV=local` 时 `/assets/*` 由 middleware 调
-  esbuild `Rebuild`（按需 + 短 TTL）直接返回字节，ETag 为构建 hash；
-  esbuild Watch 放 goroutine。
-- [ ] livereload：esbuild v0.28 的 `Watch` 不对外暴露重建事件（Phase 0
-  发现），需自研轻量源文件监听（mtime 轮询即可）触发 WebSocket hub
-  （`app/websocket`，复用）广播；`base.templ` 在 local 下注入
-  livereload 客户端脚本（整页刷新，v1 不做模块级 HMR）。
-- [ ] `Procfile.dev` / `justfile` 联动：`just dev` 下 JS 重建 + Go 重启
-  共存；`just build` 前置 `airway js:build`。
-- [ ] 单测：manifest 生成、embed handler（httptest）、dev middleware
-  缓存头、`URL_PREFIX` 前缀。
+- [x] `airway js:build`：落地为 `lib/jsbuild` 包 + `cmd/cli_js_cmd.go` 命令。
+  入口 `app/assets/js/app.tsx`，`vendor/` 为 node 解析路径，统一注入
+  `react`→`preact/compat` 别名；minify、sourcemap、`Target: ES2020`。
+- [x] 固定文件名（`app.js`）+ `manifest.json`（entry、hash、files）；
+  缓存策略用查询串 `?v=<hash>`（`app/assets.EntryPath()`），裸路径走
+  ETag 协商。构建确定性已验证：同输入两次构建 hash 相同。
+- [x] 产物写入 `app/assets/dist/` 并提交；`app/assets` 包（仓库无
+  internal/ 惯例，未按计划用 `internal/assets`）以 `//go:embed all:dist`
+  暴露 `http.Handler`，`config/routes.go` 挂 `/assets/*`；`URL_PREFIX`
+  由既有 prefixHandler 剥离后透传（实机验证 /airway/assets/… 200，裸根
+  /health 仍 200）。
+- [x] dev 内存构建：`AIRWAY_ENV=local` 时 `main.go` 调
+  `jsbuild.StartDefault`，`/assets/*` 由内存产物应答（ETag 协商 304）；
+  esbuild `Watch` 常驻后台。
+- [x] livereload：自研 mtime 轮询（300ms，跳过 vendor/）触发显式
+  `Rebuild()` + `websocket.Broadcast`（`app/websocket` 新增导出函数）
+  广播 `{"type":"js-rebuild"}`；`base.templ` 在 local 下注入
+  `/assets/livereload.js`（ws 路径经 `data-ws` 适配 URL_PREFIX）。
+- [x] `Procfile.dev` 无需改动（dev 构建在 server 进程内，随 air 重启）；
+  `justfile` 新增 `build` recipe（js:build 前置 + go build）。
+- [x] 单测（全部离线）：`lib/jsbuild`（manifest 与确定性、dev handler
+  200/304/404、源码变更→重建→广播、scanMtimes 忽略 vendor）、
+  `app/assets`（embed handler、ETag/immutable 双模式、manifest/
+  EntryPath、路径穿越 404）。
 
 **验收**：改一个 `.tsx` 保存，浏览器约 1 秒内自动刷新；`go build` 出的
 二进制拷到无源码机器可正常 serve `/assets/app.js`。
+
+### Phase 2 结论（2026-09-17 执行，验收通过）
+
+- **改 .tsx → 浏览器自动刷新**：实机验证——页面植入 `window` 标记后
+  修改 `app.tsx`，watcher 触发增量重建（日志两次 rebuilt），WebSocket
+  广播后页面刷新、标记消失，总延迟约 1s。
+- **单二进制 serve**：纯二进制拷至空目录 + `URL_PREFIX=/airway` 运行，
+  `/airway/assets/app.js`（ETag 协商）、`/airway/assets/manifest.json`、
+  裸根 `/health` 均 200；`?v=<hash>` 响应 `immutable` 一年缓存，裸路径
+  `no-cache` + ETag。
+- **构建确定性**：空入口恢复后重新 `js:build`，hash 与首次完全一致
+  （`a80ecb1ad25190cb`），提交的 dist 无噪声 diff。
+- `go build` / `go vet` / `go test ./...` 全绿（28 包，含新增
+  `lib/jsbuild`、`app/assets`）。
+
+实施要点与坑：
+
+- esbuild `AbsWorkingDir` 必须绝对路径，`Build`/`StartDev` 入口统一
+  `filepath.Abs`。
+- **watcher 基线竞态**：mtime 初始快照若在 goroutine 内采集，启动与
+  首次轮询之间的文件变更会被吞进基线（测试偶发超时的根因）；基线
+  改为构造时同步采集。
+- embed 要求 dist 至少有一个文件；dist 产物已提交（当前为空入口的
+  最小 bundle，Phase 3 island runtime 落地后自然增长）。
 
 ## Phase 3 — 岛屿运行时（templ ↔ Preact 协议）
 

@@ -29,6 +29,7 @@ airway plugin:list
 airway plugin:install <module>
 airway js:add <pkg>[@version]                          # add a frontend npm dependency (no Node required)
 airway js:install                                      # install js.pkg.json deps into app/assets/js/vendor/
+airway js:build                                        # bundle the frontend into app/assets/dist
 airway generate [action|api|model|migration|service|cmd] [params]
 airway schema:dump
 airway schema:show
@@ -281,7 +282,15 @@ talks to an npm-compatible registry directly and unpacks packages into
 airway js:add preact                          # latest version, pinned exactly
 airway js:add @tanstack/react-table@9.2.4     # explicit version
 airway js:install                             # install per js.pkg.json (idempotent)
+airway js:build                               # bundle app/assets/js/app.tsx into app/assets/dist
 ```
+
+With `AIRWAY_ENV=local`, `airway server` additionally builds the bundle in
+memory: `/assets/*` serves the freshest build with ETag revalidation, and
+editing any `.ts/.tsx/.css` file under `app/assets/js` (vendor/ excluded)
+triggers an incremental rebuild plus a livereload page refresh via the app's
+WebSocket. `just build` runs `js:build` before compiling the binary; the
+`dist/` output is committed, so deploying never requires the bundler.
 
 `js.pkg.json` at the project root has two sections: `deps` (direct
 dependencies, exact versions — hand-editable) and `lock` (the fully resolved

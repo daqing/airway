@@ -19,6 +19,11 @@ generate-watch:
 templ-fmt:
   go tool templ fmt app/views
 
+# Bundle the frontend (app/assets/js -> app/assets/dist), then compile the binary.
+build:
+  go run . js:build
+  go build -o bin/airway .
+
 build-on-mac:
   GOOS=linux GOARCH=amd64 go build .
   podman build -t airway -f Dockerfile.mac

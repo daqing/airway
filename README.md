@@ -182,7 +182,10 @@ require the templ CLI.
 
 ## Frontend strategy
 
-Status: decided, not yet implemented — this section records the direction.
+Status: rolling out per [PLAN.md](PLAN.md) — dependency management
+(`js:add`/`js:install`) and the build pipeline (`js:build`, in-memory dev
+serving with livereload, embedded single-binary assets) are implemented;
+the island runtime and component library are next.
 
 Frontend code lives in the same repository as the Go code, gets a
 component-based workflow comparable to a modern UI framework, and **does not
@@ -239,6 +242,7 @@ airway schema:dump | schema:show           # writes / reads db/schema.json
 airway upload [key] /path/to/file          # upload via the configured storage
 airway js:add <pkg>[@version]              # add a frontend npm dependency (no Node required)
 airway js:install                          # install js.pkg.json deps into app/assets/js/vendor/
+airway js:build                            # bundle app/assets/js into app/assets/dist (esbuild)
 airway version
 ```
 

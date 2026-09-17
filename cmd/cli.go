@@ -51,6 +51,8 @@ func runCLI(args []string) error {
 		return runCLIJsAdd(xargs)
 	case "js:install":
 		return runCLIJsInstall(xargs)
+	case "js:build":
+		return runCLIJsBuild(xargs)
 	case "upload":
 		return runUpload(xargs)
 	case "help", "-h", "--help":

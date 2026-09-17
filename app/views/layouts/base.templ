@@ -1,5 +1,7 @@
 package layouts
 
+import "github.com/daqing/airway/lib/utils"
+
 // Base renders the shared HTML document shell. Page templates wrap their
 // content in this component, e.g.:
 //
@@ -28,6 +30,9 @@ templ Base(title string, description ...string) {
           margin: 0
         }
 			</style>
+			if utils.AppConfig().IsLocal {
+				<script src={ templ.URL(utils.URLPrefix() + "/assets/livereload.js") } data-ws={ utils.URLPrefix() + "/ws" } defer></script>
+			}
 		</head>
 		<body>
 			{ children... }
