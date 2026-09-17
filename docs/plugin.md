@@ -65,7 +65,7 @@ airway plugin:new github.com/me/airway-im-plugin  # plugin name derived from
 
 This generates `go.mod`, `plugin.go` (Plugin implementation + `init()`
 registration), a sample API module under `app/api/<name>_api/`, and empty
-`app/models/` and `db/migrate/` directories, then runs `go mod tidy`.
+`app/models/` and `host/db/migrate/` directories, then runs `go mod tidy`.
 
 A Plugin repository mirrors the layout of a regular Airway project:
 
@@ -78,8 +78,9 @@ airway-im-plugin/
     api/im_api/           # routes + actions, same conventions as a host app
     models/               # model structs with db tags and TableName()
     views/                # templ views (commit the generated *_templ.go)
-  db/
-    migrate/              # optional: embedded *.up.sql / *.down.sql files
+  host/                   # files installed into the host project's own tree,
+    db/migrate/           # mirroring the host layout; currently only
+                          # db/migrate (optional *.up.sql / *.down.sql files)
   deps/                   # optional: extra files merged into the host
                           # project's deps/ directory by `plugin:install`;
                           # namespace them under the plugin name
@@ -131,7 +132,7 @@ func (IMPlugin) REPLModels() map[string]any {
 
 // MigrationProvider — ships SQL migrations embedded in the binary.
 //
-//go:embed db/migrate
+//go:embed host/db/migrate
 var migrations embed.FS
 
 func (IMPlugin) MigrationFS() fs.FS { return migrations }
@@ -145,10 +146,12 @@ conflicts disable plugin REPL models and log a warning.
 - **Go DSL migrations** need no install step: call `schema.RegisterChange` from
   `lib/migrate/schema` in an `init()` (exactly like a host app's DSL
   migrations) and they join the global migration list on import.
-- **SQL files** (`<version>_<name>.up.sql` / `.down.sql`) are embedded via
-  `MigrationFS()` and copied into the host's `db/migrate/` by
-  `plugin:install <module>` (run as `go run . plugin:install <module>` in the host
-  project) with fresh timestamps. After copying they
+- **SQL files** (`<version>_<name>.up.sql` / `.down.sql`) live under the
+  plugin's `host/db/migrate/` directory. They are either embedded via
+  `MigrationFS()` or read from the module directory on disk, and copied into
+  the host's `db/migrate/` by `plugin:install <module>` (run as
+  `go run . plugin:install <module>` in the host project) with fresh
+  timestamps. After copying they
   are ordinary host migrations: `db:migrate`, `db:rollback` and `db:status`
   work on them unchanged, and re-running `plugin:install` skips files already
   installed.

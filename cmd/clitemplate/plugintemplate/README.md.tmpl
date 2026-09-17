@@ -24,9 +24,10 @@ import (
 ```
 
 The plugin mounts its routes at `/api/v1/{{plugin}}`. To ship SQL migrations,
-add `<version>_<name>.up.sql` / `.down.sql` files under `db/migrate/`, expose
-them with `plugin.MigrationProvider`, and install them in the host with
-`go run . plugin:install {{module}}`.
+add `<version>_<name>.up.sql` / `.down.sql` files under `host/db/migrate/` (the
+`host/` directory holds files that `plugin:install` installs into the host
+project's own tree), expose them with `plugin.MigrationProvider`, and install
+them in the host with `go run . plugin:install {{module}}`.
 
 To ship extra project files (companion services, deploy configs, ...), put
 them under `deps/{{plugin}}/` — `plugin:install` merges the whole tree into

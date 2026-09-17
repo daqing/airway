@@ -69,6 +69,76 @@ func TestInstallPluginMigrationsRejectsMissingDown(t *testing.T) {
 	}
 }
 
+func TestInstallPluginMigrationsFromDir(t *testing.T) {
+	moduleDir := t.TempDir()
+	migrateDir := filepath.Join(moduleDir, "host", "db", "migrate")
+	makeDirs(t, migrateDir)
+	writeFile(t, filepath.Join(migrateDir, "20240101000000_create_messages.up.sql"), "CREATE TABLE messages (id INTEGER PRIMARY KEY);")
+	writeFile(t, filepath.Join(migrateDir, "20240101000000_create_messages.down.sql"), "DROP TABLE messages;")
+
+	dstDir := filepath.Join(t.TempDir(), "db", "migrate")
+
+	if err := installPluginMigrationsFromDir("im", moduleDir, dstDir); err != nil {
+		t.Fatalf("install plugin migrations from dir: %v", err)
+	}
+
+	up := migrationFiles(t, dstDir, "*_create_messages.up.sql")
+	down := migrationFiles(t, dstDir, "*_create_messages.down.sql")
+	if len(up) != 1 || len(down) != 1 {
+		t.Fatalf("expected one up/down pair, got %d up and %d down files", len(up), len(down))
+	}
+	if got := readFile(t, up[0]); got != "CREATE TABLE messages (id INTEGER PRIMARY KEY);" {
+		t.Fatalf("unexpected up migration content: %s", got)
+	}
+
+	// Installing again must skip instead of duplicating.
+	if err := installPluginMigrationsFromDir("im", moduleDir, dstDir); err != nil {
+		t.Fatalf("reinstall plugin migrations: %v", err)
+	}
+
+	if got := len(migrationFiles(t, dstDir, "*.sql")); got != 2 {
+		t.Fatalf("expected 2 migration files after reinstall, got %d", got)
+	}
+}
+
+// The plugin module root's db/migrate is no longer read; migrations must live
+// under host/db/migrate.
+func TestInstallPluginMigrationsFromDirIgnoresLegacyLocation(t *testing.T) {
+	moduleDir := t.TempDir()
+	legacyDir := filepath.Join(moduleDir, "db", "migrate")
+	makeDirs(t, legacyDir)
+	writeFile(t, filepath.Join(legacyDir, "20240101000000_create_messages.up.sql"), "CREATE TABLE messages (id INTEGER PRIMARY KEY);")
+	writeFile(t, filepath.Join(legacyDir, "20240101000000_create_messages.down.sql"), "DROP TABLE messages;")
+
+	dstDir := filepath.Join(t.TempDir(), "db", "migrate")
+
+	if err := installPluginMigrationsFromDir("im", moduleDir, dstDir); err != nil {
+		t.Fatalf("install plugin migrations from dir: %v", err)
+	}
+
+	if got := len(migrationFiles(t, dstDir, "*.sql")); got != 0 {
+		t.Fatalf("expected no migrations from the legacy location, got %d files", got)
+	}
+}
+
+func TestInstallPluginMigrationsFromDirWithoutDirIsNoOp(t *testing.T) {
+	dstDir := filepath.Join(t.TempDir(), "db", "migrate")
+
+	if err := installPluginMigrationsFromDir("im", t.TempDir(), dstDir); err != nil {
+		t.Fatalf("expected missing host/db/migrate to be a no-op, got: %v", err)
+	}
+}
+
+func migrationFiles(t *testing.T, dir, pattern string) []string {
+	t.Helper()
+
+	matches, err := filepath.Glob(filepath.Join(dir, pattern))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return matches
+}
+
 func TestEnsurePluginImportAppendsImportBlock(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "plugins.go")
 	// The scaffolded plugins.go shows a sample import block inside a comment;

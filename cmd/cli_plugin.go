@@ -44,11 +44,11 @@ func runCLIPluginList() error {
 	return nil
 }
 
-// runCLIPluginInstall copies a plugin's SQL migrations into the host's
-// db/migrate directory with fresh timestamps, so they run through the
-// regular db:migrate / db:rollback / db:status machinery, and merges the
-// plugin's deps/ directory into the host project's deps/ directory. The
-// argument is the plugin's module path (e.g. github.com/daqing/airway-im-plugin),
+// runCLIPluginInstall copies a plugin's SQL migrations (from its host/db/migrate
+// directory) into the host's db/migrate directory with fresh timestamps, so they
+// run through the regular db:migrate / db:rollback / db:status machinery, and
+// merges the plugin's deps/ directory into the host project's deps/ directory.
+// The argument is the plugin's module path (e.g. github.com/daqing/airway-im-plugin),
 // optionally with an @version suffix like `go get` accepts, or a local
 // directory holding the plugin's source (its go.mod supplies the module path,
 // wired in through a replace directive — no download needed). The plugin name
@@ -56,7 +56,7 @@ func runCLIPluginList() error {
 //
 // When the plugin is not compiled into the current binary, it is enabled
 // first (blank import + go get / replace), and the install then continues in
-// this same process, reading migrations and deps/ from the plugin module's
+// this same process, reading host/db/migrate and deps/ from the plugin module's
 // on-disk directory — so the current CLI's installer logic is always the one
 // used, never a possibly stale project binary.
 func runCLIPluginInstall(args []string) error {
@@ -349,8 +349,15 @@ func pluginMigrationInstalled(dstDir string, name string) bool {
 	return false
 }
 
+// pluginHostDir is the directory inside a plugin module holding files that
+// `plugin:install` installs into the host project's own tree, mirroring the
+// host layout (host/db/migrate → the host's db/migrate). It is the counterpart
+// of deps/, whose contents merge verbatim into the host's deps/ directory
+// instead of joining the host sources. Only host/db/migrate is handled today.
+const pluginHostDir = "host"
+
 // installPluginMigrationsFromModule installs migrations for a plugin that is
-// not compiled into the current binary: it reads the plugin's db/migrate
+// not compiled into the current binary: it reads the plugin's host/db/migrate
 // directory from its on-disk module directory (the same files a
 // MigrationProvider would embed), so the install completes in this process
 // instead of re-executing through a possibly stale project binary.
@@ -360,13 +367,17 @@ func installPluginMigrationsFromModule(name, module string) error {
 		return fmt.Errorf("locate plugin module %s: %w", module, err)
 	}
 
-	migrateDir := filepath.Join(dir, "db", "migrate")
+	return installPluginMigrationsFromDir(name, dir, migrationDir)
+}
+
+func installPluginMigrationsFromDir(name, moduleDir, dstDir string) error {
+	migrateDir := filepath.Join(moduleDir, pluginHostDir, "db", "migrate")
 	if info, err := os.Stat(migrateDir); err != nil || !info.IsDir() {
 		fmt.Printf("Plugin %s has no SQL migrations to install\n", name)
 		return nil
 	}
 
-	return installPluginMigrations(name, os.DirFS(migrateDir), migrationDir, timeNow())
+	return installPluginMigrations(name, os.DirFS(migrateDir), dstDir, timeNow())
 }
 
 // pluginDepsDir is the directory inside a plugin module whose contents are
