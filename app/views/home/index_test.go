@@ -20,7 +20,7 @@ func renderToString(t *testing.T, component templ.Component) string {
 }
 
 func TestIndexRendersHomePage(t *testing.T) {
-	html := renderToString(t, Index())
+	html := renderToString(t, Index(3))
 
 	for _, want := range []string{
 		"<!doctype html>",
@@ -48,7 +48,7 @@ func TestIndexRendersHomePage(t *testing.T) {
 }
 
 func TestIndexSupportsLightAndDarkThemes(t *testing.T) {
-	html := renderToString(t, Index())
+	html := renderToString(t, Index(3))
 
 	for _, want := range []string{
 		`data-theme-toggle`,
@@ -69,7 +69,7 @@ func TestIndexSupportsLightAndDarkThemes(t *testing.T) {
 }
 
 func TestIndexRendersAllFeatureCards(t *testing.T) {
-	html := renderToString(t, Index())
+	html := renderToString(t, Index(3))
 
 	features := []struct {
 		number string

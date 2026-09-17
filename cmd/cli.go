@@ -47,6 +47,12 @@ func runCLI(args []string) error {
 		return runCLIPluginList()
 	case "plugin:install":
 		return runCLIPluginInstall(xargs)
+	case "js:add":
+		return runCLIJsAdd(xargs)
+	case "js:install":
+		return runCLIJsInstall(xargs)
+	case "js:build":
+		return runCLIJsBuild(xargs)
 	case "upload":
 		return runUpload(xargs)
 	case "help", "-h", "--help":
@@ -84,6 +90,8 @@ func printUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "  airway plugin:new <module-path>")
 	_, _ = fmt.Fprintln(w, "  airway plugin:list")
 	_, _ = fmt.Fprintln(w, "  airway plugin:install <module>")
+	_, _ = fmt.Fprintln(w, "  airway js:add <pkg>[@version]       add a frontend dependency (no Node required)")
+	_, _ = fmt.Fprintln(w, "  airway js:install                   install frontend dependencies from js.pkg.json")
 	_, _ = fmt.Fprintln(w, "  airway upload [key] /path/to/file")
 	_, _ = fmt.Fprintln(w, "  airway repl                              interactive repo REPL (project binary only)")
 	_, _ = fmt.Fprintln(w, "  airway version                             print version (also -v, --version)")

@@ -36,6 +36,10 @@ func runCLIGenerate(args []string) error {
 		return generateService(xargs)
 	case "cmd":
 		return generateCmd(xargs)
+	case "island":
+		return generateIsland(xargs)
+	case "scaffold":
+		return generateScaffold(xargs)
 	default:
 		return fmt.Errorf("unknown generator: %s", kind)
 	}

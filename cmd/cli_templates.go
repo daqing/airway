@@ -82,19 +82,23 @@ import (
 )
 
 func Find{{.Name}}(id sql.IdType) (*models.{{.Name}}, error) {
-	return repo.FindOne[models.{{.Name}}](repo.CurrentDB(), sql.Select("*").From((models.{{.Name}}{}).TableName()).Where(sql.Eq("id", id)))
+	return repo.FindByID[models.{{.Name}}](id)
+}
+
+func Find{{.Name}}s() ([]*models.{{.Name}}, error) {
+	return repo.FindBy[models.{{.Name}}](sql.H{})
 }
 
 func Create{{.Name}}({{.Fields}}) (*models.{{.Name}}, error) {
-	return repo.Insert[models.{{.Name}}](repo.CurrentDB(), sql.InsertInto((models.{{.Name}}{}).TableName(), {{.SQLH}}))
+	return repo.CreateFrom[models.{{.Name}}]({{.SQLH}})
 }
 
 func Update{{.Name}}(id sql.IdType, {{.Fields}}) error {
-	return repo.Update(repo.CurrentDB(), sql.Update((models.{{.Name}}{}).TableName(), {{.SQLH}}).Where(sql.Eq("id", id)))
+	return repo.UpdateByID[models.{{.Name}}](id, {{.SQLH}})
 }
 
 func Delete{{.Name}}(id sql.IdType) error {
-	return repo.Delete(repo.CurrentDB(), sql.DeleteFrom((models.{{.Name}}{}).TableName()).Where(sql.Eq("id", id)))
+	return repo.DeleteByID[models.{{.Name}}](id)
 }
 `
 

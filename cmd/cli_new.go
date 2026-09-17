@@ -133,6 +133,7 @@ func newProject(arg string, tidy bool) error {
 	fmt.Println("  # edit .env — set AIRWAY_DB_DSN and AIRWAY_PORT")
 	fmt.Println("  airway db:create")
 	fmt.Println("  airway db:migrate")
+	fmt.Println("  airway js:install           # fetch frontend deps from js.pkg.json (no Node required)")
 	fmt.Println("  go run .               # start the HTTP server")
 
 	return nil

@@ -3,6 +3,10 @@ package config
 import (
 	"github.com/gin-gonic/gin"
 
+	"{{module}}/app/assets"
+	"github.com/daqing/airway/lib/jsbuild"
+	"github.com/daqing/airway/lib/utils"
+
 	"{{module}}/app/api/health_api"
 	"{{module}}/app/api/home_api"
 	"{{module}}/app/api/storage_api"
@@ -23,6 +27,7 @@ func Routes(r *gin.Engine) {
 func PublicRoutes(r *gin.Engine) {
 	r.GET("/", home_api.IndexAction)
 
+	assetRoutes(r)
 	websocketRoutes(r)
 	apiGroupRoutes(r)
 
@@ -46,4 +51,17 @@ func apiGroupRoutes(r *gin.Engine) {
 func websocketRoutes(r *gin.Engine) {
 	r.GET("/ws", websocket.Conn)
 	r.POST("/ws/publish", websocket.Publish)
+}
+
+// assetRoutes serves the frontend bundle. In local development an in-memory
+// esbuild server (started from main when AIRWAY_ENV=local) serves rebuilt
+// output directly; otherwise the embedded production bundle answers.
+func assetRoutes(r *gin.Engine) {
+	if utils.AppConfig().IsLocal {
+		if dev := jsbuild.Default(); dev != nil {
+			r.GET("/assets/*path", gin.WrapH(dev.Handler()))
+			return
+		}
+	}
+	r.GET("/assets/*path", gin.WrapH(assets.Handler()))
 }
