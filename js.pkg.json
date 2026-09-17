@@ -1,11 +1,46 @@
 {
   "deps": {
-    "preact": "10.29.8"
+    "@tanstack/preact-query": "5.103.1",
+    "@tanstack/react-table": "9.2.4",
+    "preact": "10.29.8",
+    "react-hook-form": "7.88.0"
   },
   "lock": {
+    "@tanstack/preact-query": {
+      "version": "5.103.1",
+      "integrity": "sha512-x24ZNupkOBMgsm175Jy4d9SgkCEKfgFATDSnBxxsxbR8jLtQ6/VLiC7e3HO8nKwgwTlknl8IYH2EwT0XrZVpng=="
+    },
+    "@tanstack/query-core": {
+      "version": "5.103.1",
+      "integrity": "sha512-rms8HqTGp6zA00dM+cUQ2eBcgzNJefuu5CAMB37i/6MiGT1zulPOytCFu2a0qjLqVR2n1jENPj9woqFQNuCzWA=="
+    },
+    "@tanstack/react-store": {
+      "version": "0.11.1",
+      "integrity": "sha512-HaIGKI3YLmjBYIvy5DFDY23oNaYZIsTZfngey07Uh5iLVJgM3bIGCnZeOFOqzjFld9JHWcaHJnasD/bKoGKwJQ=="
+    },
+    "@tanstack/react-table": {
+      "version": "9.2.4",
+      "integrity": "sha512-Rzp1Q4e0/nIgEjmISYR5HeEgLTNtrG+C7NFZf/AbCxPO5hg+zC3yNGwcoECigUk8SFzzvhXbd2rFdtP2ZiGrfA=="
+    },
+    "@tanstack/store": {
+      "version": "0.11.1",
+      "integrity": "sha512-mzTOBhypOuDJAy/D8n2MfUZ1HFkXnmSETviRyhqEC8LUE7/IZQExOTxMANj3KjTofYTkFNpBY67qaVrT41YccA=="
+    },
+    "@tanstack/table-core": {
+      "version": "9.2.4",
+      "integrity": "sha512-GwdDyGGr6UXAtubF14yAwcXvdaogqfsQgIk89Suebjxob/Rjq2xvfmXsjDF1rQmKmhHsJm9TOY7myxv3i6geJw=="
+    },
     "preact": {
       "version": "10.29.8",
       "integrity": "sha512-ej2aVZ+vZ8WO7tvlQWRM9N63A0KzF9q4mWJfDUHgYaIofWY9hu74QdnQrjoPMmZi2/nZ5gN0bJCQF49xQqx09Q=="
+    },
+    "react-hook-form": {
+      "version": "7.88.0",
+      "integrity": "sha512-QRaLOWhX93YCnMiRfnOFRSwWXZNt8qhm2JTZwypoDvKpSffTJHmpzMXt8U6PV5UThvL3IiiLDUWe2nHMtz6Mmw=="
+    },
+    "use-sync-external-store": {
+      "version": "1.7.0",
+      "integrity": "sha512-6L+EeigHMQhdaIPNIFUKwfWJSwWFQ8gJbJ2DLOs5sDIegTwR9fRxvnM3uciHKjIZhFz+KAv2emhWMRvDmMcY8A=="
     }
   }
 }

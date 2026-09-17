@@ -1,5 +1,5 @@
-import { useState } from "preact/hooks";
-import type { ComponentChild } from "preact";
+import { useState } from "react";
+import type { ComponentChild } from "react";
 
 // Reference island: props arrive as JSON from the server-rendered page
 // (see the Counter mount in app/views/home). Islands default-export their

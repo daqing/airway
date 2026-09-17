@@ -311,27 +311,73 @@ preact/compat 生态。
 
 任务：
 
-- [ ] design tokens：`css/airway.css` 用 CSS custom properties 定义色板、
-  间距、字号、圆角、阴影、暗色变量；组件零第三方 CSS 依赖。
-- [ ] 组件 API 风格定稿：TS props 类型、受控/非受控约定、事件命名、
-  className 合并规则。
-- [ ] 基础组件：Button、Input、Textarea、Select、Checkbox、Radio、
-  Field（表单布局）、Spinner、EmptyState。
-- [ ] Form：React Hook Form 集成封装（校验、错误展示、提交状态）——
-  表单选型定为 RHF（官方支持 Preact），不用 TanStack Form。
-- [ ] Table：`@tanstack/react-table`（compat）集成（排序、分页、行
-  选择、空态/加载态）；出现兼容缺口时改为对 `@tanstack/table-core`
-  自写 adapter。
-- [ ] 反馈组件：Modal、Toast（消息队列）、Tabs、Pagination。
-- [ ] 数据层：基于 `@tanstack/preact-query`（官方 Preact 适配），
-  `ui/data` 封装 fetch 对齐 `lib/render` 的 ok/error JSON 约定（统一
-  错误提示、401/500 处理钩子）。
-- [ ] showcase：`/ui` 路由的组件演示页（templ + 岛屿，dogfooding，
-  同时作为组件的可视化测试）。
-- [ ] 无障碍基线：label 关联、键盘导航（Modal 焦点圈、Tab 顺序）。
+- [x] design tokens：`app/assets/css/airway.css`（CSS custom properties：
+  色板/圆角/阴影/字体 + `[data-theme="dark"]` 暗色变量），组件零第三方
+  CSS 依赖；`aw-` 前缀类名；经入口 import 打包为 `dist/app.css`。
+- [x] 组件 API 风格定稿：Preact `class` prop + `cx()` 合并（库类在前、
+  调用方在后）；输入类组件全部 `forwardRef`（RHF register 必需）；
+  事件透传原生命名；受控属性直传不设内部状态。**关键决策：整个岛屿
+  树跑 preact/compat**（源码 `import … from "react"` 经 esbuild 别名到
+  compat、`jsxImportSource: "react"`）——纯 preact 模式下函数组件不透
+  传 ref，RHF 字段注册失效（实测踩坑）。
+- [x] 基础组件：Button（variant/size/loading）、Input、Textarea、
+  Select、Checkbox、Radio（均 forwardRef）、Field（label 关联 +
+  error/hint）、Spinner、EmptyState。
+- [x] Form：RHF 集成（`Form` 接收 useForm 实例，submit 按钮
+  isSubmitting 感知）；校验与错误展示由 Field + register 规则组合。
+- [x] Table：`DataTable` 基于 `@tanstack/react-table` 的 `./legacy`
+  出口（排序、分页、行选择、空态、加载态、`aria-sort`）。
+- [x] 反馈组件：Modal（Esc 关闭、Tab 焦点圈、role=dialog、打开时
+  focus/关闭时归还）、Toast（provider + useToast、消息队列自动消失）、
+  Tabs（role=tablist + 方向键导航）、Pagination。
+- [x] 数据层：`ui/data` 的 `apiFetch`/`useApiQuery`/`ApiError`/
+  `setApiErrorHandler`。**对齐 lib/render 实际信封
+  `{"code":0,"data":…,"message":""}`**（code=0 成功、非 0 业务错误，
+  修正了本计划早前 "{ok,data}" 的假设）；query 基于
+  `@tanstack/preact-query`，QueryClientProvider/ToastProvider 由
+  runtime 统一包裹每个岛屿。
+- [x] showcase：`/ui` 路由（`ui_api` + `views/ui` + `ui-showcase`
+  岛屿），七个区块全部可交互，含仅用库组件拼装的 CRUD demo（列表 +
+  新建/编辑 Modal 表单 + 删除 + Toast）；demo 数据接口
+  `/api/v1/ui-demo/items` 走标准 render 信封。
+- [x] 无障碍基线：Field label htmlFor（useId 自动 id）、Modal 焦点圈 +
+  Esc + aria-modal、Tabs role/键盘、表格 aria-sort、checkbox
+  aria-label。
 
 **验收**：仅用 airway-ui 组件即可拼出一个完整的列表 + 新建/编辑 +
 删除的 CRUD 页面；showcase 页所有组件可交互。
+
+### Phase 4 结论（2026-09-17 执行，验收通过）
+
+浏览器实机（dev 内存构建）逐项验证：
+
+- **CRUD 全流程**：New post → Modal 表单（RHF 校验拦截空值）→ Create
+  → modal 关闭 + "Post created" toast + 新行出现在第 2 页；Edit →
+  改题 → "Post updated"；Delete → 行移除 + "Deleted …" toast。仅用
+  DataTable/Modal/Form/Field/Input/Button/Toast 拼装，未写一行库外
+  UI 代码。
+- **Form demo**：空提交出两条 required 错误；填值提交 "Subscribed …"
+  toast。
+- **Modal**：role="dialog" 唯一、真实键盘 Esc 关闭通过；焦点圈与打开
+  聚焦在合成事件下偶发时序问题（真实交互正常，listener 已验证）。
+- **DataTable**：点 Title 表头升序排序（aria-sort="ascending"）、
+  翻页、行选择 checkbox。
+- **数据层**：useApiQuery → `/api/v1/ui-demo/items` → render 信封解析
+  → 渲染三条库存数据。
+- **生产**：`js:build` + 纯二进制空目录运行，/ui 200、app.js 226KB、
+  app.css 7KB 以 text/css 服务、`<link …?v=hash>` 注入验证。
+- `go build` / `go vet` / `go test ./...` 全绿（28 包）。
+
+实施修正（已回写本计划）：
+
+1. **岛屿树必须跑 preact/compat**：纯 preact 下 RHF register 的 ref
+   不进函数组件（React 语义差异），输入组件 forwardRef + 树切 compat
+   后全通。源码统一 `import "react"`。
+2. **render 信封实际是 `{code,data,message}`** 而非计划假设的
+   `{ok,data}`；`ui/data` 按实际实现。
+3. `preact/compat` 不导出 `h`，runtime 挂载改用 `createElement`。
+4. 误改 vendor 文件后以「删目录 + js:install 重装」恢复——vendor 必须
+   保持 npm 原样。
 
 ## Phase 5 — 脚手架整合
 

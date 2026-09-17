@@ -6,6 +6,7 @@ import (
 	"github.com/daqing/airway/app/api/health_api"
 	"github.com/daqing/airway/app/api/home_api"
 	"github.com/daqing/airway/app/api/storage_api"
+	"github.com/daqing/airway/app/api/ui_api"
 	"github.com/daqing/airway/app/assets"
 	"github.com/daqing/airway/app/websocket"
 	"github.com/daqing/airway/lib/jsbuild"
@@ -25,6 +26,7 @@ func Routes(r *gin.Engine) {
 // prefix; see App.Handler.
 func PublicRoutes(r *gin.Engine) {
 	r.GET("/", home_api.IndexAction)
+	r.GET("/ui", ui_api.ShowcaseAction)
 
 	assetRoutes(r)
 	websocketRoutes(r)
@@ -57,6 +59,7 @@ func apiGroupRoutes(r *gin.Engine) {
 	v1 := r.Group("/api/v1")
 	{
 		storage_api.Routes(v1)
+		v1.GET("/ui-demo/items", ui_api.DemoItemsAction)
 	}
 }
 

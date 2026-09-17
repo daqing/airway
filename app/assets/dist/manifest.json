@@ -1,7 +1,9 @@
 {
   "entry": "app.js",
-  "hash": "dbc9e9bbb5069528",
+  "hash": "90946c54c5d5b33e",
   "files": [
+    "app.css",
+    "app.css.map",
     "app.js",
     "app.js.map"
   ]

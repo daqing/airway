@@ -1,0 +1,19 @@
+package ui
+
+import (
+	"github.com/daqing/airway/app/assets"
+	"github.com/daqing/airway/app/views/layouts"
+)
+
+templ Showcase() {
+	@layouts.Base("airway-ui — component showcase", "The Airway component library: buttons, forms, tables, modals, toasts and more — interactive Preact islands, zero Node toolchain.") {
+		<div class="aw-showcase" style="max-width: 920px; margin: 0 auto; padding: 36px 22px 72px;">
+			<h1 style="font-size: 30px; letter-spacing: -1px; margin: 0;">airway-ui</h1>
+			<p style="color: var(--aw-muted, #6b7280); margin: 8px 0 0; font-size: 15px;">
+				The component library bundled with Airway. Visual layer self-made; forms on
+				react-hook-form, tables on TanStack Table, data on TanStack Query — all on Preact.
+			</p>
+			@assets.Island("ui-showcase", map[string]any{})
+		</div>
+	}
+}

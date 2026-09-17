@@ -136,6 +136,7 @@ Registered in `config/routes.go`:
 | Method | Path | Description |
 | --- | --- | --- |
 | GET | `/` | Home page (HTML, rendered from a templ view). |
+| GET | `/ui` | airway-ui component showcase (interactive island). |
 | GET | `/health` | Health check. |
 | GET | `/ws` | WebSocket connection. |
 | POST | `/ws/publish` | Publish a message to connected clients (form field `message`). |
@@ -197,13 +198,19 @@ the browser reloads on change; in production it is embedded in the binary
 behind a cache-busted URL. Pages render completely without JavaScript: the
 mount point just stays empty.
 
+**airway-ui** is the bundled component library islands build on: buttons,
+inputs, forms (react-hook-form), tables (TanStack Table), modals, toasts,
+tabs and a fetch layer aligned with `lib/render`'s JSON envelope — visual
+layer self-made, logic layers from the preact/compat ecosystem. See it all
+live at [`/ui`](http://127.0.0.1:1900/ui) on a running server.
+
 ## Frontend strategy
 
 Status: rolling out per [PLAN.md](PLAN.md) — dependency management
 (`js:add`/`js:install`), the build pipeline (`js:build`, in-memory dev
-serving with livereload, embedded single-binary assets) and the island
-runtime (interactive Preact components inside templ pages) are implemented;
-the airway-ui component library and scaffolding integration are next.
+serving with livereload, embedded single-binary assets), the island
+runtime and the airway-ui component library (`/ui` showcase) are
+implemented; scaffolding integration and docs are next.
 
 Frontend code lives in the same repository as the Go code, gets a
 component-based workflow comparable to a modern UI framework, and **does not

@@ -33,6 +33,7 @@ templ Base(title string, description ...string) {
           margin: 0
         }
 			</style>
+			@assets.Stylesheet()
 			if utils.AppConfig().IsLocal {
 				<script src={ templ.URL(utils.URLPrefix() + "/assets/livereload.js") } data-ws={ utils.URLPrefix() + "/ws" } defer></script>
 			}

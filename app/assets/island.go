@@ -45,3 +45,16 @@ func Scripts() templ.Component {
 	}
 	return templ.Raw(`<script type="module" src="` + utils.URLPrefix() + EntryPath() + `"></script>`)
 }
+
+// Stylesheet returns the link tag for the bundled component styles
+// (css/airway.css via the entry import). Same caching rules as Scripts.
+func Stylesheet() templ.Component {
+	if utils.AppConfig().IsLocal {
+		return templ.Raw(`<link rel="stylesheet" href="` + utils.URLPrefix() + `/assets/` + jsbuild.EntryCSS + `">`)
+	}
+	m, err := Manifest()
+	if err != nil || m.Hash == "" {
+		return templ.Raw(`<link rel="stylesheet" href="` + utils.URLPrefix() + `/assets/` + jsbuild.EntryCSS + `">`)
+	}
+	return templ.Raw(`<link rel="stylesheet" href="` + utils.URLPrefix() + `/assets/` + jsbuild.EntryCSS + `?v=` + m.Hash + `">`)
+}

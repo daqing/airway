@@ -37,6 +37,10 @@ const (
 	// query string from the manifest, keeping rebuild diffs small.
 	EntryJS = "app.js"
 
+	// EntryCSS is the stylesheet emitted when the entry imports CSS
+	// (airway-ui styles under css/).
+	EntryCSS = "app.css"
+
 	// ManifestFile records the build hash; view helpers read it to build
 	// cache-busted asset URLs.
 	ManifestFile = "manifest.json"
@@ -73,7 +77,10 @@ func options(root string, write bool) api.BuildOptions {
 		Target:            api.ES2020,
 		Platform:          api.PlatformBrowser,
 		JSX:               api.JSXAutomatic,
-		JSXImportSource:   "preact",
+		// jsx runtime resolves through the react alias onto preact/compat,
+		// so the whole island tree runs with React semantics (ref
+		// forwarding included — required by react-hook-form's register).
+		JSXImportSource:   "react",
 		Alias:             Alias(),
 		NodePaths:         []string{filepath.Join(root, VendorDir)},
 		Plugins:           []api.Plugin{islandsPlugin(filepath.Join(root, SourceDir, "islands"))},
