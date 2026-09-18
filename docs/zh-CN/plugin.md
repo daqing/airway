@@ -129,8 +129,8 @@ REPL 模型名不能与宿主模型或其他 Plugin 的模型重名；冲突时 
 
 ### 3. 迁移 —— 两种方式
 
-- **Go DSL 迁移**无需安装步骤：在 `init()` 中调用 `lib/migrate/schema` 的
-  `schema.RegisterChange`（与宿主项目的 DSL 迁移完全一样），import 后即自动加入全局
+- **用 Go 代码写的迁移**无需安装步骤：在 `init()` 中调用 `lib/migrate/schema` 的
+  `schema.RegisterChange`（与宿主项目的 Go 代码迁移完全一样），import 后即自动加入全局
   迁移列表。
 - **SQL 文件**（`<version>_<name>.up.sql` / `.down.sql`）放在 Plugin 的
   `host/db/migrate/` 目录下，通过 `MigrationFS()` 内嵌或直接从模块磁盘目录读取，
@@ -155,8 +155,11 @@ Plugin 顶层 `deps/` 目录下的所有内容会被 `plugin:install` 合并到�
 
 - **`deps/` 内不能有嵌套的 `go.mod`。** module zip 会整体丢弃嵌套 module，真实的
   `go.mod` 永远到不了宿主。请改存为 `go.mod.templ`——安装时会剥离一层 `.templ` 后缀，
-  在宿主项目中还原为 `go.mod`。后缀与 templ 模板引擎同名，也为未来安装时做动态模板
-  渲染留了余地。`go.sum` 不触发该规则，保持原名即可。
+  在宿主项目中还原为 `go.mod`。把真实 `go.mod` 与 `.templ` 变体并排放置（便于嵌套
+  模块在插件仓库里本地编译）也是允许的：此时安装只取 `.templ` 的内容（裸文件被
+  跳过），与 module zip 下载的结果一致；本地目录安装时若发现裸 `go.mod` 与
+  `.templ` 内容漂移，安装会立即报错退出。后缀与 templ 模板引擎同名，也为未来安装时
+  做动态模板渲染留了余地。`go.sum` 不触发该规则，保持原名即可。
 - **目录绝不能叫 `vendor/`。** module zip 会整体丢弃 `vendor/`，这正是约定目录定为
   `deps/` 的原因。
 

@@ -143,9 +143,10 @@ conflicts disable plugin REPL models and log a warning.
 
 ### 3. Migrations — two styles
 
-- **Go DSL migrations** need no install step: call `schema.RegisterChange` from
-  `lib/migrate/schema` in an `init()` (exactly like a host app's DSL
-  migrations) and they join the global migration list on import.
+- **Migrations written in Go code** need no install step: call
+  `schema.RegisterChange` from `lib/migrate/schema` in an `init()` (exactly
+  like a host app's Go migrations) and they join the global migration list
+  on import.
 - **SQL files** (`<version>_<name>.up.sql` / `.down.sql`) live under the
   plugin's `host/db/migrate/` directory. They are either embedded via
   `MigrationFS()` or read from the module directory on disk, and copied into
@@ -176,9 +177,14 @@ Two Go module rules shape what you can ship:
 - **No nested `go.mod` inside `deps/`.** Module zips drop nested modules
   entirely, so a real `go.mod` would never reach the host. Ship it as
   `go.mod.templ` instead — the install strips one `.templ` suffix, restoring
-  `go.mod` in the host project. The suffix matches the templ engine's name,
-  leaving room for the install to render such files as templates in the
-  future. `go.sum` triggers no such rule: ship it under its own name.
+  `go.mod` in the host project. Keeping the real `go.mod` beside its `.templ`
+  variant so the nested module still builds in your checkout is fine: the
+  install ships the `.templ` content only (the bare file is skipped), matching
+  what a module-zip download would deliver — and a local-directory install
+  fails fast when the bare `go.mod` has drifted from its `.templ`. The suffix
+  matches the templ engine's name, leaving room for the install to render
+  such files as templates in the future. `go.sum` triggers no such rule: ship
+  it under its own name.
 - **Never name the directory `vendor/`.** Module zips drop `vendor/`
   wholesale, which is why the convention lives in `deps/`.
 

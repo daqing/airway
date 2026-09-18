@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"fmt"
 	"go/ast"
 	"go/format"
@@ -223,7 +224,11 @@ func installPluginMigrations(pluginName string, migrations fs.FS, dstDir string,
 	}
 
 	if len(pairs) == 0 {
-		fmt.Printf("Plugin %s has no SQL migrations to install\n", pluginName)
+		if hasGoCodeMigrations(migrations) {
+			fmt.Printf("Plugin %s defines its migrations in Go code; they take effect on import and need no install\n", pluginName)
+		} else {
+			fmt.Printf("Plugin %s has no SQL migrations to install\n", pluginName)
+		}
 		return nil
 	}
 
@@ -327,6 +332,30 @@ func collectPluginMigrationPairs(migrations fs.FS) ([]pluginMigrationPair, error
 	return pairs, nil
 }
 
+// hasGoCodeMigrations reports whether migrations holds Go files besides
+// tests — migrations written in Go code take effect on import and need no
+// install, so the installer only mentions them instead of copying anything.
+func hasGoCodeMigrations(migrations fs.FS) bool {
+	found := false
+
+	_ = fs.WalkDir(migrations, ".", func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if entry.IsDir() {
+			return nil
+		}
+
+		base := entry.Name()
+		if strings.HasSuffix(base, ".go") && !strings.HasSuffix(base, "_test.go") {
+			found = true
+		}
+		return nil
+	})
+
+	return found
+}
+
 // pluginMigrationInstalled reports whether db/migrate already contains a
 // migration whose name part matches (regardless of its timestamp prefix).
 func pluginMigrationInstalled(dstDir string, name string) bool {
@@ -424,9 +453,14 @@ func pluginModuleDir(module string) (string, error) {
 // host project's deps/ directory), preserving relative paths and stripping a
 // single .templ suffix (so a plugin can ship go.mod.templ without tripping
 // Go's nested-module rules, and a future install can render such files as
-// templates). Existing destination files are left untouched, mirroring the
-// migration installer's skip behavior. A plugin without a deps/ directory
-// installs nothing.
+// templates). A bare file shipped beside its .templ variant (go.mod next to
+// go.mod.templ, so a nested module still builds in the plugin checkout) is
+// skipped, matching what a module-zip download would deliver — the .templ
+// variant is the distribution copy — and a bare go.mod that has drifted from
+// its .templ variant fails the install (only local-directory installs can
+// hit that: module zips drop the bare file). Existing destination files are
+// left untouched, mirroring the migration installer's skip behavior. A plugin
+// without a deps/ directory installs nothing.
 func installPluginDepsFrom(name, srcDir, dstRoot string) error {
 	if info, err := os.Stat(srcDir); err != nil || !info.IsDir() {
 		return nil
@@ -454,6 +488,29 @@ func installPluginDepsFrom(name, srcDir, dstRoot string) error {
 		// The scaffolded deps/.keep only holds the plugin's own empty dir;
 		// the host project ships its own deps/.keep.
 		if rel == ".keep" {
+			return nil
+		}
+		// A bare file beside its .templ variant is local-development only;
+		// installing both would collide on the same destination, and the
+		// bare file never survives a module-zip download anyway. A bare
+		// go.mod that drifted from its .templ variant means the nested
+		// module builds against something else than what ships — fail
+		// the install instead of silently preferring the .templ content.
+		if _, err := os.Stat(path + ".templ"); err == nil {
+			if filepath.Base(path) == "go.mod" {
+				bare, err := os.ReadFile(path)
+				if err != nil {
+					return err
+				}
+				templ, err := os.ReadFile(path + ".templ")
+				if err != nil {
+					return err
+				}
+				if !bytes.Equal(bare, templ) {
+					return fmt.Errorf("plugin %s: %s and %s.templ differ; keep them in sync (the .templ variant is what gets installed)", name, rel, rel)
+				}
+			}
+			fmt.Printf("%s has a .templ variant, installing that instead\n", rel)
 			return nil
 		}
 		rel = strings.TrimSuffix(rel, ".templ")
