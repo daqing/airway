@@ -24,16 +24,19 @@ import (
 ```
 
 The plugin mounts its routes at `/api/v1/{{plugin}}`. To ship SQL migrations,
-add `<version>_<name>.up.sql` / `.down.sql` files under `db/migrate/`, expose
-them with `plugin.MigrationProvider`, and install them in the host with
-`go run . plugin:install {{module}}`.
+add `<version>_<name>.up.sql` / `.down.sql` files under `host/db/migrate/` (the
+`host/` directory holds files that `plugin:install` installs into the host
+project's own tree), expose them with `plugin.MigrationProvider`, and install
+them in the host with `go run . plugin:install {{module}}`.
 
 To ship extra project files (companion services, deploy configs, ...), put
 them under `deps/{{plugin}}/` — `plugin:install` merges the whole tree into
 the host project's `deps/` directory, skipping files that already exist.
 Ship files named `go.mod` as `go.mod.templ` (installed as `go.mod`): Go
 module zips drop nested modules, so a real `go.mod` inside `deps/` would
-never reach the host.
+never reach the host. Keeping the real `go.mod` beside its `.templ` for
+local builds is fine — the install ships the `.templ` content only, and
+fails if the two drift apart.
 
 See https://github.com/daqing/airway/blob/main/docs/plugin.md for the full
 plugin guide.

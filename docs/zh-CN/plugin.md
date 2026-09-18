@@ -54,7 +54,7 @@ airway plugin:new github.com/me/airway-im-plugin  # Plugin 名称从路径最后
 
 该命令会生成 `go.mod`、`plugin.go`（Plugin 实现 + `init()` 注册）、
 `app/api/<name>_api/` 下的示例 API 模块，以及空的 `app/models/` 和
-`db/migrate/` 目录，然后自动执行 `go mod tidy`。
+`host/db/migrate/` 目录，然后自动执行 `go mod tidy`。
 
 Plugin 仓库的目录结构与标准 Airway 项目一致：
 
@@ -67,8 +67,9 @@ airway-im-plugin/
     api/im_api/           # 路由 + action，与宿主项目同样的约定
     models/               # 带 db tag 的模型结构体 + TableName()
     views/                # templ 视图（提交生成的 *_templ.go）
-  db/
-    migrate/              # 可选：内嵌的 *.up.sql / *.down.sql 迁移文件
+  host/                   # plugin:install 时装进宿主项目自身目录树的文件，
+    db/migrate/           # 镜像宿主布局；目前仅支持 db/migrate
+                          # （可选的 *.up.sql / *.down.sql 迁移文件）
   deps/                   # 可选：plugin:install 时合并进宿主项目 deps/ 目录的
                           # 额外文件（伴生服务、部署配置……），请用 Plugin 名
                           # 作为命名空间（名为 im 的 Plugin 放 deps/im/app/...）
@@ -117,7 +118,7 @@ func (IMPlugin) REPLModels() map[string]any {
 
 // MigrationProvider —— 把 SQL 迁移文件嵌入二进制分发。
 //
-//go:embed db/migrate
+//go:embed host/db/migrate
 var migrations embed.FS
 
 func (IMPlugin) MigrationFS() fs.FS { return migrations }
@@ -128,12 +129,13 @@ REPL 模型名不能与宿主模型或其他 Plugin 的模型重名；冲突时 
 
 ### 3. 迁移 —— 两种方式
 
-- **Go DSL 迁移**无需安装步骤：在 `init()` 中调用 `lib/migrate/schema` 的
-  `schema.RegisterChange`（与宿主项目的 DSL 迁移完全一样），import 后即自动加入全局
+- **用 Go 代码写的迁移**无需安装步骤：在 `init()` 中调用 `lib/migrate/schema` 的
+  `schema.RegisterChange`（与宿主项目的 Go 代码迁移完全一样），import 后即自动加入全局
   迁移列表。
-- **SQL 文件**（`<version>_<name>.up.sql` / `.down.sql`）通过 `MigrationFS()` 内嵌，由
-  `plugin:install <module>`（在宿主项目中以 `go run . plugin:install <module>` 运行）复制到
-  宿主的 `db/migrate/` 并分配新的时间戳。复制后
+- **SQL 文件**（`<version>_<name>.up.sql` / `.down.sql`）放在 Plugin 的
+  `host/db/migrate/` 目录下，通过 `MigrationFS()` 内嵌或直接从模块磁盘目录读取，
+  由 `plugin:install <module>`（在宿主项目中以 `go run . plugin:install <module>`
+  运行）复制到宿主的 `db/migrate/` 并分配新的时间戳。复制后
   就是普通的宿主迁移：`db:migrate`、`db:rollback`、`db:status` 照常工作；重复执行
   `plugin:install` 会跳过已安装的文件。
 
@@ -153,8 +155,11 @@ Plugin 顶层 `deps/` 目录下的所有内容会被 `plugin:install` 合并到�
 
 - **`deps/` 内不能有嵌套的 `go.mod`。** module zip 会整体丢弃嵌套 module，真实的
   `go.mod` 永远到不了宿主。请改存为 `go.mod.templ`——安装时会剥离一层 `.templ` 后缀，
-  在宿主项目中还原为 `go.mod`。后缀与 templ 模板引擎同名，也为未来安装时做动态模板
-  渲染留了余地。`go.sum` 不触发该规则，保持原名即可。
+  在宿主项目中还原为 `go.mod`。把真实 `go.mod` 与 `.templ` 变体并排放置（便于嵌套
+  模块在插件仓库里本地编译）也是允许的：此时安装只取 `.templ` 的内容（裸文件被
+  跳过），与 module zip 下载的结果一致；本地目录安装时若发现裸 `go.mod` 与
+  `.templ` 内容漂移，安装会立即报错退出。后缀与 templ 模板引擎同名，也为未来安装时
+  做动态模板渲染留了余地。`go.sum` 不触发该规则，保持原名即可。
 - **目录绝不能叫 `vendor/`。** module zip 会整体丢弃 `vendor/`，这正是约定目录定为
   `deps/` 的原因。
 
