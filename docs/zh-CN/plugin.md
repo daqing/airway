@@ -30,9 +30,9 @@ plugins.go 添加 blank import、执行 `go get <module>`（本地目录则通�
 指令接入），然后从 Plugin 模块的磁盘目录读取迁移和 deps/ 完成安装——全部在当前
 进程内完成，始终使用当前 CLI 的安装逻辑。这些步骤也仍然可以手动完成。
 
-`plugin:list` 只能看到编译进当前二进制的 Plugin，所以需要通过项目二进制运行
-（在项目目录中执行 `go run . ...`）：全局安装的 `airway` CLI 只能列出编译进它
-自身的 Plugin。
+`plugin:list` 只能看到编译进当前二进制的 Plugin。在项目内，全局安装的 `airway`
+会自动代理为 `go run .` 执行（stderr 会打印 `proxying to project binary` 提示），
+因此列出的就是项目自己启用的 Plugin。
 
 Plugin 注册的路由在它声明的挂载路径下应答（例如 `/api/v1/im`）。选择暴露模型的
 Plugin，其模型会出现在 `go run . repl` 中，与宿主模型并列。

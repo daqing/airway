@@ -7,9 +7,15 @@ go install github.com/daqing/airway@latest
 ```
 
 安装后即得到 `airway` 命令。命令执行时会优先自动加载当前项目根目录下的 `.env` 文件。
-在项目（或框架仓库）内部，同样的命令也可以用 `go run . <命令>` 的方式执行——其中
-`repl`、`plugin:install` 等命令*建议*用这种方式运行，因为它们只能看到编译进当前
-二进制的模型和 Plugin（详见下文）。
+在项目内部，全局安装的 `airway` 会识别宿主应用（go.mod require 了
+`github.com/daqing/airway` 且存在 main.go），并自动把所有项目级命令透明地转为
+`go run .` 重新执行——Plugin、REPL 模型、Go 代码迁移始终来自项目自己的二进制。
+只需记住 `airway <命令>` 这一种用法，在哪里都成立。代理时会在 stderr 打印一行
+`proxying to project binary: go run . ...` 提示。只有当全局安装的 CLI 版本与项目
+go.mod 中 pin 的 airway 版本一致时代理才会执行（若通过 `replace` 指向本地 airway
+检出，则改与该目录的 `VERSION` 文件比对）；版本不一致时命令直接报错退出，避免
+静默运行项目二进制里过期的 CLI 逻辑。`new`、`version`、`help`
+始终本地执行；项目之外的命令行为不变；直接使用 `go run . <命令>` 与代理等价。
 
 旧形式 `airway cli <命令>` 仍作为兼容别名可用。
 
@@ -231,19 +237,19 @@ airway plugin:new im                              # 目录：im，Plugin 名称�
 airway plugin:new github.com/me/airway-im-plugin  # 名称从路径最后一段推导
 ```
 
-与下面的命令不同，`plugin:new` 用全局安装的 `airway` 即可运行——它只是写文件，
-不依赖编译期注册。
+与 `plugin:list` 不同，`plugin:new` 不涉及项目二进制——它只写文件。
 
 Plugin 是通过 `plugins.go` 中的 blank import 启用的可选功能模块（见
 [Plugin 扩展机制](plugin.md)）：
 
 ```bash
-go run . plugin:list           # 列出已注册的 Plugin 及挂载路径
-go run . plugin:install <module> # 把 Plugin 内嵌的 SQL 迁移复制到 db/migrate
+airway plugin:list               # 列出已注册的 Plugin 及挂载路径
+airway plugin:install <module>   # 把 Plugin 的 SQL 迁移复制到 db/migrate
 ```
 
-Plugin 在编译期注册，所以这些命令需要通过项目二进制运行（在项目目录中执行
-`go run . ...`）：全局安装的 `airway` 只能列出/安装编译进它自身的 Plugin。
+Plugin 在编译期注册，所以在项目内全局安装的 `airway` 会自动把这些命令转为
+`go run .` 执行（只有项目自己的二进制能看到已启用的 Plugin）；直接执行
+`go run . plugin:list` 效果相同。
 
 `plugin:install` 的参数是 Plugin 的模块路径（如 `github.com/daqing/airway-im-plugin`)，
 插件名从路径最后一段推导（与 `plugin:new` 相同）。它会为复制的迁移文件分配新的时间戳，并跳过已安装的文件；复制后它们就是
@@ -257,8 +263,8 @@ go run . repl
 
 REPL 只能看到编译进当前二进制、通过 `github.com/daqing/airway/lib/replreg`
 注册的模型——项目模型的 init 通过 `app/models` 的 `registerREPLModel` 注册
-（该函数委托给 `lib/replreg`）。因此在项目中请使用 `go run . repl`；全局安装的
-`airway repl` 只能看到框架自带的模型。
+（该函数委托给 `lib/replreg`）。在项目内，全局安装的 `airway repl` 会自动代理为
+`go run . repl`；在项目之外则只能看到框架自带的模型。
 
 ## 实战示例
 

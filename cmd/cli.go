@@ -93,7 +93,7 @@ func printUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "  airway js:add <pkg>[@version]       add a frontend dependency (no Node required)")
 	_, _ = fmt.Fprintln(w, "  airway js:install                   install frontend dependencies from js.pkg.json")
 	_, _ = fmt.Fprintln(w, "  airway upload [key] /path/to/file")
-	_, _ = fmt.Fprintln(w, "  airway repl                              interactive repo REPL (project binary only)")
+	_, _ = fmt.Fprintln(w, "  airway repl                              interactive repo REPL (runs through go run . inside a project)")
 	_, _ = fmt.Fprintln(w, "  airway version                             print version (also -v, --version)")
 	_, _ = fmt.Fprintln(w, "")
 	_, _ = fmt.Fprintln(w, "`airway <command>` remains accepted as an alias for `airway <command>`.")

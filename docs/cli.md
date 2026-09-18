@@ -7,10 +7,19 @@ go install github.com/daqing/airway@latest
 ```
 
 This gives you the `airway` command. Commands auto-load `.env` from the current
-project root. Inside a project (or the framework repo itself) the same commands
-also work as `go run . <command>` — and some commands (`repl`,
-`plugin:install`) *should* be run that way, because they only see the models
-and plugins compiled into the running binary (see below).
+project root. Inside a project, the globally installed `airway` detects the
+host application (go.mod requiring `github.com/daqing/airway` plus a main.go)
+and transparently re-runs every project-scoped command through `go run .`, so
+plugins, REPL models and Go-code migrations always come from the project's own
+binary — one command to remember, `airway <command>`, works everywhere. The
+proxy prints a `proxying to project binary: go run . ...` notice on stderr.
+The proxy only runs when the globally installed CLI's version matches the
+airway version the project pins in go.mod (a `replace` onto a local airway
+checkout compares against that checkout's `VERSION` file instead); on a
+mismatch the command aborts with an error instead of silently running the
+project binary's older CLI logic. `new`, `version` and `help` always run
+locally, as does everything outside a project; running `go run . <command>`
+yourself remains equivalent.
 
 The legacy form `airway cli <command>` still works as a compatibility alias.
 
@@ -251,20 +260,21 @@ airway plugin:new im                              # directory: im, plugin name: 
 airway plugin:new github.com/me/airway-im-plugin  # name derived from the last path segment
 ```
 
-Unlike the commands below, `plugin:new` works fine with the globally installed
-`airway` — it writes files and does not depend on compile-time registration.
+Unlike `plugin:list`, `plugin:new` never touches the project binary — it just
+writes files.
 
 Plugins are optional feature modules enabled with blank imports in
 `plugins.go` (see [docs/plugin.md](plugin.md)):
 
 ```bash
-go run . plugin:list           # list registered plugins and mount paths
-go run . plugin:install <module> # copy a plugin's embedded SQL migrations into db/migrate
+airway plugin:list               # list registered plugins and mount paths
+airway plugin:install <module>   # copy a plugin's SQL migrations into db/migrate
 ```
 
-Plugins register at compile time, so run these through the project binary
-(`go run . ...` in the project directory): the globally installed `airway` can
-only list and install the plugins compiled into itself.
+Plugins register at compile time, so inside a project the globally installed
+`airway` re-runs these through `go run .` automatically (the project's binary
+is what can see your enabled plugins); `go run . plugin:list` does the same
+thing directly.
 
 `plugin:install` takes the plugin's module path (e.g.
 `github.com/daqing/airway-im-plugin`); the plugin name is derived from the
@@ -312,8 +322,9 @@ go run . repl
 
 The REPL only sees the models compiled into the binary you run — project models
 register through `registerREPLModel` in `app/models`, which delegates to
-`github.com/daqing/airway/lib/replreg`. Use `go run . repl` inside your project;
-the globally installed `airway repl` only sees the framework's built-in models.
+`github.com/daqing/airway/lib/replreg`. Inside a project the globally installed
+`airway repl` proxies to `go run . repl` for you; outside a project it only
+sees the framework's built-in models.
 
 ## Practical Example
 

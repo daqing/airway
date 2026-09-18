@@ -36,10 +36,10 @@ disk — everything happens in the same process, so the current CLI's installer
 logic is always the one used. You can still do these steps by hand if you
 prefer.
 
-`plugin:list` only sees plugins compiled into the running binary, so run it
-through the project binary (`go run . ...` in the project directory): a
-globally installed `airway` CLI can only list the plugins compiled into
-itself.
+`plugin:list` only sees plugins compiled into the running binary. Inside a
+project the globally installed `airway` proxies to `go run .` automatically
+(it prints a `proxying to project binary` notice), so the project's own
+plugins are what gets listed.
 
 Routes registered by the plugin answer under its declared mount path (e.g.
 `/api/v1/im`). Plugin models that opt in appear in `go run . repl` alongside

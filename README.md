@@ -253,9 +253,11 @@ as a JSON API.
 ## CLI
 
 The Airway CLI is a single `airway` binary (install with
-`go install github.com/daqing/airway@latest`); inside a project the same
-commands also run as `go run . <command>`. Commands auto-load `.env` from the
-project root:
+`go install github.com/daqing/airway@latest`). Inside a project it detects
+the host application and transparently re-runs every project-scoped command
+through `go run .` (stderr shows a `proxying to project binary` notice), so
+plugins, REPL models and Go-code migrations always come from the project's
+own binary. Commands auto-load `.env` from the project root:
 
 ```bash
 airway new myapp                           # scaffold a new project skeleton
@@ -280,10 +282,10 @@ airway version
 ```
 
 The legacy form `airway cli <command>` still works as a compatibility alias.
-Because models and plugins are registered at compile time, prefer the project
-binary for `repl` and `plugin:install` (`go run . repl`,
-`go run . plugin:install <module>`) — the globally installed `airway` only sees
-what is compiled into itself.
+Models and plugins register at compile time, which is exactly why the global
+`airway` proxies to `go run .` inside a project — `airway repl` and
+`airway plugin:install <module>` (run from the project root) already behave
+like their `go run .` equivalents.
 
 Database commands read `DSN`/`AIRWAY_DSN`; the legacy `AIRWAY_DB_DSN` and
 `AIRWAY_PG` are still honored for backward compatibility. See the full
@@ -419,9 +421,10 @@ go run . repl                              # uses the configured DSN
 go run . repl --driver sqlite --dsn ./tmp/airway.db
 ```
 
-Run the REPL through your project binary as shown: it only sees the models
-compiled into the binary (registered via `lib/replreg`), so the globally
-installed `airway repl` does not see your project's models.
+The REPL only sees the models compiled into the binary it runs in (registered
+via `lib/replreg`). Inside a project, `airway repl` proxies to `go run . repl`
+automatically, so your project's models show up; outside a project only the
+framework's built-in models are visible.
 
 Commands: `help`, `driver`, `tables`, `exit`. Type a Go expression to evaluate
 it — builders print the compiled SQL, `repo.*` calls run against the database:

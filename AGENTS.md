@@ -111,8 +111,14 @@ The server requires `AIRWAY_ENV` to be set; when it is `local`, `.env` is loaded
 
 Commands run through the `airway` binary (installed via
 `go install github.com/daqing/airway@latest`) or as `go run . <command>` in a
-project; they auto-load `.env` from the project root. The legacy
-`airway cli <command>` form still works as a compatibility alias:
+project; they auto-load `.env` from the project root. Inside a host
+application the globally installed `airway` auto-proxies every project-scoped
+command to `go run .` (see `cmd.ProxyHostProject`; `new`/`version`/`help` and
+anything run outside a project stay local), so both forms are equivalent.
+The proxy aborts when the global CLI's version differs from the project's
+pinned `github.com/daqing/airway` version (a local-directory `replace` is
+compared against that checkout's `VERSION` file).
+The legacy `airway cli <command>` form still works as a compatibility alias:
 
 ```bash
 airway new myapp                                      # scaffold a new project skeleton
@@ -145,9 +151,9 @@ current binary, it adds the blank import to `plugins.go`, runs `go get` (or a
 `replace` for a local directory), and then reads the plugin's `host/db/migrate`
 migrations and `deps/` from its module directory on disk — all in the same
 process, so the current CLI's installer logic is always the one used. `repl`
-only sees plugins/models compiled into the
-running binary, so run it via the project binary (`go run . ...`); the
-globally installed `airway` only knows what is compiled into itself.
+only sees plugins/models compiled into the running binary; inside a project
+the globally installed `airway` proxies to `go run .` automatically, so
+`airway repl` there behaves like `go run . repl`.
 Generators read the module path from the current directory's `go.mod`, so
 generated code imports the project's own packages.
 

@@ -29,12 +29,27 @@ func main() {
 		return
 	}
 
+	// Set before any dispatch: the host-project proxy compares the CLI's
+	// version against the project's pinned framework version.
+	cmd.Version = versionString()
+
+	// Inside a host application the project's own binary must serve every
+	// project-scoped command (plugins, REPL models, Go-code migrations are
+	// compiled into it), so a globally installed `airway` re-execs through
+	// `go run .` — see cmd.ProxyHostProject.
+	proxied, err := cmd.ProxyHostProject(args)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if proxied {
+		return
+	}
+
 	if len(args) > 0 && args[0] == "server" {
 		runServer()
 		return
 	}
 
-	cmd.Version = versionString()
 	loadCLIEnv()
 	cmd.Run(args)
 }
