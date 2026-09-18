@@ -173,11 +173,11 @@ func newProject(arg string, tidy bool, localDir string) error {
 
 	fmt.Println("\nNext steps:")
 	fmt.Printf("  cd %s\n", destDir)
-	fmt.Println("  # edit .env — set AIRWAY_DB_DSN and AIRWAY_PORT")
+	fmt.Println("  # edit .env — set DSN and PORT")
 	fmt.Println("  airway db:create")
 	fmt.Println("  airway db:migrate")
 	fmt.Println("  airway js:install           # fetch frontend deps from js.pkg.json (no Node required)")
-	fmt.Println("  go run .               # start the HTTP server")
+	fmt.Println("  airway server               # start the HTTP server")
 
 	return nil
 }

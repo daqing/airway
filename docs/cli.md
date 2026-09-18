@@ -76,7 +76,7 @@ cd myapp
 # edit .env — set DSN and PORT
 airway db:create
 airway db:migrate
-go run .                # starts the server (same as: go run . server)
+airway server             # starts the HTTP server
 ```
 
 A generated project's binary starts the HTTP server when run with no arguments
