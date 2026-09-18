@@ -121,7 +121,7 @@ compared against that checkout's `VERSION` file).
 The legacy `airway cli <command>` form still works as a compatibility alias:
 
 ```bash
-airway new myapp                                      # scaffold a new project skeleton
+airway new [--local[=path]] myapp                      # scaffold a new project; --local replaces the framework with an airway checkout (default $PWD) for framework development
 airway server                                         # start the HTTP server
 airway generate api admin                             # new API namespace under app/api/
 airway generate action admin show                     # new action in an existing API module

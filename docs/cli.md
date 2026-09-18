@@ -26,7 +26,7 @@ The legacy form `airway cli <command>` still works as a compatibility alias.
 ## Command Overview
 
 ```bash
-airway new <module-path | directory>                    # scaffold a new project skeleton
+airway new [--local[=path]] <module-path | directory>   # scaffold a new project skeleton
 airway server                                           # start the HTTP server
 airway db:create
 airway db:drop
@@ -55,7 +55,17 @@ Running `airway` with no arguments prints usage.
 airway new myapp                    # directory: myapp
 airway new github.com/me/myapp      # module path; directory is the last path segment
 airway new /path/to/myapp           # create at that local path; module: myapp
+airway new --local myapp            # develop against the airway checkout in $PWD
+airway new --local ~/src/airway myapp
 ```
+
+`--local` adds a `replace github.com/daqing/airway => <checkout>` to the new
+project's go.mod, for developing the framework itself: the scaffolded code can
+reference APIs that no published version contains yet. The target must be an
+airway source checkout (its go.mod declares the framework module and it has a
+`VERSION` file); bare `--local` uses the current directory. Running `new`
+from inside the framework repository implies `--local` automatically — the
+template comes from that working tree, so the project must depend on it too.
 
 `airway new` generates a fresh project skeleton based on the framework's `app/`
 scaffold, seeds `.env` from `.env.example`, runs `go mod tidy`, and prints the
