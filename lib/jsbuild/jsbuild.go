@@ -92,6 +92,10 @@ func options(root string, write bool) api.BuildOptions {
 		Sourcemap:         api.SourceMapExternal,
 		AbsWorkingDir:     root,
 		LogLevel:          api.LogLevelWarning,
+		// Vendored packages legitimately use types-only bare imports while
+		// declaring "sideEffects": false, so this warning fires on every
+		// build without pointing at anything actionable.
+		LogOverride: map[string]api.LogLevel{"ignored-bare-import": api.LogLevelSilent},
 	}
 }
 
