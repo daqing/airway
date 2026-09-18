@@ -94,8 +94,14 @@ func runServer() {
 
 	// In local development the frontend bundle is rebuilt in memory and
 	// served with livereload; production serves the embedded dist bundle.
+	// A missing vendor directory aborts the boot: the source watcher skips
+	// vendor/, so a running server would never pick up a later js:install.
 	if appConfig.IsLocal {
 		if _, err := jsbuild.StartDefault(".", websocket.Broadcast); err != nil {
+			if errors.Is(err, jsbuild.ErrVendorMissing) {
+				log.Printf("frontend dev server failed: %v", err)
+				os.Exit(6)
+			}
 			log.Printf("frontend dev server disabled: %v", err)
 		}
 	}
