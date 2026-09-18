@@ -278,7 +278,7 @@ Plugins are optional feature modules enabled with blank imports in
 
 ```bash
 airway plugin:list               # list registered plugins and mount paths
-airway plugin:install <module>   # copy a plugin's SQL migrations into db/migrate
+airway plugin:install <module>   # install a plugin's SQL migrations, host/ tree, and deps/ directory
 ```
 
 Plugins register at compile time, so inside a project the globally installed

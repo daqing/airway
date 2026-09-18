@@ -426,3 +426,44 @@ func TestInstallPluginDepsWithoutDirIsNoOp(t *testing.T) {
 		t.Fatalf("expected missing deps dir to be a no-op, got: %v", err)
 	}
 }
+
+func TestInstallPluginHost(t *testing.T) {
+	srcDir := filepath.Join(t.TempDir(), "host")
+	makeDirs(t, filepath.Join(srcDir, "db", "migrate"))
+	writeFile(t, filepath.Join(srcDir, "db", "migrate", "create_users.up.sql"), "CREATE TABLE users (id INTEGER);\n")
+	writeFile(t, filepath.Join(srcDir, "docker-compose.yml"), "services: {}\n")
+	writeFile(t, filepath.Join(srcDir, "Dockerfile.templ"), "FROM scratch\n")
+
+	dstRoot := t.TempDir()
+
+	if err := installPluginHostFrom("im", srcDir, dstRoot); err != nil {
+		t.Fatalf("install plugin host tree: %v", err)
+	}
+
+	if got := readFile(t, filepath.Join(dstRoot, "docker-compose.yml")); got != "services: {}\n" {
+		t.Fatalf("unexpected docker-compose.yml content: %s", got)
+	}
+	// The .templ suffix is stripped on install.
+	if got := readFile(t, filepath.Join(dstRoot, "Dockerfile")); got != "FROM scratch\n" {
+		t.Fatalf("unexpected Dockerfile content: %s", got)
+	}
+	// db/migrate is the migration installer's territory, not mirrored verbatim.
+	if _, err := os.Stat(filepath.Join(dstRoot, "db")); !os.IsNotExist(err) {
+		t.Fatal("expected no db/ tree in the destination")
+	}
+
+	// Reinstalling skips existing files instead of overwriting local edits.
+	writeFile(t, filepath.Join(dstRoot, "docker-compose.yml"), "services: edited\n")
+	if err := installPluginHostFrom("im", srcDir, dstRoot); err != nil {
+		t.Fatalf("reinstall plugin host tree: %v", err)
+	}
+	if got := readFile(t, filepath.Join(dstRoot, "docker-compose.yml")); got != "services: edited\n" {
+		t.Fatalf("expected existing file untouched, got: %s", got)
+	}
+}
+
+func TestInstallPluginHostWithoutDirIsNoOp(t *testing.T) {
+	if err := installPluginHostFrom("im", filepath.Join(t.TempDir(), "host"), t.TempDir()); err != nil {
+		t.Fatalf("expected missing host dir to be a no-op, got: %v", err)
+	}
+}

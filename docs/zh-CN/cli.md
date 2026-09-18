@@ -244,7 +244,7 @@ Plugin 是通过 `plugins.go` 中的 blank import 启用的可选功能模块（
 
 ```bash
 airway plugin:list               # 列出已注册的 Plugin 及挂载路径
-airway plugin:install <module>   # 把 Plugin 的 SQL 迁移复制到 db/migrate
+airway plugin:install <module>   # 安装 Plugin 的 SQL 迁移、host/ 目录树和 deps/ 目录
 ```
 
 Plugin 在编译期注册，所以在项目内全局安装的 `airway` 会自动把这些命令转为

@@ -67,9 +67,11 @@ airway-im-plugin/
     api/im_api/           # 路由 + action，与宿主项目同样的约定
     models/               # 带 db tag 的模型结构体 + TableName()
     views/                # templ 视图（提交生成的 *_templ.go）
-  host/                   # plugin:install 时装进宿主项目自身目录树的文件，
-    db/migrate/           # 镜像宿主布局；目前仅支持 db/migrate
-                          # （可选的 *.up.sql / *.down.sql 迁移文件）
+  host/                   # 可选：plugin:install 时镜像进宿主项目自身目录树的
+                          # 文件，保留相对路径（host/Caddyfile → 宿主的
+                          # Caddyfile）
+    db/migrate/           # SQL 迁移（*.up.sql / *.down.sql）——按新时间戳
+                          # 复制，不做逐字镜像
   deps/                   # 可选：plugin:install 时合并进宿主项目 deps/ 目录的
                           # 额外文件（伴生服务、部署配置……），请用 Plugin 名
                           # 作为命名空间（名为 im 的 Plugin 放 deps/im/app/...）
@@ -139,7 +141,7 @@ REPL 模型名不能与宿主模型或其他 Plugin 的模型重名；冲突时 
   就是普通的宿主迁移：`db:migrate`、`db:rollback`、`db:status` 照常工作；重复执行
   `plugin:install` 会跳过已安装的文件。
 
-### 4. 用 `deps/` 分发额外的项目文件
+### 4. 用 `deps/` 和 `host/` 分发额外的项目文件
 
 Plugin 顶层 `deps/` 目录下的所有内容会被 `plugin:install` 合并到宿主项目的 `deps/`
 目录——适合放伴生服务（如独立的 WebSocket gateway）、部署配置等宿主项目需要落在磁盘上的
@@ -147,6 +149,17 @@ Plugin 顶层 `deps/` 目录下的所有内容会被 `plugin:install` 合并到�
 多个 Plugin 并行安装就不会互相冲突。目标位置已存在的文件会被跳过（绝不覆盖），因此
 重复执行 `plugin:install` 是安全的；想用新版 Plugin 刷新某个文件，先删掉已安装的
 副本再重新安装。
+
+需要落在宿主项目根目录的文件——部署用的 `docker-compose.yml`、`Containerfile`、
+宿主构建依赖的配置等——放在 Plugin 的 `host/` 目录下，`plugin:install` 会按相对路径
+镜像进宿主自身的目录树（`host/docker-compose.yml` 成为宿主的 `docker-compose.yml`）。
+规则相同：已存在的文件跳过，`.templ` 后缀剥离一层。`host/db/migrate` 子树不参与
+镜像——它归上面的迁移安装器处理。
+
+Compose 栈推荐级联而不是冲突：Plugin 自己的服务放在
+`deps/<name>/docker-compose.yml`（被 include 时其中的 build context 相对于该文件解析），
+再通过 `host/` 分发一个根级 `docker-compose.yml`，用 Compose 的 `include` 指令引入它——
+已有 compose 文件的宿主会保留自己的文件（安装跳过），手动加上同样的 `include` 即可。
 
 `airway new` 生成的宿主项目自带空的 `deps/` 目录；目录不存在时安装会自动创建，
 老版本 Airway 生成的项目无需任何改动。

@@ -78,9 +78,11 @@ airway-im-plugin/
     api/im_api/           # routes + actions, same conventions as a host app
     models/               # model structs with db tags and TableName()
     views/                # templ views (commit the generated *_templ.go)
-  host/                   # files installed into the host project's own tree,
-    db/migrate/           # mirroring the host layout; currently only
-                          # db/migrate (optional *.up.sql / *.down.sql files)
+  host/                   # optional: files mirrored into the host project's
+                          # own tree by `plugin:install`, preserving relative
+                          # paths (host/Caddyfile → the host's Caddyfile)
+    db/migrate/           # SQL migrations (*.up.sql / *.down.sql) — copied
+                          # with fresh timestamps, not mirrored verbatim
   deps/                   # optional: extra files merged into the host
                           # project's deps/ directory by `plugin:install`;
                           # namespace them under the plugin name
@@ -157,7 +159,7 @@ conflicts disable plugin REPL models and log a warning.
   work on them unchanged, and re-running `plugin:install` skips files already
   installed.
 
-### 4. Shipping extra project files with `deps/`
+### 4. Shipping extra project files with `deps/` and `host/`
 
 Everything under the plugin's top-level `deps/` directory is merged into the
 host project's `deps/` directory by `plugin:install` — use it for companion
@@ -167,6 +169,22 @@ named `im`) so several plugins can install side by side without collisions.
 Existing destination files are skipped (never overwritten), so re-running
 `plugin:install` is safe; delete the installed copy first if you want to
 refresh it from a newer plugin version.
+
+Files that must land at the host project root instead — a deploy
+`docker-compose.yml`, a `Containerfile`, a config the host builds on — go
+under the plugin's `host/` directory, which `plugin:install` mirrors into the
+host's own tree preserving relative paths (`host/docker-compose.yml` becomes
+the host's `docker-compose.yml`). The same rules apply: existing files are
+skipped, and a single `.templ` suffix is stripped. The `host/db/migrate`
+subtree is exempt from this mirroring — it belongs to the migration
+installer above.
+
+For a Compose stack, cascade rather than collide: keep the plugin's own
+services in `deps/<name>/docker-compose.yml` (build contexts in it resolve
+relative to that file when included) and ship a root-level
+`docker-compose.yml` via `host/` that pulls it in with Compose's `include`
+directive — a host that already has its own compose file keeps it (the
+install skips) and adds the same `include` line by hand.
 
 The scaffolded host project ships an empty `deps/` directory; the install
 creates it when missing, so projects scaffolded by older Airway versions work

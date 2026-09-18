@@ -47,8 +47,9 @@ func runCLIPluginList() error {
 
 // runCLIPluginInstall copies a plugin's SQL migrations (from its host/db/migrate
 // directory) into the host's db/migrate directory with fresh timestamps, so they
-// run through the regular db:migrate / db:rollback / db:status machinery, and
-// merges the plugin's deps/ directory into the host project's deps/ directory.
+// run through the regular db:migrate / db:rollback / db:status machinery, mirrors
+// the rest of the plugin's host/ tree into the host project root, and merges the
+// plugin's deps/ directory into the host project's deps/ directory.
 // The argument is the plugin's module path (e.g. github.com/daqing/airway-im-plugin),
 // optionally with an @version suffix like `go get` accepts, or a local
 // directory holding the plugin's source (its go.mod supplies the module path,
@@ -96,6 +97,10 @@ func runCLIPluginInstall(args []string) error {
 			return err
 		}
 	} else if err := installPluginMigrationsFromModule(name, module); err != nil {
+		return err
+	}
+
+	if err := installPluginHost(name, module); err != nil {
 		return err
 	}
 
@@ -380,9 +385,12 @@ func pluginMigrationInstalled(dstDir string, name string) bool {
 
 // pluginHostDir is the directory inside a plugin module holding files that
 // `plugin:install` installs into the host project's own tree, mirroring the
-// host layout (host/db/migrate → the host's db/migrate). It is the counterpart
-// of deps/, whose contents merge verbatim into the host's deps/ directory
-// instead of joining the host sources. Only host/db/migrate is handled today.
+// host layout (host/docker-compose.yml → the host's docker-compose.yml). It
+// is the counterpart of deps/, whose contents merge verbatim into the host's
+// deps/ directory instead of joining the host sources. The db/migrate
+// subtree is exempt from this verbatim mirroring: SQL migrations are
+// installed with fresh timestamps by the migration installer, and Go DSL
+// migrations are compiled into the plugin.
 const pluginHostDir = "host"
 
 // installPluginMigrationsFromModule installs migrations for a plugin that is
@@ -407,6 +415,81 @@ func installPluginMigrationsFromDir(name, moduleDir, dstDir string) error {
 	}
 
 	return installPluginMigrations(name, os.DirFS(migrateDir), dstDir, timeNow())
+}
+
+// installPluginHost mirrors the plugin's host/ tree into the host project
+// root. The plugin module directory is resolved through the host's module
+// graph, so proxy downloads and local replace directives behave the same.
+func installPluginHost(name, module string) error {
+	dir, err := pluginModuleDir(module)
+	if err != nil {
+		return fmt.Errorf("locate plugin module %s: %w", module, err)
+	}
+
+	return installPluginHostFrom(name, filepath.Join(dir, pluginHostDir), ".")
+}
+
+// installPluginHostFrom copies every file under srcDir (the plugin's host/
+// directory) into dstRoot (the host project root), preserving relative paths
+// and stripping a single .templ suffix, like the deps installer. The
+// db/migrate subtree is excluded: SQL migrations get fresh timestamps from
+// the migration installer, and Go DSL migrations are compiled into the
+// plugin — neither belongs verbatim in the host tree. Existing destination
+// files are left untouched, mirroring the deps installer's skip behavior. A
+// plugin without a host/ directory installs nothing.
+func installPluginHostFrom(name, srcDir, dstRoot string) error {
+	if info, err := os.Stat(srcDir); err != nil || !info.IsDir() {
+		return nil
+	}
+
+	migrateDir := filepath.Join(srcDir, "db", "migrate")
+
+	return filepath.WalkDir(srcDir, func(path string, entry os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if entry.IsDir() {
+			if path == migrateDir {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+
+		rel, err := filepath.Rel(srcDir, path)
+		if err != nil {
+			return err
+		}
+		rel = strings.TrimSuffix(rel, ".templ")
+
+		dst := filepath.Join(dstRoot, rel)
+		if _, err := os.Stat(dst); err == nil {
+			fmt.Printf("%s already exists, skipping...\n", rel)
+			return nil
+		} else if !os.IsNotExist(err) {
+			return err
+		}
+
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+
+		if err := ensureDir(filepath.Dir(dst)); err != nil {
+			return err
+		}
+
+		mode := os.FileMode(0o644)
+		if info, err := entry.Info(); err == nil && info.Mode()&0o111 != 0 {
+			mode = 0o755
+		}
+
+		if err := os.WriteFile(dst, data, mode); err != nil {
+			return fmt.Errorf("write %s: %w", dst, err)
+		}
+
+		fmt.Printf("Installed %s from plugin %s\n", rel, name)
+		return nil
+	})
 }
 
 // pluginDepsDir is the directory inside a plugin module whose contents are
