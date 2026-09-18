@@ -348,6 +348,37 @@ func TestInstallPluginDepsRejectsDriftedGoMod(t *testing.T) {
 	}
 }
 
+// Reinstalling a bare go.mod kept in sync with its go.mod.templ skips the
+// destination silently: nothing changed since the previous install. Files
+// without such a twin still report the skip.
+func TestInstallPluginDepsSkipsInSyncGoModSilently(t *testing.T) {
+	srcDir := filepath.Join(t.TempDir(), "deps")
+	makeDirs(t, filepath.Join(srcDir, "im", "gateway"))
+	makeDirs(t, filepath.Join(srcDir, "im", "app"))
+	writeFile(t, filepath.Join(srcDir, "im", "gateway", "go.mod"), "module gateway\n")
+	writeFile(t, filepath.Join(srcDir, "im", "gateway", "go.mod.templ"), "module gateway\n")
+	writeFile(t, filepath.Join(srcDir, "im", "app", "docker-compose.yml"), "services: {}\n")
+
+	dstRoot := filepath.Join(t.TempDir(), "deps")
+
+	if err := installPluginDepsFrom("im", srcDir, dstRoot); err != nil {
+		t.Fatalf("install plugin deps: %v", err)
+	}
+
+	output := captureStdout(t, func() {
+		if err := installPluginDepsFrom("im", srcDir, dstRoot); err != nil {
+			t.Fatalf("reinstall plugin deps: %v", err)
+		}
+	})
+
+	if strings.Contains(output, "im/gateway/go.mod already exists") {
+		t.Fatalf("expected no skip notice for the in-sync go.mod, got: %s", output)
+	}
+	if !strings.Contains(output, "im/app/docker-compose.yml already exists") {
+		t.Fatalf("expected a skip notice for the unrelated existing file, got: %s", output)
+	}
+}
+
 func TestInstallPluginDepsCreatesMissingHostDir(t *testing.T) {
 	srcDir := filepath.Join(t.TempDir(), "deps")
 	makeDirs(t, filepath.Join(srcDir, "im", "app"))

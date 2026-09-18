@@ -473,6 +473,11 @@ func installPluginDepsFrom(name, srcDir, dstRoot string) error {
 		return err
 	}
 
+	// Bare go.mod files verified in sync with their .templ twin: when the
+	// .templ variant later lands on an existing destination, the skip is
+	// silent — nothing changed since the previous install.
+	inSync := map[string]bool{}
+
 	return filepath.WalkDir(srcDir, func(path string, entry os.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -509,6 +514,7 @@ func installPluginDepsFrom(name, srcDir, dstRoot string) error {
 				if !bytes.Equal(bare, templ) {
 					return fmt.Errorf("plugin %s: %s and %s.templ differ; keep them in sync (the .templ variant is what gets installed)", name, rel, rel)
 				}
+				inSync[rel] = true
 			}
 			fmt.Printf("%s has a .templ variant, installing that instead\n", rel)
 			return nil
@@ -517,7 +523,9 @@ func installPluginDepsFrom(name, srcDir, dstRoot string) error {
 
 		dst := filepath.Join(dstRoot, rel)
 		if _, err := os.Stat(dst); err == nil {
-			fmt.Printf("%s already exists, skipping...\n", rel)
+			if !inSync[rel] {
+				fmt.Printf("%s already exists, skipping...\n", rel)
+			}
 			return nil
 		} else if !os.IsNotExist(err) {
 			return err
