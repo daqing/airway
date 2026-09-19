@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -20,7 +21,7 @@ func TestNewPluginScaffoldsModule(t *testing.T) {
 	if !strings.Contains(pluginFile, `func (Plugin) Name() string      { return "im" }`) {
 		t.Fatalf("expected plugin name in plugin.go, got:\n%s", pluginFile)
 	}
-	if !strings.Contains(pluginFile, `"im/app/api/im_api"`) {
+	if !strings.Contains(pluginFile, `"im/install/app/api/im_api"`) {
 		t.Fatalf("expected plugin api import, got:\n%s", pluginFile)
 	}
 
@@ -29,9 +30,15 @@ func TestNewPluginScaffoldsModule(t *testing.T) {
 		t.Fatalf("expected module path in go.mod, got:\n%s", goMod)
 	}
 
-	routes := readFile(t, filepath.Join(wd, "im", "app", "api", "im_api", "routes.go"))
+	routes := readFile(t, filepath.Join(wd, "im", "install", "app", "api", "im_api", "routes.go"))
 	if !strings.Contains(routes, "package im_api") {
 		t.Fatalf("expected im_api package, got:\n%s", routes)
+	}
+
+	// The scaffolded install/ignore/ directory holds local-only files that
+	// plugin:install never ships to a host project.
+	if info, err := os.Stat(filepath.Join(wd, "im", "install", "ignore", ".keep")); err != nil || info.IsDir() {
+		t.Fatalf("expected the scaffolded install/ignore/.keep: %v", err)
 	}
 }
 
@@ -46,7 +53,7 @@ func TestNewPluginDerivesNameFromModulePath(t *testing.T) {
 	if !strings.Contains(pluginFile, `{ return "billing" }`) {
 		t.Fatalf("expected derived plugin name, got:\n%s", pluginFile)
 	}
-	if !strings.Contains(pluginFile, `"github.com/example/airway-billing-plugin/app/api/billing_api"`) {
+	if !strings.Contains(pluginFile, `"github.com/example/airway-billing-plugin/install/app/api/billing_api"`) {
 		t.Fatalf("expected module import rewritten, got:\n%s", pluginFile)
 	}
 }

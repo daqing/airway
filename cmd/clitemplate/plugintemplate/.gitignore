@@ -1,0 +1,6 @@
+# Local development artifacts; plugin:install honors these rules and never
+# installs ignored files into a host project.
+node_modules/
+tmp/
+.env
+*.log

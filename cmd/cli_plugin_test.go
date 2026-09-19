@@ -29,7 +29,7 @@ func TestInstallPluginMigrations(t *testing.T) {
 	dstDir := filepath.Join(t.TempDir(), "db", "migrate")
 	now := time.Date(2026, 9, 11, 12, 0, 0, 0, time.UTC)
 
-	if err := installPluginMigrations("im", migrations, dstDir, now); err != nil {
+	if err := installPluginMigrations("im", migrations, dstDir, now, nil); err != nil {
 		t.Fatalf("install plugin migrations: %v", err)
 	}
 
@@ -44,7 +44,7 @@ func TestInstallPluginMigrations(t *testing.T) {
 	}
 
 	// Installing again must skip instead of duplicating.
-	if err := installPluginMigrations("im", migrations, dstDir, now); err != nil {
+	if err := installPluginMigrations("im", migrations, dstDir, now, nil); err != nil {
 		t.Fatalf("reinstall plugin migrations: %v", err)
 	}
 
@@ -64,14 +64,14 @@ func TestInstallPluginMigrationsRejectsMissingDown(t *testing.T) {
 
 	dstDir := filepath.Join(t.TempDir(), "db", "migrate")
 
-	if err := installPluginMigrations("im", migrations, dstDir, time.Now()); err == nil {
+	if err := installPluginMigrations("im", migrations, dstDir, time.Now(), nil); err == nil {
 		t.Fatal("expected an error for a migration without a down file")
 	}
 }
 
 func TestInstallPluginMigrationsFromDir(t *testing.T) {
 	moduleDir := t.TempDir()
-	migrateDir := filepath.Join(moduleDir, "host", "db", "migrate")
+	migrateDir := filepath.Join(moduleDir, "install", "host", "db", "migrate")
 	makeDirs(t, migrateDir)
 	writeFile(t, filepath.Join(migrateDir, "20240101000000_create_messages.up.sql"), "CREATE TABLE messages (id INTEGER PRIMARY KEY);")
 	writeFile(t, filepath.Join(migrateDir, "20240101000000_create_messages.down.sql"), "DROP TABLE messages;")
@@ -101,14 +101,20 @@ func TestInstallPluginMigrationsFromDir(t *testing.T) {
 	}
 }
 
-// The plugin module root's db/migrate is no longer read; migrations must live
-// under host/db/migrate.
-func TestInstallPluginMigrationsFromDirIgnoresLegacyLocation(t *testing.T) {
+// The installer reads only install/host/db/migrate; the layouts used before
+// the install/ directory (plugin-root db/migrate, then top-level host/) are
+// no longer read.
+func TestInstallPluginMigrationsFromDirIgnoresLegacyLocations(t *testing.T) {
 	moduleDir := t.TempDir()
 	legacyDir := filepath.Join(moduleDir, "db", "migrate")
 	makeDirs(t, legacyDir)
 	writeFile(t, filepath.Join(legacyDir, "20240101000000_create_messages.up.sql"), "CREATE TABLE messages (id INTEGER PRIMARY KEY);")
 	writeFile(t, filepath.Join(legacyDir, "20240101000000_create_messages.down.sql"), "DROP TABLE messages;")
+
+	legacyHostDir := filepath.Join(moduleDir, "host", "db", "migrate")
+	makeDirs(t, legacyHostDir)
+	writeFile(t, filepath.Join(legacyHostDir, "20240101000000_create_messages.up.sql"), "CREATE TABLE messages (id INTEGER PRIMARY KEY);")
+	writeFile(t, filepath.Join(legacyHostDir, "20240101000000_create_messages.down.sql"), "DROP TABLE messages;")
 
 	dstDir := filepath.Join(t.TempDir(), "db", "migrate")
 
@@ -117,7 +123,7 @@ func TestInstallPluginMigrationsFromDirIgnoresLegacyLocation(t *testing.T) {
 	}
 
 	if got := len(migrationFiles(t, dstDir, "*.sql")); got != 0 {
-		t.Fatalf("expected no migrations from the legacy location, got %d files", got)
+		t.Fatalf("expected no migrations from the legacy locations, got %d files", got)
 	}
 }
 
@@ -158,7 +164,7 @@ func TestHasGoCodeMigrations(t *testing.T) {
 	}
 
 	for _, tt := range cases {
-		if got := hasGoCodeMigrations(tt.files); got != tt.want {
+		if got := hasGoCodeMigrations(tt.files, nil); got != tt.want {
 			t.Fatalf("%s: hasGoCodeMigrations = %v, want %v", tt.name, got, tt.want)
 		}
 	}
@@ -175,7 +181,7 @@ func TestInstallPluginMigrationsWithOnlyGoCode(t *testing.T) {
 
 	dstDir := filepath.Join(t.TempDir(), "db", "migrate")
 
-	if err := installPluginMigrations("im", migrations, dstDir, time.Now()); err != nil {
+	if err := installPluginMigrations("im", migrations, dstDir, time.Now(), nil); err != nil {
 		t.Fatalf("install plugin migrations: %v", err)
 	}
 
@@ -266,7 +272,8 @@ func TestModulePathAt(t *testing.T) {
 }
 
 func TestInstallPluginDeps(t *testing.T) {
-	srcDir := filepath.Join(t.TempDir(), "deps")
+	moduleDir := t.TempDir()
+	srcDir := filepath.Join(moduleDir, "install", "deps")
 	makeDirs(t, filepath.Join(srcDir, "im", "app"))
 	makeDirs(t, filepath.Join(srcDir, "im", "gateway"))
 	writeFile(t, filepath.Join(srcDir, ".keep"), "")
@@ -279,7 +286,7 @@ func TestInstallPluginDeps(t *testing.T) {
 	makeDirs(t, dstRoot)
 	writeFile(t, filepath.Join(dstRoot, ".keep"), "host\n")
 
-	if err := installPluginDepsFrom("im", srcDir, dstRoot); err != nil {
+	if err := installPluginDepsFrom("im", moduleDir, dstRoot); err != nil {
 		t.Fatalf("install plugin deps: %v", err)
 	}
 
@@ -303,7 +310,7 @@ func TestInstallPluginDeps(t *testing.T) {
 
 	// Reinstalling skips existing files instead of overwriting local edits.
 	writeFile(t, filepath.Join(dstRoot, "im", "app", "docker-compose.yml"), "services: edited\n")
-	if err := installPluginDepsFrom("im", srcDir, dstRoot); err != nil {
+	if err := installPluginDepsFrom("im", moduleDir, dstRoot); err != nil {
 		t.Fatalf("reinstall plugin deps: %v", err)
 	}
 	if got := readFile(t, filepath.Join(dstRoot, "im", "app", "docker-compose.yml")); got != "services: edited\n" {
@@ -315,14 +322,15 @@ func TestInstallPluginDeps(t *testing.T) {
 // nested module builds in the plugin checkout) is skipped: the .templ variant
 // is the distribution copy, matching what a module-zip download delivers.
 func TestInstallPluginDepsPrefersTemplVariant(t *testing.T) {
-	srcDir := filepath.Join(t.TempDir(), "deps")
+	moduleDir := t.TempDir()
+	srcDir := filepath.Join(moduleDir, "install", "deps")
 	makeDirs(t, filepath.Join(srcDir, "im", "delivery"))
 	writeFile(t, filepath.Join(srcDir, "im", "delivery", "go.mod"), "module delivery\n")
 	writeFile(t, filepath.Join(srcDir, "im", "delivery", "go.mod.templ"), "module delivery\n")
 
 	dstRoot := filepath.Join(t.TempDir(), "deps")
 
-	if err := installPluginDepsFrom("im", srcDir, dstRoot); err != nil {
+	if err := installPluginDepsFrom("im", moduleDir, dstRoot); err != nil {
 		t.Fatalf("install plugin deps: %v", err)
 	}
 
@@ -334,12 +342,13 @@ func TestInstallPluginDepsPrefersTemplVariant(t *testing.T) {
 // A bare go.mod that drifted from its go.mod.templ fails the install: the
 // nested module would build against something else than what ships.
 func TestInstallPluginDepsRejectsDriftedGoMod(t *testing.T) {
-	srcDir := filepath.Join(t.TempDir(), "deps")
+	moduleDir := t.TempDir()
+	srcDir := filepath.Join(moduleDir, "install", "deps")
 	makeDirs(t, filepath.Join(srcDir, "im", "delivery"))
 	writeFile(t, filepath.Join(srcDir, "im", "delivery", "go.mod"), "module delivery-stale\n")
 	writeFile(t, filepath.Join(srcDir, "im", "delivery", "go.mod.templ"), "module delivery-dist\n")
 
-	err := installPluginDepsFrom("im", srcDir, filepath.Join(t.TempDir(), "deps"))
+	err := installPluginDepsFrom("im", moduleDir, filepath.Join(t.TempDir(), "deps"))
 	if err == nil {
 		t.Fatal("expected an error for a bare go.mod that drifted from its .templ variant")
 	}
@@ -352,7 +361,8 @@ func TestInstallPluginDepsRejectsDriftedGoMod(t *testing.T) {
 // destination silently: nothing changed since the previous install. Files
 // without such a twin still report the skip.
 func TestInstallPluginDepsSkipsInSyncGoModSilently(t *testing.T) {
-	srcDir := filepath.Join(t.TempDir(), "deps")
+	moduleDir := t.TempDir()
+	srcDir := filepath.Join(moduleDir, "install", "deps")
 	makeDirs(t, filepath.Join(srcDir, "im", "gateway"))
 	makeDirs(t, filepath.Join(srcDir, "im", "app"))
 	writeFile(t, filepath.Join(srcDir, "im", "gateway", "go.mod"), "module gateway\n")
@@ -361,12 +371,12 @@ func TestInstallPluginDepsSkipsInSyncGoModSilently(t *testing.T) {
 
 	dstRoot := filepath.Join(t.TempDir(), "deps")
 
-	if err := installPluginDepsFrom("im", srcDir, dstRoot); err != nil {
+	if err := installPluginDepsFrom("im", moduleDir, dstRoot); err != nil {
 		t.Fatalf("install plugin deps: %v", err)
 	}
 
 	output := captureStdout(t, func() {
-		if err := installPluginDepsFrom("im", srcDir, dstRoot); err != nil {
+		if err := installPluginDepsFrom("im", moduleDir, dstRoot); err != nil {
 			t.Fatalf("reinstall plugin deps: %v", err)
 		}
 	})
@@ -380,14 +390,15 @@ func TestInstallPluginDepsSkipsInSyncGoModSilently(t *testing.T) {
 }
 
 func TestInstallPluginDepsCreatesMissingHostDir(t *testing.T) {
-	srcDir := filepath.Join(t.TempDir(), "deps")
+	moduleDir := t.TempDir()
+	srcDir := filepath.Join(moduleDir, "install", "deps")
 	makeDirs(t, filepath.Join(srcDir, "im", "app"))
 	writeFile(t, filepath.Join(srcDir, "im", "app", "docker-compose.yml"), "services: {}\n")
 
 	// Hosts scaffolded by older Airway versions have no deps/ directory.
 	dstRoot := filepath.Join(t.TempDir(), "deps")
 
-	if err := installPluginDepsFrom("im", srcDir, dstRoot); err != nil {
+	if err := installPluginDepsFrom("im", moduleDir, dstRoot); err != nil {
 		t.Fatalf("install plugin deps: %v", err)
 	}
 
@@ -397,14 +408,15 @@ func TestInstallPluginDepsCreatesMissingHostDir(t *testing.T) {
 }
 
 func TestInstallPluginDepsCreatesHostDirForKeepOnlyDeps(t *testing.T) {
-	srcDir := filepath.Join(t.TempDir(), "deps")
+	moduleDir := t.TempDir()
+	srcDir := filepath.Join(moduleDir, "install", "deps")
 	makeDirs(t, srcDir)
 	writeFile(t, filepath.Join(srcDir, ".keep"), "")
 
 	// Even a .keep-only plugin deps/ must leave the host with a deps/ directory.
 	dstRoot := filepath.Join(t.TempDir(), "deps")
 
-	if err := installPluginDepsFrom("im", srcDir, dstRoot); err != nil {
+	if err := installPluginDepsFrom("im", moduleDir, dstRoot); err != nil {
 		t.Fatalf("install plugin deps: %v", err)
 	}
 
@@ -422,13 +434,14 @@ func TestInstallPluginDepsCreatesHostDirForKeepOnlyDeps(t *testing.T) {
 }
 
 func TestInstallPluginDepsWithoutDirIsNoOp(t *testing.T) {
-	if err := installPluginDepsFrom("im", filepath.Join(t.TempDir(), "deps"), t.TempDir()); err != nil {
-		t.Fatalf("expected missing deps dir to be a no-op, got: %v", err)
+	if err := installPluginDepsFrom("im", t.TempDir(), t.TempDir()); err != nil {
+		t.Fatalf("expected missing install/deps dir to be a no-op, got: %v", err)
 	}
 }
 
 func TestInstallPluginHost(t *testing.T) {
-	srcDir := filepath.Join(t.TempDir(), "host")
+	moduleDir := t.TempDir()
+	srcDir := filepath.Join(moduleDir, "install", "host")
 	makeDirs(t, filepath.Join(srcDir, "db", "migrate"))
 	writeFile(t, filepath.Join(srcDir, "db", "migrate", "create_users.up.sql"), "CREATE TABLE users (id INTEGER);\n")
 	writeFile(t, filepath.Join(srcDir, "docker-compose.yml"), "services: {}\n")
@@ -436,7 +449,7 @@ func TestInstallPluginHost(t *testing.T) {
 
 	dstRoot := t.TempDir()
 
-	if err := installPluginHostFrom("im", srcDir, dstRoot); err != nil {
+	if err := installPluginHostFrom("im", moduleDir, dstRoot); err != nil {
 		t.Fatalf("install plugin host tree: %v", err)
 	}
 
@@ -454,7 +467,7 @@ func TestInstallPluginHost(t *testing.T) {
 
 	// Reinstalling skips existing files instead of overwriting local edits.
 	writeFile(t, filepath.Join(dstRoot, "docker-compose.yml"), "services: edited\n")
-	if err := installPluginHostFrom("im", srcDir, dstRoot); err != nil {
+	if err := installPluginHostFrom("im", moduleDir, dstRoot); err != nil {
 		t.Fatalf("reinstall plugin host tree: %v", err)
 	}
 	if got := readFile(t, filepath.Join(dstRoot, "docker-compose.yml")); got != "services: edited\n" {
@@ -463,7 +476,199 @@ func TestInstallPluginHost(t *testing.T) {
 }
 
 func TestInstallPluginHostWithoutDirIsNoOp(t *testing.T) {
-	if err := installPluginHostFrom("im", filepath.Join(t.TempDir(), "host"), t.TempDir()); err != nil {
-		t.Fatalf("expected missing host dir to be a no-op, got: %v", err)
+	if err := installPluginHostFrom("im", t.TempDir(), t.TempDir()); err != nil {
+		t.Fatalf("expected missing install/host dir to be a no-op, got: %v", err)
+	}
+}
+
+// Any ignore/ directory inside the plugin's install/host/ tree marks
+// local-only files: everything under it is skipped, at any depth.
+func TestInstallPluginHostSkipsIgnoreDir(t *testing.T) {
+	moduleDir := t.TempDir()
+	srcDir := filepath.Join(moduleDir, "install", "host")
+	makeDirs(t, filepath.Join(srcDir, "ignore", "scratch"))
+	writeFile(t, filepath.Join(srcDir, "docker-compose.yml"), "services: {}\n")
+	writeFile(t, filepath.Join(srcDir, "ignore", "notes.md"), "local only\n")
+	writeFile(t, filepath.Join(srcDir, "ignore", "scratch", "x.txt"), "local only\n")
+
+	dstRoot := t.TempDir()
+
+	if err := installPluginHostFrom("im", moduleDir, dstRoot); err != nil {
+		t.Fatalf("install plugin host tree: %v", err)
+	}
+
+	if got := readFile(t, filepath.Join(dstRoot, "docker-compose.yml")); got != "services: {}\n" {
+		t.Fatalf("unexpected docker-compose.yml content: %s", got)
+	}
+	if _, err := os.Stat(filepath.Join(dstRoot, "ignore")); !os.IsNotExist(err) {
+		t.Fatal("expected no ignore/ tree in the destination")
+	}
+}
+
+func TestInstallPluginDepsSkipsIgnoreDir(t *testing.T) {
+	moduleDir := t.TempDir()
+	srcDir := filepath.Join(moduleDir, "install", "deps")
+	makeDirs(t, filepath.Join(srcDir, "im", "gateway", "ignore"))
+	writeFile(t, filepath.Join(srcDir, "im", "gateway", "main.go"), "package main\n")
+	writeFile(t, filepath.Join(srcDir, "im", "gateway", "ignore", "scratch.go"), "package main\n")
+
+	dstRoot := filepath.Join(t.TempDir(), "deps")
+
+	if err := installPluginDepsFrom("im", moduleDir, dstRoot); err != nil {
+		t.Fatalf("install plugin deps: %v", err)
+	}
+
+	if got := readFile(t, filepath.Join(dstRoot, "im", "gateway", "main.go")); got != "package main\n" {
+		t.Fatalf("unexpected im/gateway/main.go content: %s", got)
+	}
+	if _, err := os.Stat(filepath.Join(dstRoot, "im", "gateway", "ignore")); !os.IsNotExist(err) {
+		t.Fatal("expected no ignore/ tree in the destination")
+	}
+}
+
+// A stray .up.sql under an ignore/ directory is local-only: the migration
+// walk skips it instead of failing on its missing down file.
+func TestInstallPluginMigrationsSkipsIgnoreDir(t *testing.T) {
+	migrations := fstest.MapFS{
+		"20240101000000_create_messages.up.sql":   {Data: []byte("CREATE TABLE messages (id INTEGER PRIMARY KEY);")},
+		"20240101000000_create_messages.down.sql": {Data: []byte("DROP TABLE messages;")},
+		"ignore/scratch.up.sql":                   {Data: []byte("SELECT 1;")},
+	}
+
+	dstDir := filepath.Join(t.TempDir(), "db", "migrate")
+
+	if err := installPluginMigrations("im", migrations, dstDir, time.Now(), nil); err != nil {
+		t.Fatalf("install plugin migrations: %v", err)
+	}
+
+	if got := len(migrationFiles(t, dstDir, "*_create_messages.*.sql")); got != 2 {
+		t.Fatalf("expected 2 migration files, got %d", got)
+	}
+	if _, err := os.Stat(filepath.Join(dstDir, "ignore")); !os.IsNotExist(err) {
+		t.Fatal("expected no ignore/ tree in the destination")
+	}
+}
+
+// The installer's view of a plugin is exactly its install/ directory: every
+// other directory at the plugin's top level is ignored, even when it holds
+// installable-looking content (the layout used before install/ existed).
+func TestInstallPluginHostIgnoresTopLevelDirs(t *testing.T) {
+	moduleDir := t.TempDir()
+	makeDirs(t, filepath.Join(moduleDir, "host", "db", "migrate"))
+	makeDirs(t, filepath.Join(moduleDir, "ignore"))
+	writeFile(t, filepath.Join(moduleDir, "host", "docker-compose.yml"), "services: {}\n")
+	writeFile(t, filepath.Join(moduleDir, "host", "db", "migrate", "create_users.up.sql"), "CREATE TABLE users (id INTEGER);\n")
+	writeFile(t, filepath.Join(moduleDir, "ignore", "notes.md"), "local only\n")
+
+	dstRoot := t.TempDir()
+
+	if err := installPluginHostFrom("im", moduleDir, dstRoot); err != nil {
+		t.Fatalf("install plugin host tree: %v", err)
+	}
+
+	entries, err := os.ReadDir(dstRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 0 {
+		t.Fatalf("expected nothing installed from the top-level directories, got %d entries", len(entries))
+	}
+}
+
+func TestInstallPluginDepsIgnoresTopLevelDirs(t *testing.T) {
+	moduleDir := t.TempDir()
+	makeDirs(t, filepath.Join(moduleDir, "deps", "im", "gateway"))
+	writeFile(t, filepath.Join(moduleDir, "deps", ".keep"), "")
+	writeFile(t, filepath.Join(moduleDir, "deps", "im", "gateway", "main.go"), "package main\n")
+
+	dstRoot := filepath.Join(t.TempDir(), "deps")
+
+	if err := installPluginDepsFrom("im", moduleDir, dstRoot); err != nil {
+		t.Fatalf("install plugin deps: %v", err)
+	}
+
+	// Not even the host deps/ directory is created: the plugin's top-level
+	// deps/ is invisible to the installer.
+	if _, err := os.Stat(dstRoot); !os.IsNotExist(err) {
+		t.Fatalf("expected the host deps/ directory to stay absent, got: %v", err)
+	}
+}
+
+// The plugin's root .gitignore rules exclude matching paths on install, in
+// every installable tree (node_modules, build outputs, ...).
+func TestInstallPluginHostHonorsGitIgnore(t *testing.T) {
+	moduleDir := t.TempDir()
+	writeFile(t, filepath.Join(moduleDir, ".gitignore"), "node_modules/\n*.log\n")
+	srcDir := filepath.Join(moduleDir, "install", "host")
+	makeDirs(t, filepath.Join(srcDir, "frontend", "node_modules"))
+	writeFile(t, filepath.Join(srcDir, "app.js"), "export {}\n")
+	writeFile(t, filepath.Join(srcDir, "frontend", "index.js"), "export {}\n")
+	writeFile(t, filepath.Join(srcDir, "frontend", "node_modules", "x.js"), "module {}\n")
+	writeFile(t, filepath.Join(srcDir, "debug.log"), "noise\n")
+
+	dstRoot := t.TempDir()
+
+	if err := installPluginHostFrom("im", moduleDir, dstRoot); err != nil {
+		t.Fatalf("install plugin host tree: %v", err)
+	}
+
+	if got := readFile(t, filepath.Join(dstRoot, "app.js")); got != "export {}\n" {
+		t.Fatalf("unexpected app.js content: %s", got)
+	}
+	if got := readFile(t, filepath.Join(dstRoot, "frontend", "index.js")); got != "export {}\n" {
+		t.Fatalf("unexpected frontend/index.js content: %s", got)
+	}
+	if _, err := os.Stat(filepath.Join(dstRoot, "frontend", "node_modules")); !os.IsNotExist(err) {
+		t.Fatal("expected the gitignored node_modules to be skipped")
+	}
+	if _, err := os.Stat(filepath.Join(dstRoot, "debug.log")); !os.IsNotExist(err) {
+		t.Fatal("expected the gitignored debug.log to be skipped")
+	}
+}
+
+func TestInstallPluginDepsHonorsGitIgnore(t *testing.T) {
+	moduleDir := t.TempDir()
+	writeFile(t, filepath.Join(moduleDir, ".gitignore"), "node_modules\n")
+	srcDir := filepath.Join(moduleDir, "install", "deps")
+	makeDirs(t, filepath.Join(srcDir, "im", "gateway", "node_modules", "left-pad"))
+	writeFile(t, filepath.Join(srcDir, "im", "gateway", "main.go"), "package main\n")
+	writeFile(t, filepath.Join(srcDir, "im", "gateway", "node_modules", "left-pad", "index.js"), "module.exports = 1\n")
+
+	dstRoot := filepath.Join(t.TempDir(), "deps")
+
+	if err := installPluginDepsFrom("im", moduleDir, dstRoot); err != nil {
+		t.Fatalf("install plugin deps: %v", err)
+	}
+
+	if got := readFile(t, filepath.Join(dstRoot, "im", "gateway", "main.go")); got != "package main\n" {
+		t.Fatalf("unexpected im/gateway/main.go content: %s", got)
+	}
+	if _, err := os.Stat(filepath.Join(dstRoot, "im", "gateway", "node_modules")); !os.IsNotExist(err) {
+		t.Fatal("expected the gitignored node_modules to be skipped")
+	}
+}
+
+func TestInstallPluginMigrationsHonorsGitIgnore(t *testing.T) {
+	moduleDir := t.TempDir()
+	writeFile(t, filepath.Join(moduleDir, ".gitignore"), "scratch*\n")
+	migrateDir := filepath.Join(moduleDir, "install", "host", "db", "migrate")
+	makeDirs(t, migrateDir)
+	writeFile(t, filepath.Join(migrateDir, "20240101000000_create_messages.up.sql"), "CREATE TABLE messages (id INTEGER PRIMARY KEY);")
+	writeFile(t, filepath.Join(migrateDir, "20240101000000_create_messages.down.sql"), "DROP TABLE messages;")
+	// Would fail the install on its missing down file if the gitignore rule
+	// did not keep it out of the walk.
+	writeFile(t, filepath.Join(migrateDir, "scratch.up.sql"), "SELECT 1;")
+
+	dstDir := filepath.Join(t.TempDir(), "db", "migrate")
+
+	if err := installPluginMigrationsFromDir("im", moduleDir, dstDir); err != nil {
+		t.Fatalf("install plugin migrations from dir: %v", err)
+	}
+
+	if got := len(migrationFiles(t, dstDir, "*_create_messages.*.sql")); got != 2 {
+		t.Fatalf("expected 2 migration files, got %d", got)
+	}
+	if got := len(migrationFiles(t, dstDir, "*scratch*")); got != 0 {
+		t.Fatalf("expected the gitignored scratch migration to be skipped, got %d files", got)
 	}
 }

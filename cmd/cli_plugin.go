@@ -45,11 +45,18 @@ func runCLIPluginList() error {
 	return nil
 }
 
-// runCLIPluginInstall copies a plugin's SQL migrations (from its host/db/migrate
-// directory) into the host's db/migrate directory with fresh timestamps, so they
-// run through the regular db:migrate / db:rollback / db:status machinery, mirrors
-// the rest of the plugin's host/ tree into the host project root, and merges the
-// plugin's deps/ directory into the host project's deps/ directory.
+// runCLIPluginInstall copies a plugin's SQL migrations (from its
+// install/host/db/migrate directory) into the host's db/migrate directory
+// with fresh timestamps, so they run through the regular db:migrate /
+// db:rollback / db:status machinery, mirrors the rest of the plugin's
+// install/host/ tree into the host project root, and merges the plugin's
+// install/deps/ directory into the host project's deps/ directory. The
+// installer's view of the plugin is exactly its install/ directory: host/ and
+// deps/ inside it are installed, install/ignore/ (and any ignore/ directory
+// inside the installable trees) is skipped, and every other directory at the
+// plugin's top level is ignored. When the plugin is read from disk, its root
+// .gitignore rules exclude matching files too (node_modules, build outputs,
+// ...) — a module download from the proxy only carries committed files anyway.
 // The argument is the plugin's module path (e.g. github.com/daqing/airway-im-plugin),
 // optionally with an @version suffix like `go get` accepts, or a local
 // directory holding the plugin's source (its go.mod supplies the module path,
@@ -58,9 +65,9 @@ func runCLIPluginList() error {
 //
 // When the plugin is not compiled into the current binary, it is enabled
 // first (blank import + go get / replace), and the install then continues in
-// this same process, reading host/db/migrate and deps/ from the plugin module's
-// on-disk directory — so the current CLI's installer logic is always the one
-// used, never a possibly stale project binary.
+// this same process, reading install/host/db/migrate and install/deps from the
+// plugin module's on-disk directory — so the current CLI's installer logic is
+// always the one used, never a possibly stale project binary.
 func runCLIPluginInstall(args []string) error {
 	if len(args) != 1 {
 		return fmt.Errorf("usage: airway plugin:install <module>[@version] | <local-dir>")
@@ -93,7 +100,7 @@ func runCLIPluginInstall(args []string) error {
 	}
 
 	if provider, ok := p.(plugin.MigrationProvider); ok {
-		if err := installPluginMigrations(name, provider.MigrationFS(), migrationDir, timeNow()); err != nil {
+		if err := installPluginMigrations(name, provider.MigrationFS(), migrationDir, timeNow(), nil); err != nil {
 			return err
 		}
 	} else if err := installPluginMigrationsFromModule(name, module); err != nil {
@@ -222,14 +229,17 @@ func ensurePluginImport(path string, module string) (bool, error) {
 	return true, nil
 }
 
-func installPluginMigrations(pluginName string, migrations fs.FS, dstDir string, now time.Time) error {
-	pairs, err := collectPluginMigrationPairs(migrations)
+// installPluginMigrations copies every up/down migration pair in the FS into
+// dstDir with fresh timestamps; match, when non-nil, filters FS paths the
+// plugin's .gitignore excludes.
+func installPluginMigrations(pluginName string, migrations fs.FS, dstDir string, now time.Time, match func(string, bool) bool) error {
+	pairs, err := collectPluginMigrationPairs(migrations, match)
 	if err != nil {
 		return fmt.Errorf("read plugin %s migrations: %w", pluginName, err)
 	}
 
 	if len(pairs) == 0 {
-		if hasGoCodeMigrations(migrations) {
+		if hasGoCodeMigrations(migrations, match) {
 			fmt.Printf("Plugin %s defines its migrations in Go code; they take effect on import and need no install\n", pluginName)
 		} else {
 			fmt.Printf("Plugin %s has no SQL migrations to install\n", pluginName)
@@ -274,7 +284,7 @@ type pluginMigrationPair struct {
 	down []byte
 }
 
-func collectPluginMigrationPairs(migrations fs.FS) ([]pluginMigrationPair, error) {
+func collectPluginMigrationPairs(migrations fs.FS, match func(string, bool) bool) ([]pluginMigrationPair, error) {
 	ups := map[string][]byte{}
 	downs := map[string][]byte{}
 
@@ -283,6 +293,15 @@ func collectPluginMigrationPairs(migrations fs.FS) ([]pluginMigrationPair, error
 			return err
 		}
 		if entry.IsDir() {
+			if entry.Name() == pluginIgnoreDir {
+				return fs.SkipDir
+			}
+			if match != nil && path != "." && match(path, true) {
+				return fs.SkipDir
+			}
+			return nil
+		}
+		if match != nil && match(path, false) {
 			return nil
 		}
 
@@ -340,7 +359,7 @@ func collectPluginMigrationPairs(migrations fs.FS) ([]pluginMigrationPair, error
 // hasGoCodeMigrations reports whether migrations holds Go files besides
 // tests — migrations written in Go code take effect on import and need no
 // install, so the installer only mentions them instead of copying anything.
-func hasGoCodeMigrations(migrations fs.FS) bool {
+func hasGoCodeMigrations(migrations fs.FS, match func(string, bool) bool) bool {
 	found := false
 
 	_ = fs.WalkDir(migrations, ".", func(path string, entry fs.DirEntry, err error) error {
@@ -348,6 +367,15 @@ func hasGoCodeMigrations(migrations fs.FS) bool {
 			return err
 		}
 		if entry.IsDir() {
+			if entry.Name() == pluginIgnoreDir {
+				return fs.SkipDir
+			}
+			if match != nil && path != "." && match(path, true) {
+				return fs.SkipDir
+			}
+			return nil
+		}
+		if match != nil && match(path, false) {
 			return nil
 		}
 
@@ -383,21 +411,36 @@ func pluginMigrationInstalled(dstDir string, name string) bool {
 	return false
 }
 
-// pluginHostDir is the directory inside a plugin module holding files that
-// `plugin:install` installs into the host project's own tree, mirroring the
-// host layout (host/docker-compose.yml → the host's docker-compose.yml). It
-// is the counterpart of deps/, whose contents merge verbatim into the host's
-// deps/ directory instead of joining the host sources. The db/migrate
-// subtree is exempt from this verbatim mirroring: SQL migrations are
-// installed with fresh timestamps by the migration installer, and Go DSL
-// migrations are compiled into the plugin.
+// pluginInstallDir is the directory inside a plugin module holding everything
+// `plugin:install` reads: host/ (mirrored into the host project's own tree),
+// deps/ (merged into the host project's deps/ directory), and ignore/
+// (local-only files, never read). Nothing outside install/ is installed.
+const pluginInstallDir = "install"
+
+// pluginHostDir is the directory inside a plugin's install/ directory holding
+// files that `plugin:install` installs into the host project's own tree,
+// mirroring the host layout (install/host/docker-compose.yml → the host's
+// docker-compose.yml). It is the counterpart of deps/, whose contents merge
+// verbatim into the host's deps/ directory instead of joining the host
+// sources. The db/migrate subtree is exempt from this verbatim mirroring:
+// SQL migrations are installed with fresh timestamps by the migration
+// installer, and Go DSL migrations are compiled into the plugin.
 const pluginHostDir = "host"
 
+// pluginIgnoreDir is the reserved directory name marking local-only files
+// that stay in the plugin checkout and never reach the host project.
+// install/ignore/ is simply never read (only install/host/ and install/deps/
+// are), and inside the installable trees the installer walks — host/, deps/,
+// and the migrations — everything under an ignore/ directory is skipped
+// wholesale.
+const pluginIgnoreDir = "ignore"
+
 // installPluginMigrationsFromModule installs migrations for a plugin that is
-// not compiled into the current binary: it reads the plugin's host/db/migrate
-// directory from its on-disk module directory (the same files a
-// MigrationProvider would embed), so the install completes in this process
-// instead of re-executing through a possibly stale project binary.
+// not compiled into the current binary: it reads the plugin's
+// install/host/db/migrate directory from its on-disk module directory (the
+// same files a MigrationProvider would embed), so the install completes in
+// this process instead of re-executing through a possibly stale project
+// binary.
 func installPluginMigrationsFromModule(name, module string) error {
 	dir, err := pluginModuleDir(module)
 	if err != nil {
@@ -407,40 +450,65 @@ func installPluginMigrationsFromModule(name, module string) error {
 	return installPluginMigrationsFromDir(name, dir, migrationDir)
 }
 
+// installPluginMigrationsFromDir installs SQL migrations from a plugin module
+// directory on disk, reading its install/host/db/migrate subtree. The
+// plugin's root .gitignore rules exclude matching paths.
 func installPluginMigrationsFromDir(name, moduleDir, dstDir string) error {
-	migrateDir := filepath.Join(moduleDir, pluginHostDir, "db", "migrate")
+	migrateDir := filepath.Join(moduleDir, pluginInstallDir, pluginHostDir, "db", "migrate")
 	if info, err := os.Stat(migrateDir); err != nil || !info.IsDir() {
 		fmt.Printf("Plugin %s has no SQL migrations to install\n", name)
 		return nil
 	}
 
-	return installPluginMigrations(name, os.DirFS(migrateDir), dstDir, timeNow())
+	ignore, err := loadPluginGitIgnore(moduleDir)
+	if err != nil {
+		return err
+	}
+	var match func(string, bool) bool
+	if ignore != nil {
+		prefix := pluginInstallDir + "/" + pluginHostDir + "/db/migrate/"
+		match = func(path string, isDir bool) bool {
+			return ignore.Match(prefix+path, isDir)
+		}
+	}
+
+	return installPluginMigrations(name, os.DirFS(migrateDir), dstDir, timeNow(), match)
 }
 
-// installPluginHost mirrors the plugin's host/ tree into the host project
-// root. The plugin module directory is resolved through the host's module
-// graph, so proxy downloads and local replace directives behave the same.
+// installPluginHost mirrors the plugin's install/host/ tree into the host
+// project root. The plugin module directory is resolved through the host's
+// module graph, so proxy downloads and local replace directives behave the same.
 func installPluginHost(name, module string) error {
 	dir, err := pluginModuleDir(module)
 	if err != nil {
 		return fmt.Errorf("locate plugin module %s: %w", module, err)
 	}
 
-	return installPluginHostFrom(name, filepath.Join(dir, pluginHostDir), ".")
+	return installPluginHostFrom(name, dir, ".")
 }
 
-// installPluginHostFrom copies every file under srcDir (the plugin's host/
-// directory) into dstRoot (the host project root), preserving relative paths
+// installPluginHostFrom copies every file under the plugin's install/host/
+// directory into dstRoot (the host project root), preserving relative paths
 // and stripping a single .templ suffix, like the deps installer. The
-// db/migrate subtree is excluded: SQL migrations get fresh timestamps from
-// the migration installer, and Go DSL migrations are compiled into the
-// plugin — neither belongs verbatim in the host tree. Existing destination
-// files are left untouched, mirroring the deps installer's skip behavior. A
-// plugin without a host/ directory installs nothing.
-func installPluginHostFrom(name, srcDir, dstRoot string) error {
+// install/host/db/migrate subtree is excluded: SQL migrations get fresh
+// timestamps from the migration installer, and Go DSL migrations are compiled
+// into the plugin — neither belongs verbatim in the host tree. Any ignore/
+// directory under install/host/ is skipped wholesale (local-only files never
+// reach the host), and the plugin's root .gitignore rules exclude matching
+// paths. Existing destination files are left untouched, mirroring
+// the deps installer's skip behavior. A plugin without an install/host/
+// directory installs nothing.
+func installPluginHostFrom(name, moduleDir, dstRoot string) error {
+	srcDir := filepath.Join(moduleDir, pluginInstallDir, pluginHostDir)
 	if info, err := os.Stat(srcDir); err != nil || !info.IsDir() {
 		return nil
 	}
+
+	ignore, err := loadPluginGitIgnore(moduleDir)
+	if err != nil {
+		return err
+	}
+	prefix := pluginInstallDir + "/" + pluginHostDir + "/"
 
 	migrateDir := filepath.Join(srcDir, "db", "migrate")
 
@@ -448,17 +516,26 @@ func installPluginHostFrom(name, srcDir, dstRoot string) error {
 		if err != nil {
 			return err
 		}
-		if entry.IsDir() {
-			if path == migrateDir {
-				return filepath.SkipDir
-			}
-			return nil
-		}
 
 		rel, err := filepath.Rel(srcDir, path)
 		if err != nil {
 			return err
 		}
+
+		if entry.IsDir() {
+			if path == migrateDir || entry.Name() == pluginIgnoreDir {
+				return filepath.SkipDir
+			}
+			if rel != "." && ignore.Match(prefix+filepath.ToSlash(rel), true) {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+
+		if ignore.Match(prefix+filepath.ToSlash(rel), false) {
+			return nil
+		}
+
 		rel = strings.TrimSuffix(rel, ".templ")
 
 		dst := filepath.Join(dstRoot, rel)
@@ -492,12 +569,12 @@ func installPluginHostFrom(name, srcDir, dstRoot string) error {
 	})
 }
 
-// pluginDepsDir is the directory inside a plugin module whose contents are
-// merged into the host project's deps/ directory by `plugin:install`
-// (companion services, deploy configs, ...). It must not be named "vendor" —
-// module zips drop vendor/ entirely — and must not contain nested go.mod
-// files, which module zips drop as nested modules; ship them as go.mod.templ
-// instead, installed as go.mod.
+// pluginDepsDir is the directory inside a plugin's install/ directory whose
+// contents are merged into the host project's deps/ directory by
+// `plugin:install` (companion services, deploy configs, ...). It must not be
+// named "vendor" — module zips drop vendor/ entirely — and must not contain
+// nested go.mod files, which module zips drop as nested modules; ship them as
+// go.mod.templ instead, installed as go.mod.
 const pluginDepsDir = "deps"
 
 // installPluginDeps merges the plugin's deps/ directory into the host
@@ -510,7 +587,7 @@ func installPluginDeps(name, module string) error {
 		return fmt.Errorf("locate plugin module %s: %w", module, err)
 	}
 
-	return installPluginDepsFrom(name, filepath.Join(dir, pluginDepsDir), pluginDepsDir)
+	return installPluginDepsFrom(name, dir, pluginDepsDir)
 }
 
 // pluginModuleDir returns the on-disk directory of a module in the build list
@@ -532,22 +609,32 @@ func pluginModuleDir(module string) (string, error) {
 	return dir, nil
 }
 
-// installPluginDepsFrom copies every file under srcDir into dstRoot (the
-// host project's deps/ directory), preserving relative paths and stripping a
-// single .templ suffix (so a plugin can ship go.mod.templ without tripping
-// Go's nested-module rules, and a future install can render such files as
-// templates). A bare file shipped beside its .templ variant (go.mod next to
-// go.mod.templ, so a nested module still builds in the plugin checkout) is
-// skipped, matching what a module-zip download would deliver — the .templ
-// variant is the distribution copy — and a bare go.mod that has drifted from
-// its .templ variant fails the install (only local-directory installs can
-// hit that: module zips drop the bare file). Existing destination files are
-// left untouched, mirroring the migration installer's skip behavior. A plugin
-// without a deps/ directory installs nothing.
-func installPluginDepsFrom(name, srcDir, dstRoot string) error {
+// installPluginDepsFrom copies every file under the plugin's install/deps/
+// directory into dstRoot (the host project's deps/ directory), preserving
+// relative paths and stripping a single .templ suffix (so a plugin can ship
+// go.mod.templ without tripping Go's nested-module rules, and a future install
+// can render such files as templates). A bare file shipped beside its .templ
+// variant (go.mod next to go.mod.templ, so a nested module still builds in the
+// plugin checkout) is skipped, matching what a module-zip download would
+// deliver — the .templ variant is the distribution copy — and a bare go.mod
+// that has drifted from its .templ variant fails the install (only
+// local-directory installs can hit that: module zips drop the bare file). Any
+// ignore/ directory under install/deps/ is skipped wholesale, like the host
+// installer, and the plugin's root .gitignore rules exclude matching paths.
+// Existing destination files are left untouched, mirroring the
+// migration installer's skip behavior. A plugin without an install/deps/
+// directory installs nothing.
+func installPluginDepsFrom(name, moduleDir, dstRoot string) error {
+	srcDir := filepath.Join(moduleDir, pluginInstallDir, pluginDepsDir)
 	if info, err := os.Stat(srcDir); err != nil || !info.IsDir() {
 		return nil
 	}
+
+	ignore, err := loadPluginGitIgnore(moduleDir)
+	if err != nil {
+		return err
+	}
+	prefix := pluginInstallDir + "/" + pluginDepsDir + "/"
 
 	// Hosts scaffolded by older Airway versions may not have a deps/
 	// directory; create it even when the plugin's deps/ holds nothing
@@ -565,14 +652,26 @@ func installPluginDepsFrom(name, srcDir, dstRoot string) error {
 		if err != nil {
 			return err
 		}
-		if entry.IsDir() {
-			return nil
-		}
 
 		rel, err := filepath.Rel(srcDir, path)
 		if err != nil {
 			return err
 		}
+
+		if entry.IsDir() {
+			if entry.Name() == pluginIgnoreDir {
+				return filepath.SkipDir
+			}
+			if rel != "." && ignore.Match(prefix+filepath.ToSlash(rel), true) {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+
+		if ignore.Match(prefix+filepath.ToSlash(rel), false) {
+			return nil
+		}
+
 		// The scaffolded deps/.keep only holds the plugin's own empty dir;
 		// the host project ships its own deps/.keep.
 		if rel == ".keep" {
