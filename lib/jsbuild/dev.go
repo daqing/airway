@@ -55,6 +55,9 @@ func StartDev(root string, broadcast func(string)) (*DevServer, error) {
 	if err != nil {
 		return nil, err
 	}
+	if err := checkVendor(root); err != nil {
+		return nil, err
+	}
 	ctx, cerr := api.Context(options(root, false))
 	if cerr != nil {
 		return nil, cerr

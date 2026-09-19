@@ -29,17 +29,40 @@ func main() {
 		return
 	}
 
+	// Set before any dispatch: the host-project proxy compares the CLI's
+	// version against the project's pinned framework version.
+	cmd.Version = versionString()
+
+	// Inside a host application the project's own binary must serve every
+	// project-scoped command (plugins, REPL models, Go-code migrations are
+	// compiled into it), so a globally installed `airway` re-execs through
+	// `go run .` — see cmd.ProxyHostProject.
+	proxied, err := cmd.ProxyHostProject(args)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if proxied {
+		return
+	}
+
 	if len(args) > 0 && args[0] == "server" {
 		runServer()
 		return
 	}
 
-	cmd.Version = versionString()
 	loadCLIEnv()
 	cmd.Run(args)
 }
 
 func runServer() {
+	// .env supplies fallbacks for anything the process environment does not
+	// set (godotenv.Load never overrides existing values), so
+	// `PORT=1988 airway server` wins over a PORT in .env. Load it before any
+	// env checks so AIRWAY_ENV itself can come from .env.
+	if err := godotenv.Load(".env"); err != nil && !errors.Is(err, os.ErrNotExist) {
+		log.Printf("Loading env file: .env failed: %v", err)
+	}
+
 	appConfig := utils.AppConfig()
 
 	if appConfig.Env == "" {
@@ -47,14 +70,7 @@ func runServer() {
 		os.Exit(1)
 	}
 
-	if appConfig.IsLocal {
-		envFile := ".env"
-		err := godotenv.Load(envFile)
-		if err != nil {
-			log.Printf("Loading env file: %s failed", envFile)
-			os.Exit(2)
-		}
-	} else {
+	if !appConfig.IsLocal {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
@@ -79,8 +95,14 @@ func runServer() {
 
 	// In local development the frontend bundle is rebuilt in memory and
 	// served with livereload; production serves the embedded dist bundle.
+	// A missing vendor directory aborts the boot: the source watcher skips
+	// vendor/, so a running server would never pick up a later js:install.
 	if appConfig.IsLocal {
 		if _, err := jsbuild.StartDefault(".", websocket.Broadcast); err != nil {
+			if errors.Is(err, jsbuild.ErrVendorMissing) {
+				log.Printf("frontend dev server failed: %v", err)
+				os.Exit(6)
+			}
 			log.Printf("frontend dev server disabled: %v", err)
 		}
 	}

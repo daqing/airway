@@ -51,6 +51,12 @@ func TestRunCLICommandGeneratesAPI(t *testing.T) {
 		t.Fatalf("expected generated admin route group, got:\n%s", routesContent)
 	}
 
+	openapiPath := filepath.Join(wd, "app", "api", "admin_api", "openapi.go")
+	openapiContent := readFile(t, openapiPath)
+	if !strings.Contains(openapiContent, `openapi.Get("/admin/index"`) {
+		t.Fatalf("expected generated openapi declaration, got:\n%s", openapiContent)
+	}
+
 	actionPath := filepath.Join(wd, "app", "api", "admin_api", "index_action.go")
 	actionContent := readFile(t, actionPath)
 	if !strings.Contains(actionContent, "func IndexAction") {

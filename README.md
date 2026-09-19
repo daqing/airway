@@ -253,9 +253,11 @@ as a JSON API.
 ## CLI
 
 The Airway CLI is a single `airway` binary (install with
-`go install github.com/daqing/airway@latest`); inside a project the same
-commands also run as `go run . <command>`. Commands auto-load `.env` from the
-project root:
+`go install github.com/daqing/airway@latest`). Inside a project it detects
+the host application and transparently re-runs every project-scoped command
+through `go run .` (stderr shows a `proxying to project binary` notice), so
+plugins, REPL models and Go-code migrations always come from the project's
+own binary. Commands auto-load `.env` from the project root:
 
 ```bash
 airway new myapp                           # scaffold a new project skeleton
@@ -280,10 +282,10 @@ airway version
 ```
 
 The legacy form `airway cli <command>` still works as a compatibility alias.
-Because models and plugins are registered at compile time, prefer the project
-binary for `repl` and `plugin:install` (`go run . repl`,
-`go run . plugin:install <module>`) — the globally installed `airway` only sees
-what is compiled into itself.
+Models and plugins register at compile time, which is exactly why the global
+`airway` proxies to `go run .` inside a project — `airway repl` and
+`airway plugin:install <module>` (run from the project root) already behave
+like their `go run .` equivalents.
 
 Database commands read `DSN`/`AIRWAY_DSN`; the legacy `AIRWAY_DB_DSN` and
 `AIRWAY_PG` are still honored for backward compatibility. See the full
@@ -361,6 +363,56 @@ n, err := repo.CountWhere[User](sql.H{"active": true})
 n, err := repo.CountEvery[User]()
 ```
 
+### Transactions
+
+`repo.WithTx` runs a callback on a single transaction-bound connection. The
+callback receives a `*repo.Tx` whose helper methods execute on that
+transaction; the generic helpers take `tx.Executor()` via the `*With`
+variants:
+
+```go
+users := sql.TableOf("users")
+
+err := repo.WithTx(db, func(tx *repo.Tx) error {
+	if _, err := repo.InsertWith[User](tx.Executor(), sql.Insert(sql.H{"name": "John"}).IntoTable(users)); err != nil {
+		return err
+	}
+
+	n, err := tx.Count(sql.SelectColumns("count(*)").FromTable(users))
+	if err != nil {
+		return err
+	}
+
+	return nil // commit; a non-nil return rolls back
+})
+```
+
+Use `tx.Raw()` to drop down to `*sql.Tx` for hand-written SQL. There is no
+public `Commit`/`Rollback` — the outcome follows the callback's return value,
+and `repo.WithTxContext` accepts a context. `JoinQuery`/`Preloader` remain
+pool-only and cannot run inside a transaction.
+
+Optimistic locking recipe: `UpdateAffected` with a version check, so exactly
+one concurrent writer wins:
+
+```go
+affected, err := tx.UpdateAffected(
+	sql.UpdateTable(users).
+		Set(sql.H{"name": "Jane", "version": sql.Expr("version + 1")}).
+		Where(sql.AllOf(sql.Eq("id", 1), sql.Eq("version", currentVersion))),
+)
+if err != nil {
+	return err
+}
+if affected == 0 {
+	return errors.New("stale record")
+}
+```
+
+PostgreSQL is the primary target for transactions. The MySQL insert path
+issues a second lookup statement on the same connection, which is best-effort
+inside a transaction.
+
 ### Preload (eager loading)
 
 Preload replaces N+1 loops with a couple of queries:
@@ -419,9 +471,10 @@ go run . repl                              # uses the configured DSN
 go run . repl --driver sqlite --dsn ./tmp/airway.db
 ```
 
-Run the REPL through your project binary as shown: it only sees the models
-compiled into the binary (registered via `lib/replreg`), so the globally
-installed `airway repl` does not see your project's models.
+The REPL only sees the models compiled into the binary it runs in (registered
+via `lib/replreg`). Inside a project, `airway repl` proxies to `go run . repl`
+automatically, so your project's models show up; outside a project only the
+framework's built-in models are visible.
 
 Commands: `help`, `driver`, `tables`, `exit`. Type a Go expression to evaluate
 it — builders print the compiled SQL, `repo.*` calls run against the database:

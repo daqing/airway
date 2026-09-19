@@ -12,33 +12,41 @@ func Create[T any](db *DB, b buildersql.Stmt) (*T, error) {
 	return Insert[T](db, b)
 }
 
-func Insert[T any](db *DB, b buildersql.Stmt) (*T, error) {
-	return insertSkipExists[T](db, b, false)
+func CreateWith[T any](ex *Executor, b buildersql.Stmt) (*T, error) {
+	return InsertWith[T](ex, b)
 }
 
-func insertSkipExists[T any](db *DB, b buildersql.Stmt, skipExists bool) (*T, error) {
+func Insert[T any](db *DB, b buildersql.Stmt) (*T, error) {
+	return InsertWith[T](db.executor(), b)
+}
+
+func InsertWith[T any](ex *Executor, b buildersql.Stmt) (*T, error) {
+	return insertSkipExists[T](ex, b, false)
+}
+
+func insertSkipExists[T any](ex *Executor, b buildersql.Stmt, skipExists bool) (*T, error) {
 	if skipExists {
-		ex, err := Exists(db, b)
+		existed, err := ExistsWith(ex, b)
 		if err != nil {
 			return nil, err
 		}
 
-		if ex {
+		if existed {
 			return nil, nil
 		}
 	}
 
 	var t T
-	if db.Driver() == DriverMySQL {
-		return insertMySQL[T](db, b)
+	if ex.driver == DriverMySQL {
+		return insertMySQL[T](ex, b)
 	}
 
-	query, args, err := db.prepareBuilder(b)
+	query, args, err := ex.prepareBuilder(b)
 	if err != nil {
 		return nil, err
 	}
 
-	rows, err := db.conn.QueryContext(context.Background(), query, args...)
+	rows, err := ex.q.QueryContext(context.Background(), query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -59,41 +67,41 @@ func insertSkipExists[T any](db *DB, b buildersql.Stmt, skipExists bool) (*T, er
 	return &t, nil
 }
 
-func insertMySQL[T any](db *DB, b buildersql.Stmt) (*T, error) {
-	query, args, err := db.prepareInsertBuilder(b)
+func insertMySQL[T any](ex *Executor, b buildersql.Stmt) (*T, error) {
+	query, args, err := ex.prepareInsertBuilder(b)
 	if err != nil {
 		return nil, err
 	}
 
-	result, err := db.conn.ExecContext(context.Background(), query, args...)
+	result, err := ex.q.ExecContext(context.Background(), query, args...)
 	if err != nil {
 		return nil, err
 	}
 
-	lookupColumn, lookupValue, err := db.resolveInsertLookup(b, result)
+	lookupColumn, lookupValue, err := resolveInsertLookup(ex, b, result)
 	if err != nil {
 		return nil, err
 	}
 
 	selectQuery := fmt.Sprintf("SELECT * FROM %s WHERE %s = @lookup LIMIT 1", b.TableName(), lookupColumn)
-	compiledQuery, compiledArgs, err := db.prepareQuery(selectQuery, buildersql.NamedArgs{"lookup": lookupValue})
+	compiledQuery, compiledArgs, err := ex.prepareQuery(selectQuery, buildersql.NamedArgs{"lookup": lookupValue})
 	if err != nil {
 		return nil, err
 	}
 
 	var record T
-	if err := getStruct(context.Background(), db.conn, &record, compiledQuery, compiledArgs...); err != nil {
+	if err := getStruct(context.Background(), ex.q, &record, compiledQuery, compiledArgs...); err != nil {
 		return nil, err
 	}
 
 	return &record, nil
 }
 
-func (db *DB) resolveInsertLookup(b buildersql.Stmt, result any) (string, any, error) {
+func resolveInsertLookup(ex *Executor, b buildersql.Stmt, result any) (string, any, error) {
 	if execResult, ok := result.(interface{ LastInsertId() (int64, error) }); ok {
 		lastInsertID, err := execResult.LastInsertId()
 		if err == nil && lastInsertID > 0 {
-			primaryKey, pkErr := db.lookupPrimaryKeyColumn(b.TableName())
+			primaryKey, pkErr := lookupPrimaryKeyColumn(ex, b.TableName())
 			if pkErr == nil {
 				return primaryKey, lastInsertID, nil
 			}
@@ -153,14 +161,14 @@ func normalizeLookupColumn(column string) string {
 	return strings.Trim(parts[len(parts)-1], "`\"")
 }
 
-func (db *DB) lookupPrimaryKeyColumn(tableName string) (string, error) {
+func lookupPrimaryKeyColumn(ex *Executor, tableName string) (string, error) {
 	cleanTable := normalizeLookupColumn(tableName)
 	if cleanTable == "" {
 		return "", fmt.Errorf("table name is empty")
 	}
 
 	var primaryKey string
-	err := db.conn.QueryRowContext(
+	err := ex.q.QueryRowContext(
 		context.Background(),
 		`SELECT COLUMN_NAME
 FROM information_schema.KEY_COLUMN_USAGE

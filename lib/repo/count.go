@@ -7,12 +7,16 @@ import (
 )
 
 func Count(db *DB, b buildersql.Stmt) (n int64, err error) {
-	query, args, err := db.prepareBuilder(b)
+	return CountWith(db.executor(), b)
+}
+
+func CountWith(ex *Executor, b buildersql.Stmt) (n int64, err error) {
+	query, args, err := ex.prepareBuilder(b)
 	if err != nil {
 		return 0, err
 	}
 
-	err = db.conn.QueryRowContext(context.Background(), query, args...).Scan(&n)
+	err = ex.q.QueryRowContext(context.Background(), query, args...).Scan(&n)
 
 	return n, err
 }

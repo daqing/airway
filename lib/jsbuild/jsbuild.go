@@ -15,6 +15,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/daqing/airway/lib/jspkg"
 	"github.com/evanw/esbuild/pkg/api"
 )
 
@@ -69,14 +70,14 @@ func Alias() map[string]string {
 
 func options(root string, write bool) api.BuildOptions {
 	return api.BuildOptions{
-		EntryPoints:       []string{EntryPoint},
-		Outdir:            DistDir,
-		Bundle:            true,
-		Write:             write,
-		Format:            api.FormatESModule,
-		Target:            api.ES2020,
-		Platform:          api.PlatformBrowser,
-		JSX:               api.JSXAutomatic,
+		EntryPoints: []string{EntryPoint},
+		Outdir:      DistDir,
+		Bundle:      true,
+		Write:       write,
+		Format:      api.FormatESModule,
+		Target:      api.ES2020,
+		Platform:    api.PlatformBrowser,
+		JSX:         api.JSXAutomatic,
 		// jsx runtime resolves through the react alias onto preact/compat,
 		// so the whole island tree runs with React semantics (ref
 		// forwarding included — required by react-hook-form's register).
@@ -91,7 +92,32 @@ func options(root string, write bool) api.BuildOptions {
 		Sourcemap:         api.SourceMapExternal,
 		AbsWorkingDir:     root,
 		LogLevel:          api.LogLevelWarning,
+		// Vendored packages legitimately use types-only bare imports while
+		// declaring "sideEffects": false, so this warning fires on every
+		// build without pointing at anything actionable.
+		LogOverride: map[string]api.LogLevel{"ignored-bare-import": api.LogLevelSilent},
 	}
+}
+
+// ErrVendorMissing is returned by Build and StartDev when js.pkg.json
+// declares dependencies but the vendor directory is absent. Server boots
+// check for it to fail fast instead of continuing without a frontend.
+var ErrVendorMissing = fmt.Errorf("%s is missing; run `airway js:install` to fetch the %s dependencies", VendorDir, jspkg.ManifestFile)
+
+// checkVendor fails fast when js.pkg.json declares dependencies but the
+// vendor directory they install into is absent — the freshly scaffolded
+// project case, where a build would otherwise drown in esbuild "Could not
+// resolve" errors. Everything else is left to esbuild's own diagnostics, so
+// projects without npm dependencies still build without a vendor directory.
+func checkVendor(root string) error {
+	if info, err := os.Stat(filepath.Join(root, VendorDir)); err == nil && info.IsDir() {
+		return nil
+	}
+	m, err := jspkg.ReadManifest(root)
+	if err != nil || len(m.Deps) == 0 {
+		return nil
+	}
+	return ErrVendorMissing
 }
 
 // Build runs a production build into DistDir and writes ManifestFile.
@@ -99,6 +125,9 @@ func options(root string, write bool) api.BuildOptions {
 func Build(root string) (*Manifest, error) {
 	root, err := filepath.Abs(root)
 	if err != nil {
+		return nil, err
+	}
+	if err := checkVendor(root); err != nil {
 		return nil, err
 	}
 	result := api.Build(options(root, true))

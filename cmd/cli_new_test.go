@@ -11,7 +11,7 @@ import (
 func TestNewProjectScaffoldsModule(t *testing.T) {
 	wd := useTempWorkingDir(t)
 
-	if err := newProject("github.com/example/demo", false); err != nil {
+	if err := newProject("github.com/example/demo", false, ""); err != nil {
 		t.Fatalf("new project: %v", err)
 	}
 
@@ -57,7 +57,7 @@ func TestNewProjectPinsAirwayVersion(t *testing.T) {
 	Version = "v9.9.9"
 	t.Cleanup(func() { Version = oldVersion })
 
-	if err := newProject("pinned", false); err != nil {
+	if err := newProject("pinned", false, ""); err != nil {
 		t.Fatalf("new project: %v", err)
 	}
 
@@ -74,7 +74,7 @@ func TestNewProjectSkipsPinForDevBuild(t *testing.T) {
 	Version = "dev"
 	t.Cleanup(func() { Version = oldVersion })
 
-	if err := newProject("devbuild", false); err != nil {
+	if err := newProject("devbuild", false, ""); err != nil {
 		t.Fatalf("new project: %v", err)
 	}
 
@@ -89,7 +89,7 @@ func TestNewProjectRejectsExistingNonEmptyDirectory(t *testing.T) {
 	makeDirs(t, filepath.Join(wd, "demo"))
 	writeFile(t, filepath.Join(wd, "demo", "existing.txt"), "occupied\n")
 
-	if err := newProject("demo", false); err == nil {
+	if err := newProject("demo", false, ""); err == nil {
 		t.Fatalf("expected error for non-empty directory")
 	}
 }
@@ -98,7 +98,7 @@ func TestNewProjectFromAbsolutePath(t *testing.T) {
 	wd := useTempWorkingDir(t)
 
 	destDir := filepath.Join(wd, "nested", "foobar")
-	if err := newProject(destDir, false); err != nil {
+	if err := newProject(destDir, false, ""); err != nil {
 		t.Fatalf("new project: %v", err)
 	}
 
@@ -116,7 +116,7 @@ func TestNewProjectRejectsInvalidModulePath(t *testing.T) {
 	useTempWorkingDir(t)
 
 	for _, module := range []string{"", "UPPER Case", "has space", "/tmp/UPPER Case"} {
-		if err := newProject(module, false); err == nil {
+		if err := newProject(module, false, ""); err == nil {
 			t.Fatalf("expected error for module path %q", module)
 		}
 	}
@@ -136,7 +136,100 @@ func TestRunNewHelpPrintsUsage(t *testing.T) {
 		}
 	})
 
-	if !strings.Contains(output, "airway new <module-path | directory>") {
+	if !strings.Contains(output, "airway new [--local[=path]] <module-path | directory>") {
 		t.Fatalf("expected new usage output, got:\n%s", output)
+	}
+}
+
+func TestResolveLocalCheckout(t *testing.T) {
+	wd := useTempWorkingDir(t)
+	checkout := filepath.Join(wd, "airway-src")
+	makeDirs(t, checkout)
+	writeFile(t, filepath.Join(checkout, "go.mod"), "module github.com/daqing/airway\n\ngo 1.26\n")
+
+	if _, err := resolveLocalCheckout(filepath.Join(wd, "empty")); err == nil || !strings.Contains(err.Error(), "go.mod not found") {
+		t.Fatalf("missing go.mod: err = %v, want go.mod not found", err)
+	}
+
+	writeFile(t, filepath.Join(wd, "go.mod"), "module github.com/example/other\n")
+	if _, err := resolveLocalCheckout(wd); err == nil || !strings.Contains(err.Error(), "module is not github.com/daqing/airway") {
+		t.Fatalf("foreign module: err = %v, want module mismatch", err)
+	}
+
+	if _, err := resolveLocalCheckout(checkout); err == nil || !strings.Contains(err.Error(), "VERSION not found") {
+		t.Fatalf("missing VERSION: err = %v, want VERSION not found", err)
+	}
+
+	writeFile(t, filepath.Join(checkout, "VERSION"), "0.9.3\n")
+	abs, err := resolveLocalCheckout(checkout)
+	if err != nil {
+		t.Fatalf("resolveLocalCheckout: %v", err)
+	}
+	if abs != checkout {
+		t.Fatalf("resolveLocalCheckout = %q, want %q", abs, checkout)
+	}
+}
+
+func TestNewProjectReplacesWithLocalCheckout(t *testing.T) {
+	wd := useTempWorkingDir(t)
+
+	oldVersion := Version
+	Version = "v9.9.9"
+	t.Cleanup(func() { Version = oldVersion })
+
+	checkout := filepath.Join(wd, "airway-src")
+	makeDirs(t, checkout)
+	writeFile(t, filepath.Join(checkout, "go.mod"), "module github.com/daqing/airway\n")
+	writeFile(t, filepath.Join(checkout, "VERSION"), "0.9.3\n")
+
+	if err := newProject("localdev", false, checkout); err != nil {
+		t.Fatalf("new project: %v", err)
+	}
+
+	goMod := readFile(t, filepath.Join(wd, "localdev", "go.mod"))
+	if !strings.Contains(goMod, "replace github.com/daqing/airway => "+checkout) {
+		t.Fatalf("expected local replace in go.mod, got:\n%s", goMod)
+	}
+	if strings.Contains(goMod, "require github.com/daqing/airway") {
+		t.Fatalf("expected no pin alongside a local replace, got:\n%s", goMod)
+	}
+}
+
+func TestImpliedLocalCheckout(t *testing.T) {
+	useTempWorkingDir(t)
+
+	if dir, ok := impliedLocalCheckout(); ok {
+		t.Fatalf("impliedLocalCheckout outside a checkout = %q, want none", dir)
+	}
+
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkout := filepath.Join(wd, "airway-src")
+	makeDirs(t, checkout)
+	writeFile(t, filepath.Join(checkout, "go.mod"), "module github.com/daqing/airway\n")
+	writeFile(t, filepath.Join(checkout, "VERSION"), "0.9.3\n")
+	if err := os.Chdir(checkout); err != nil {
+		t.Fatal(err)
+	}
+
+	dir, ok := impliedLocalCheckout()
+	if !ok || dir != checkout {
+		t.Fatalf("impliedLocalCheckout inside checkout = %q, %v; want %q", dir, ok, checkout)
+	}
+}
+
+func TestRunNewLocalFlagRejectsNonCheckout(t *testing.T) {
+	useTempWorkingDir(t)
+
+	err := run([]string{"new", "--local", "demo"})
+	if err == nil || !strings.Contains(err.Error(), "--local") {
+		t.Fatalf("run new --local outside a checkout = %v, want --local error", err)
+	}
+
+	err = run([]string{"new", "--local=", "demo"})
+	if err == nil || !strings.Contains(err.Error(), "--local needs a path") {
+		t.Fatalf("run new --local= = %v, want path-required error", err)
 	}
 }

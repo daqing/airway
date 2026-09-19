@@ -45,6 +45,22 @@ type routesTemplateData struct {
 	APIName string
 }
 
+const openapiTemplate = `package {{.APIName}}
+
+import "github.com/daqing/airway/lib/openapi"
+
+func init() {
+	openapi.Get("/{{.Mod}}/index", func(o *openapi.Operation) {
+		o.Summary("Index of {{.Mod}}").Tag("{{.Mod}}").OK()
+	})
+}
+`
+
+type openapiTemplateData struct {
+	Mod     string
+	APIName string
+}
+
 const modelTemplate = `package models
 
 import (

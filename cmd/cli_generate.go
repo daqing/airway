@@ -89,10 +89,18 @@ func generateAPI(args []string) error {
 		return err
 	}
 
-	return writeTemplateFile(
+	if err := writeTemplateFile(
 		routesTemplate,
 		filepath.Join(dirPath, "routes.go"),
 		routesTemplateData{Mod: name, APIName: apiName},
+	); err != nil {
+		return err
+	}
+
+	return writeTemplateFile(
+		openapiTemplate,
+		filepath.Join(dirPath, "openapi.go"),
+		openapiTemplateData{Mod: name, APIName: apiName},
 	)
 }
 

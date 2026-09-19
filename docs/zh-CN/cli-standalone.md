@@ -132,7 +132,7 @@ Plugin 是通过 `plugins.go` 中的空白导入启用的可选功能模块
 
 ```bash
 go run . plugin:list           # 列出已注册的 Plugin 及挂载路径
-go run . plugin:install <module> # 把 Plugin 内嵌的 SQL 迁移复制到 db/migrate/
+go run . plugin:install <module> # 安装 Plugin 的 SQL 迁移、host/ 目录树和 deps/ 目录
 ```
 
 Plugin 在编译期注册，因此请通过**项目二进制**运行这些命令

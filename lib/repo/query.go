@@ -25,21 +25,33 @@ var mysqlConflictDoUpdatePattern = regexp.MustCompile(`\s+ON\s+CONFLICT(?:\s+ON\
 var mysqlExcludedPattern = regexp.MustCompile(`\bEXCLUDED\.([A-Za-z_][A-Za-z0-9_]*)\b`)
 
 func (db *DB) prepareBuilder(b buildersql.Stmt) (string, []any, error) {
-	query, vals := b.ToSQL()
-	return db.prepareQuery(query, vals)
+	return db.driver.prepareBuilder(b)
 }
 
 func (db *DB) prepareInsertBuilder(b buildersql.Stmt) (string, []any, error) {
-	query, vals := b.ToSQL()
-	if db.driver == DriverMySQL {
-		query = stripReturningClause(query)
-	}
-
-	return db.prepareQuery(query, vals)
+	return db.driver.prepareInsertBuilder(b)
 }
 
 func (db *DB) prepareQuery(query string, vals buildersql.NamedArgs) (string, []any, error) {
-	transformedQuery, err := transformQueryForDriver(db.driver, query)
+	return db.driver.prepareQuery(query, vals)
+}
+
+func (driver Driver) prepareBuilder(b buildersql.Stmt) (string, []any, error) {
+	query, vals := b.ToSQL()
+	return driver.prepareQuery(query, vals)
+}
+
+func (driver Driver) prepareInsertBuilder(b buildersql.Stmt) (string, []any, error) {
+	query, vals := b.ToSQL()
+	if driver == DriverMySQL {
+		query = stripReturningClause(query)
+	}
+
+	return driver.prepareQuery(query, vals)
+}
+
+func (driver Driver) prepareQuery(query string, vals buildersql.NamedArgs) (string, []any, error) {
+	transformedQuery, err := transformQueryForDriver(driver, query)
 	if err != nil {
 		return "", nil, err
 	}
@@ -49,7 +61,7 @@ func (db *DB) prepareQuery(query string, vals buildersql.NamedArgs) (string, []a
 		return "", nil, err
 	}
 
-	return db.rebind(compiledQuery), args, nil
+	return driver.rebind(compiledQuery), args, nil
 }
 
 func compileNamedQuery(query string, vals buildersql.NamedArgs) (string, []any, error) {

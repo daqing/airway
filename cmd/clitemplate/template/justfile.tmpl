@@ -1,6 +1,9 @@
 dev:
   overmind start -f Procfile.dev
 
+compose:
+  docker-compose up --build
+
 install-deps:
   go install github.com/air-verse/air@latest
   brew install tmux

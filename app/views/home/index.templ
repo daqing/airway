@@ -19,13 +19,13 @@ templ Index(counterStart int) {
 				<nav class="home-nav container" aria-label="Main navigation">
 					<a class="home-brand" href="#top" aria-label="Airway home">@brandMark()
 <span>airway<span class="brand-period">.</span></span></a>
-					<div class="home-nav-links">
-						<a href="#features">The framework</a><a href="#get-started">Quick start</a>
-						<a href={ templ.URL(repositoryURL + "#readme") }>
-							Documentation
-							@arrow("up")
-						</a>
-					</div>
+						<div class="home-nav-links">
+							<a href="#features">The framework</a><a href="#frontend">Frontend</a><a href="#get-started">Quick start</a>
+							<a href={ templ.URL(repositoryURL + "#readme") }>
+								Documentation
+								@arrow("up")
+							</a>
+						</div>
 					<div class="home-nav-side">
 						<button type="button" class="theme-toggle" data-theme-toggle aria-pressed="false" aria-label="Toggle light and dark mode" title="Toggle light and dark mode">
 							@sunIcon()
@@ -137,10 +137,38 @@ index_action.go</button>
 						<p class="database-footnote">Basic CRUD is portable. Some advanced SQL helpers are PostgreSQL-specific.</p>
 					</div>
 				</section>
+				<section id="frontend" class="frontend-section container" aria-labelledby="frontend-title">
+					<div>
+						<p class="eyebrow">03 / THE FRONTEND, WITHOUT NODE.JS</p>
+						<h2 id="frontend-title">Islands of interactivity.<br/><span class="text-muted">One binary, start to finish.</span></h2>
+						<p class="section-copy">Pages stay server-rendered with templ — structure, SEO, and first paint included. Where a page needs to react, drop in an island: a Preact component mounted on one small spot of the page, seeded with props from your Go action. Fetching, resolving, bundling, and serving npm packages happens inside the airway binary itself.</p>
+						<ul class="frontend-points">
+							<li><strong>templ renders the skeleton.</strong> Pages paint fully without JavaScript; islands hydrate only the spots that need to react.</li>
+							<li><strong>Islands own the interactivity.</strong> Props ride along as JSON next to the mount point — no client-side fetch before first render.</li>
+							<li><strong>esbuild, linked as a Go library.</strong> Local dev rebuilds in memory with livereload; production bundles embed in the binary via go:embed.</li>
+							<li><strong>airway-ui on a preact/compat base.</strong> Logic from the React ecosystem, a visual layer built in-house — live reference at /ui.</li>
+						</ul>
+						<a class="inline-link" href={ templ.URL(repositoryURL + "/blob/main/docs/frontend.md") }>
+							Read the frontend guide
+							@arrow("right")
+						</a>
+					</div>
+					<div class="frontend-demo" data-tabs>
+						<div class="frontend-tabs" role="tablist" aria-label="Frontend examples">
+							<button id="tab-island" type="button" role="tab" aria-selected="true" aria-controls="panel-island" data-tab="island">Islands</button>
+							<button id="tab-ui" type="button" role="tab" aria-selected="false" aria-controls="panel-ui" tabindex="-1" data-tab="ui">airway-ui</button>
+							<button id="tab-js" type="button" role="tab" aria-selected="false" aria-controls="panel-js" tabindex="-1" data-tab="js">Workflow</button>
+						</div>
+						<div id="panel-island" role="tabpanel" aria-labelledby="tab-island" tabindex="0"><pre><code><span class="syntax-comment">{ "// In any templ view — an island, seeded server-side:" }</span>{ "\n" }{ "@assets." }<span class="syntax-blue">Island</span>(<span class="syntax-green">"chart"</span>, map[string]any{ "{" }{ "\n" }{ "    " }<span class="syntax-green">"points"</span>: []int{ "{4, 8, 15}" }{ "),\n\n" }<span class="syntax-comment">{ "// What ships to the browser:" }</span>{ "\n" }{ "<div data-island=\"chart\"></div>\n" }{ "<script type=\"application/json\" id=\"island-data-1\">\n" }{ "    " }{ "{" }<span class="syntax-green">"points"</span>:{ "[4, 8, 15]" }{ "}" }{ "\n" }{ "</script>\n\n" }<span class="syntax-comment">{ "// The runtime scans data-island nodes and mounts the" }</span>{ "\n" }<span class="syntax-comment">{ "// component with the adjacent JSON as props." }</span></code></pre></div>
+						<div id="panel-ui" role="tabpanel" aria-labelledby="tab-ui" tabindex="0" hidden><pre><code><span class="syntax-comment">{ "// app/assets/js/islands/chart.tsx — the default export" }</span>{ "\n" }<span class="syntax-comment">{ "// is the island; its file path is its name." }</span>{ "\n" }<span class="syntax-purple">import</span> { "{ DataTable, useToast }" } <span class="syntax-purple">from</span> <span class="syntax-green">"../ui"</span>;{ "\n\n" }<span class="syntax-purple">export default function</span> <span class="syntax-blue">Chart</span>({ "{ posts }" }: { "{ posts: Post[] }" }{ ") {\n    const toast = useToast();\n    return (\n        <DataTable\n            data={posts}\n            pageSize={10}\n            onRowClick={(post) => toast.show(post.title)}\n        />\n    );\n}\n\n" }<span class="syntax-comment">{ "// React-ecosystem logic, an in-house visual layer." }</span>{ "\n" }<span class="syntax-comment">{ "// See every component live at /ui on your server." }</span></code></pre></div>
+						<div id="panel-js" role="tabpanel" aria-labelledby="tab-js" tabindex="0" hidden><pre><code><span class="syntax-comment"># Frontend dependencies, no Node required:</span>{ "\n" }airway js:add <span class="syntax-green">{ "@tanstack/react-table@9.2.4" }</span><span class="syntax-comment">{ "   # pinned in js.pkg.json + lock" }</span>{ "\n" }airway js:install<span class="syntax-comment">{ "                           # node_modules layout, committed" }</span>{ "\n" }airway js:build<span class="syntax-comment">{ "                             # esbuild -> app/assets/dist" }</span>{ "\n\n" }<span class="syntax-comment"># Scaffold the interactive parts:</span>{ "\n" }airway generate island chart<span class="syntax-comment">{ "                # a new island component" }</span>{ "\n" }airway generate scaffold post title:string<span class="syntax-comment">{ " # CRUD: API + page + island" }</span>{ "\n\n" }<span class="syntax-comment"># AIRWAY_ENV=local airway server</span>{ "\n" }<span class="syntax-comment"># -> in-memory rebuilds, livereload on every save</span></code></pre></div>
+						<p class="frontend-footnote">Outgrow the islands? Split the frontend into its own app and keep Airway as your JSON API — the escape hatch is part of the design.</p>
+					</div>
+				</section>
 				<section id="get-started" class="quickstart-section" aria-labelledby="quickstart-title">
 					<div class="container quickstart-grid">
 						<div>
-							<p class="eyebrow">03 / CLEAR FOR TAKEOFF</p>
+							<p class="eyebrow">04 / CLEAR FOR TAKEOFF</p>
 							<h2 id="quickstart-title">Your next project<br/>starts here.</h2>
 							<p class="section-copy">A few commands. A working application.<br/>And a whole lot of possibility.</p>
 							<ol class="start-steps"><li><span>01</span><div><strong>Make it yours</strong><p>Clone Airway and copy the example config.</p></div></li><li><span>02</span><div><strong>Pick your database</strong><p>Uncomment the SQLite DSN in your .env file.</p></div></li><li><span>03</span><div><strong>You’re ready to Go</strong><p>Start the app and open localhost:1900.</p></div></li></ol>
@@ -152,7 +180,7 @@ index_action.go</button>
 						<div class="quickstart-terminal"><div class="terminal-heading"><span>@terminalIcon()
 Quick start</span><button type="button" class="copy-button" data-copy="quickstart-code" hidden aria-label="Copy quick start commands">@copyIcon()
 <span>Copy</span></button></div><pre><code id="quickstart-code"><span class="syntax-comment"># 1. Get the code</span>{ "\n" }git clone https://github.com/daqing/airway.git{ "\n" }cd airway{ "\n" }cp .env.example .env{ "\n\n" }<span class="syntax-comment"># 2. In .env, uncomment the SQLite DSN:</span>{ "\n" }<span class="syntax-comment"># DSN="sqlite://./tmp/airway.db"</span>{ "\n\n" }<span class="syntax-comment"># 3. Start your application</span>{ "\n" }AIRWAY_ENV=local go run .</code></pre><div class="terminal-footer"><span class="status-dot" aria-hidden="true"></span><span>Next stop: <strong>http://localhost:1900</strong></span>@arrow("right")
-</div><p class="terminal-requirement">Requires Go 1.26.2 or later · Live reload with <code>just dev</code></p><p class="copy-status" role="status" aria-live="polite"></p></div>
+</div><p class="terminal-requirement">Requires Go 1.27.1 or later · Live reload with <code>just dev</code></p><p class="copy-status" role="status" aria-live="polite"></p></div>
 					</div>
 				</section>
 				<section class="community-section container" aria-labelledby="community-title">

@@ -7,7 +7,11 @@ import (
 )
 
 func FindOne[T any](db *DB, b buildersql.Stmt) (*T, error) {
-	rows, err := Find[T](db, b)
+	return FindOneWith[T](db.executor(), b)
+}
+
+func FindOneWith[T any](ex *Executor, b buildersql.Stmt) (*T, error) {
+	rows, err := FindWith[T](ex, b)
 	if err != nil {
 		return nil, err
 	}
@@ -25,14 +29,18 @@ func FindOne[T any](db *DB, b buildersql.Stmt) (*T, error) {
 
 // limit = 0 means no limit
 func Find[T any](db *DB, b buildersql.Stmt) ([]*T, error) {
+	return FindWith[T](db.executor(), b)
+}
+
+func FindWith[T any](ex *Executor, b buildersql.Stmt) ([]*T, error) {
 	var records = []*T{}
 
-	query, args, err := db.prepareBuilder(b)
+	query, args, err := ex.prepareBuilder(b)
 	if err != nil {
 		return nil, err
 	}
 
-	rows, err := db.conn.QueryContext(context.Background(), query, args...)
+	rows, err := ex.q.QueryContext(context.Background(), query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -45,6 +53,7 @@ func Find[T any](db *DB, b buildersql.Stmt) ([]*T, error) {
 		if err := rowScanner.Scan(&record); err != nil {
 			return nil, err
 		}
+
 		records = append(records, &record)
 	}
 

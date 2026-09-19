@@ -30,7 +30,7 @@ func main() {
 	}
 	defer f.Close()
 
-	if err := home.Index().Render(context.Background(), f); err != nil {
+	if err := home.Index(3).Render(context.Background(), f); err != nil {
 		fmt.Fprintf(os.Stderr, "render home page: %v\n", err)
 		os.Exit(1)
 	}

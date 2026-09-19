@@ -13,7 +13,7 @@ The project supports PostgreSQL, SQLite 3, and MySQL 8 from the same codebase; t
 
 ## Tech Stack
 
-- **Language:** Go 1.26 (module `github.com/daqing/airway`); pure-Go SQLite driver (`modernc.org/sqlite`).
+- **Language:** Go 1.27 (module `github.com/daqing/airway`); pure-Go SQLite driver (`modernc.org/sqlite`).
 - **HTTP framework:** Gin (`gin-gonic/gin`), with `gin-contrib/cors`.
 - **HTML views:** [templ](https://templ.guide/) templates under `app/views`, compiled to Go and rendered via `lib/render.HTML`. Generated `*_templ.go` files are committed.
 - **Database access:** `database/sql` on top of `jackc/pgx/v5/stdlib` (PostgreSQL), `go-sql-driver/mysql`, `modernc.org/sqlite`.
@@ -76,9 +76,13 @@ lib/
                  storage.Current() after boot.
   redis_client/  Redis setup helper.
   render/        Response helpers: JSON (ok, error, found) and HTML via templ.
+  openapi/       OpenAPI 3.2 document generation: route metadata registry,
+                 JSON-schema inference from Go types, deterministic build
+                 behind `airway openapi:generate` and GET /openapi.json
+                 (see docs/openapi.md).
   utils/         Env/config helpers, password hashing, tokens, dates, markdown.
   validation/    Input validation helpers.
-docs/            Guides: cli.md, plugin.md, storage.md,
+docs/            Guides: cli.md, plugin.md, storage.md, openapi.md,
                  docker-compose.yml.example, zh-CN/ (Chinese docs).
   homegen/       //go:build ignore script run by the docs workflow after the
                  VitePress build; renders the app/views/home templ landing page
@@ -111,11 +115,17 @@ The server requires `AIRWAY_ENV` to be set; when it is `local`, `.env` is loaded
 
 Commands run through the `airway` binary (installed via
 `go install github.com/daqing/airway@latest`) or as `go run . <command>` in a
-project; they auto-load `.env` from the project root. The legacy
-`airway cli <command>` form still works as a compatibility alias:
+project; they auto-load `.env` from the project root. Inside a host
+application the globally installed `airway` auto-proxies every project-scoped
+command to `go run .` (see `cmd.ProxyHostProject`; `new`/`version`/`help` and
+anything run outside a project stay local), so both forms are equivalent.
+The proxy aborts when the global CLI's version differs from the project's
+pinned `github.com/daqing/airway` version (a local-directory `replace` is
+compared against that checkout's `VERSION` file).
+The legacy `airway cli <command>` form still works as a compatibility alias:
 
 ```bash
-airway new myapp                                      # scaffold a new project skeleton
+airway new [--local[=path]] myapp                      # scaffold a new project; --local replaces the framework with an airway checkout (default $PWD) for framework development
 airway server                                         # start the HTTP server
 airway generate api admin                             # new API namespace under app/api/
 airway generate action admin show                     # new action in an existing API module
@@ -128,12 +138,14 @@ airway db:migrate [version]                           # apply migrations
 airway db:rollback [step]
 airway db:status
 airway schema:dump | schema:show                      # writes/reads db/schema.json
+airway openapi:generate [--out path]                  # write the OpenAPI 3.2 document (default ./openapi.json); served live at GET /openapi.json
 airway upload [key] /path/to/file                     # upload via configured storage
 airway js:add <pkg>[@version]                         # add a frontend npm dependency (no Node required)
 airway js:install                                     # install js.pkg.json deps into app/assets/js/vendor/
 airway js:build                                       # bundle the frontend into app/assets/dist
-airway plugin:new <module-path>                       # scaffold a new plugin module
+airway plugin:new <module-path> | <path>              # scaffold a new plugin module (a path like /tmp/foo scaffolds there)
 airway plugin:list                                    # registered plugins and mount paths
+airway plugin:lint                                    # check the current plugin project for legacy layout issues
 airway version                                          # or -v / --version; prints the VERSION file contents
 airway --version | -v                                   # print VERSION contents without loading .env
 go run . plugin:install <module>                      # enable a plugin (go get + blank import) and install its SQL migrations + deps/ directory
@@ -142,12 +154,13 @@ go run . repl                                         # interactive repo REPL
 
 `plugin:install` is self-contained: when the plugin is not compiled into the
 current binary, it adds the blank import to `plugins.go`, runs `go get` (or a
-`replace` for a local directory), and then reads the plugin's migrations and
-`deps/` from its module directory on disk — all in the same process, so the
-current CLI's installer logic is always the one used. `repl` only sees
-plugins/models compiled into the
-running binary, so run it via the project binary (`go run . ...`); the
-globally installed `airway` only knows what is compiled into itself.
+`replace` for a local directory), and then reads the plugin's `install/`
+directory (`install/host/` tree and `install/deps/`) from its module
+directory on disk — all in the same
+process, so the current CLI's installer logic is always the one used. `repl`
+only sees plugins/models compiled into the running binary; inside a project
+the globally installed `airway` proxies to `go run .` automatically, so
+`airway repl` there behaves like `go run . repl`.
 Generators read the module path from the current directory's `go.mod`, so
 generated code imports the project's own packages.
 
@@ -159,12 +172,19 @@ Migration and schema commands read `AIRWAY_DB_DSN` first and fall back to the le
 - **API modules** (`app/api/<name>_api/`): one package per namespace. `routes.go` exposes `Routes(r *gin.RouterGroup)`; handlers live in `<action>_action.go` as `func XxxAction(c *gin.Context)`. New modules must be wired into `config/routes.go`.
 - **Data access:** prefer the generics API in `lib/repo` (`repo.FindBy[T]`, `repo.CreateFrom[T]`, `repo.UpdateByID[T]`, `repo.DeleteByID[T]`, `repo.Preload(...)`, `repo.Join(...)`) and the `lib/sql` builder for conditions (`sql.Eq`, `sql.And`, `sql.Gt`, ...). Use `repo.Preload` instead of hand-written loops to avoid N+1 queries.
 - **Responses:** use the `lib/render` helpers rather than hand-rolled JSON.
+- **OpenAPI:** every API route is documented automatically (handler-derived
+  operationId, default `render` envelope as the 200 response). Modules enrich
+  their docs with an `openapi.go` file declaring operations via `lib/openapi`
+  (`openapi.Get(...)` etc., matched by method+path; see docs/openapi.md);
+  document-level settings live in `app/api/openapi_api/doc.go`. The generated
+  `openapi.json` is a local build artifact (git-ignored); regenerate it with
+  `go run . openapi:generate` whenever routes or declared types change.
 - **HTML views:** server-rendered pages live under `app/views/<module>/` as templ files, one folder per API module (e.g. `app/views/home/` for `home_api`); a shared shell lives in `app/views/layouts/`. Actions render them with `render.HTML(c, view.Component())` (see `home_api`). Re-run `go generate ./...` when you edit a `.templ` file and keep the generated `*_templ.go`.
 - **Interactive islands:** embed Preact TSX components in templ views with `@assets.Island("name", props)`; the component file is `app/assets/js/islands/<name>.tsx` (default-export; file path = island name, case-sensitive). `base.templ` loads the bundle via `assets.Scripts()` and styles via `assets.Stylesheet()`. After changing frontend sources run `go run . js:build` and commit the dist output (see PLAN.md Phase 3).
 - **airway-ui components:** build islands from the library under `app/assets/js/ui/` (Button, inputs + Field, Form on react-hook-form, DataTable on TanStack Table, Modal, Toast via `useToast`, Tabs, Pagination, `apiFetch`/`useApiQuery`); live reference at `/ui`. Frontend sources import `react` (aliased onto preact/compat at build time) — React semantics apply, so custom inputs used with `register()` must forwardRef.
 - **Storage:** always go through `storage.Current()` — never touch local disk or cloud SDKs directly.
 - **Globals at boot:** `main.go` initializes the DB (`repo.SetupDB`), Redis (`redis_client.Setup`), and storage (`storage.Setup`) from environment variables; packages then use their `Current*()` accessors.
-- **Plugins:** optional feature modules (separate Go modules, e.g. an IM backend) implement `lib/plugin.Plugin` and self-register via `init()`; hosts enable them with blank imports in `plugins.go`. Routes mount through `plugin.MountAll` in `config/routes.go`, boot hooks run from `main.go` after infra setup, and `go run . plugin:install` enables a plugin (blank import + `go get`) and installs its SQL migrations plus its `deps/` directory (merged into the host project's `deps/` directory, namespaced under the plugin name, `.templ` suffix stripped, existing files skipped) in one step (see docs/plugin.md).
+- **Plugins:** optional feature modules (separate Go modules, e.g. an IM backend) implement `lib/plugin.Plugin` and self-register via `init()`; hosts enable them with blank imports in `plugins.go`. Routes mount through `plugin.MountAll` in `config/routes.go`, boot hooks run from `main.go` after infra setup, and `go run . plugin:install` enables a plugin (blank import + `go get`) and installs its SQL migrations (from the plugin's `install/host/db/migrate`, copied into the host's `db/migrate`), mirrors the rest of its `install/host/` tree into the host project root preserving relative paths, plus its `install/deps/` directory (merged into the host project's `deps/` directory, namespaced under the plugin name, `.templ` suffix stripped — a bare file beside its `.templ` variant is skipped, and a bare `go.mod` out of sync with its `.templ` fails the install — and existing files skipped; everything is read from `install/` only, the plugin's implementation in `install/lib/` is compiled into the plugin binary and never copied, every `ignore/` directory — `install/ignore/` or inside `install/host/` and `install/deps/` — is skipped wholesale, and the plugin's root `.gitignore` rules likewise exclude files when reading from disk, e.g. `node_modules/`) in one step (see docs/plugin.md).
 - **Naming:** environment variables are prefixed `AIRWAY_`; CLI subcommands follow the Rails-like `db:migrate` / `schema:dump` style.
 - Format code with `gofmt`/`go fmt`; keep changes minimal and match the surrounding style.
 - **Git commit messages:** a concise one-line summary plus a short paragraph describing what the change accomplishes; leave implementation details (files, functions, internal mechanics) out of the message. Do not add AI attribution/signatures (such as `Co-Authored-By` or any other AI-related lines) to commit messages.
@@ -180,7 +200,10 @@ Migration and schema commands read `AIRWAY_DB_DSN` first and fall back to the le
 
 ## Configuration
 
-All configuration is via environment variables (see `.env.example`):
+All configuration is via environment variables (see `.env.example`). The
+process environment always wins over `.env` values (loaded as fallbacks for
+keys the environment does not set), so `PORT=1988 airway server` overrides a
+`PORT`/`AIRWAY_PORT` in `.env`:
 
 - `AIRWAY_ENV` — `local` enables `.env` loading and Gin debug mode; anything else runs Gin in release mode.
 - `AIRWAY_DB_DSN` — database URL; driver inferred from scheme: `postgres://...`, `sqlite://./tmp/airway.db`, `sqlite://:memory:`, `mysql://...` (native Go MySQL driver DSN format also accepted).
@@ -193,7 +216,7 @@ All configuration is via environment variables (see `.env.example`):
 
 ## Deployment
 
-- **Docker:** multi-stage `Dockerfile` (golang:1.26-alpine builder, alpine runtime; pure-Go build). Build with `just docker` or `docker build -t airway .`. The image sets `AIRWAY_ENV=production`, exposes port `1900`, copies `db/` into the image, and starts with `CMD ["/app/airway", "server"]`. Note the Dockerfile points the Go module proxy at goproxy.cn (Chinese mirror).
+- **Docker:** multi-stage `Dockerfile` (golang:1.27-alpine builder, alpine runtime; pure-Go build). Build with `just docker` or `docker build -t airway .`. The image sets `AIRWAY_ENV=production`, exposes port `1900`, copies `db/` into the image, and starts with `CMD ["/app/airway", "server"]`. Note the Dockerfile points the Go module proxy at goproxy.cn (Chinese mirror).
 - **docker-compose:** see `docs/docker-compose.yml.example`.
 - The binary is self-contained; run migrations with `./airway db:migrate` before/after deploy as needed.
 

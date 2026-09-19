@@ -12,7 +12,7 @@ jobs:
   e2e:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.26-alpine
+      image: golang:1.27-alpine
     env:
       JS_REGISTRY: https://registry.npmmirror.com
     steps:

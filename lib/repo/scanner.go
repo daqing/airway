@@ -80,7 +80,7 @@ func (s *structScanner) init(structType reflect.Type) error {
 
 // selectStructs queries multiple rows and scans them into a slice of structs
 // (or a slice of pointers to structs). dst must be a pointer to such a slice.
-func selectStructs(ctx context.Context, conn *sql.DB, dst any, query string, args ...any) error {
+func selectStructs(ctx context.Context, q Querier, dst any, query string, args ...any) error {
 	sliceValue := reflect.ValueOf(dst)
 	if !sliceValue.IsValid() || sliceValue.Kind() != reflect.Ptr || sliceValue.IsNil() {
 		return fmt.Errorf("select destination must be a non-nil pointer, got %T", dst)
@@ -91,7 +91,7 @@ func selectStructs(ctx context.Context, conn *sql.DB, dst any, query string, arg
 		return fmt.Errorf("select destination must be a pointer to a slice, got %T", dst)
 	}
 
-	rows, err := conn.QueryContext(ctx, query, args...)
+	rows, err := q.QueryContext(ctx, query, args...)
 	if err != nil {
 		return err
 	}
@@ -128,8 +128,8 @@ func selectStructs(ctx context.Context, conn *sql.DB, dst any, query string, arg
 // getStruct queries a single row and scans it into dst, a pointer to a struct.
 // It returns sql.ErrNoRows when the query yields no rows. Additional rows, if
 // any, are ignored.
-func getStruct(ctx context.Context, conn *sql.DB, dst any, query string, args ...any) error {
-	rows, err := conn.QueryContext(ctx, query, args...)
+func getStruct(ctx context.Context, q Querier, dst any, query string, args ...any) error {
+	rows, err := q.QueryContext(ctx, query, args...)
 	if err != nil {
 		return err
 	}

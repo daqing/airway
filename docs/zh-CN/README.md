@@ -232,6 +232,52 @@ n, err := repo.CountWhere[User](sql.H{"active": true})
 n, err := repo.CountEvery[User]()
 ```
 
+### Transactions（事务）
+
+`repo.WithTx` 在单条绑定事务的连接上执行回调。回调拿到一个
+`*repo.Tx`，其辅助方法都运行在该事务内；泛型辅助函数则通过 `tx.Executor()`
+配合 `*With` 变体使用：
+
+```go
+users := sql.TableOf("users")
+
+err := repo.WithTx(db, func(tx *repo.Tx) error {
+	if _, err := repo.InsertWith[User](tx.Executor(), sql.Insert(sql.H{"name": "John"}).IntoTable(users)); err != nil {
+		return err
+	}
+
+	n, err := tx.Count(sql.SelectColumns("count(*)").FromTable(users))
+	if err != nil {
+		return err
+	}
+
+	return nil // 提交；返回非 nil 则回滚
+})
+```
+
+需要手写 SQL 时，用 `tx.Raw()` 拿到底层的 `*sql.Tx`。`repo.Tx` 不暴露
+`Commit`/`Rollback`——提交或回滚由回调的返回值决定，`repo.WithTxContext`
+可传入 context。`JoinQuery`/`Preloader` 仍只走连接池，无法在事务内使用。
+
+乐观锁写法：`UpdateAffected` 配合 version 检查，并发写入时只有一个成功：
+
+```go
+affected, err := tx.UpdateAffected(
+	sql.UpdateTable(users).
+		Set(sql.H{"name": "Jane", "version": sql.Expr("version + 1")}).
+		Where(sql.AllOf(sql.Eq("id", 1), sql.Eq("version", currentVersion))),
+)
+if err != nil {
+	return err
+}
+if affected == 0 {
+	return errors.New("stale record")
+}
+```
+
+事务以 PostgreSQL 为主要支持目标。MySQL 的 insert 路径会在同一连接上
+额外执行一次查询做回填，事务内属于 best-effort。
+
 ### Preload（预加载）
 
 Preload 用少量查询代替 N+1 循环：

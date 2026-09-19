@@ -35,6 +35,8 @@ func runCLI(args []string) error {
 		return runCLISchemaDump(xargs)
 	case "schema":
 		return runCLISchema(xargs)
+	case "openapi:generate":
+		return runCLIOpenAPIGenerate(xargs)
 	case "db:drop":
 		return runCLIDBDrop(xargs)
 	case "db:create":
@@ -47,6 +49,8 @@ func runCLI(args []string) error {
 		return runCLIPluginList()
 	case "plugin:install":
 		return runCLIPluginInstall(xargs)
+	case "plugin:lint":
+		return runCLIPluginLint(xargs)
 	case "js:add":
 		return runCLIJsAdd(xargs)
 	case "js:install":
@@ -87,13 +91,15 @@ func printUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "  airway db:status")
 	_, _ = fmt.Fprintln(w, "  airway schema:dump")
 	_, _ = fmt.Fprintln(w, "  airway schema:show")
+	_, _ = fmt.Fprintln(w, "  airway openapi:generate [--out path]     write the OpenAPI 3.2 document (default ./openapi.json)")
 	_, _ = fmt.Fprintln(w, "  airway plugin:new <module-path>")
 	_, _ = fmt.Fprintln(w, "  airway plugin:list")
 	_, _ = fmt.Fprintln(w, "  airway plugin:install <module>")
+	_, _ = fmt.Fprintln(w, "  airway plugin:lint")
 	_, _ = fmt.Fprintln(w, "  airway js:add <pkg>[@version]       add a frontend dependency (no Node required)")
 	_, _ = fmt.Fprintln(w, "  airway js:install                   install frontend dependencies from js.pkg.json")
 	_, _ = fmt.Fprintln(w, "  airway upload [key] /path/to/file")
-	_, _ = fmt.Fprintln(w, "  airway repl                              interactive repo REPL (project binary only)")
+	_, _ = fmt.Fprintln(w, "  airway repl                              interactive repo REPL (runs through go run . inside a project)")
 	_, _ = fmt.Fprintln(w, "  airway version                             print version (also -v, --version)")
 	_, _ = fmt.Fprintln(w, "")
 	_, _ = fmt.Fprintln(w, "`airway <command>` remains accepted as an alias for `airway <command>`.")

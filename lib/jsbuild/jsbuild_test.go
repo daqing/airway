@@ -2,6 +2,7 @@ package jsbuild
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -142,6 +143,56 @@ func TestDevServerServesRevalidatesAndRebuilds(t *testing.T) {
 	if rec := get("/assets/missing.js", ""); rec.Code != http.StatusNotFound {
 		t.Errorf("missing asset status %d, want 404", rec.Code)
 	}
+}
+
+func TestMissingVendorHint(t *testing.T) {
+	jsx := `export default () => <div class="island-counter" />`
+	writeManifest := func(root string) {
+		if err := os.WriteFile(filepath.Join(root, "js.pkg.json"), []byte(`{"deps":{"preact":"10.29.8"}}`), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	t.Run("build with declared deps", func(t *testing.T) {
+		root := writeFixture(t, jsx)
+		writeManifest(root)
+
+		_, err := Build(root)
+		if !errors.Is(err, ErrVendorMissing) {
+			t.Fatalf("Build error = %v, want ErrVendorMissing", err)
+		}
+	})
+
+	t.Run("dev server with declared deps", func(t *testing.T) {
+		root := writeFixture(t, jsx)
+		writeManifest(root)
+
+		if _, err := StartDev(root, nil); !errors.Is(err, ErrVendorMissing) {
+			t.Fatalf("StartDev error = %v, want ErrVendorMissing", err)
+		}
+	})
+
+	t.Run("no declared deps falls through to esbuild", func(t *testing.T) {
+		root := writeFixture(t, jsx)
+
+		_, err := Build(root)
+		if err == nil || !strings.Contains(err.Error(), "preact/compat") || strings.Contains(err.Error(), "js:install") {
+			t.Fatalf("Build error = %v, want esbuild resolution error without hint", err)
+		}
+	})
+
+	t.Run("vendor present passes the check", func(t *testing.T) {
+		root := writeFixture(t, jsx)
+		writeManifest(root)
+		if err := os.MkdirAll(filepath.Join(root, VendorDir), 0o755); err != nil {
+			t.Fatal(err)
+		}
+
+		_, err := Build(root)
+		if err == nil || strings.Contains(err.Error(), "js:install") {
+			t.Fatalf("Build error = %v, want esbuild error (empty vendor), not the hint", err)
+		}
+	})
 }
 
 func TestScanMtimesIgnoresVendor(t *testing.T) {

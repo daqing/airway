@@ -53,14 +53,45 @@ func runCLINew(args []string) error {
 		return nil
 	}
 
-	if len(args) != 1 {
-		return fmt.Errorf("usage: airway new <module-path | directory>")
+	// --local[=path] points the scaffolded project at an airway source
+	// checkout through a replace directive, for framework development: the
+	// embedded template can reference APIs that no published version has.
+	local := ""
+	localSet := false
+	rest := make([]string, 0, len(args))
+	for _, arg := range args {
+		switch {
+		case arg == "--local" || arg == "-local":
+			local, localSet = ".", true
+		case strings.HasPrefix(arg, "--local="), strings.HasPrefix(arg, "-local="):
+			local, localSet = strings.SplitN(arg, "=", 2)[1], true
+		default:
+			rest = append(rest, arg)
+		}
 	}
 
-	return newProject(strings.TrimSpace(args[0]), true)
+	if len(rest) != 1 {
+		return fmt.Errorf("usage: airway new [--local[=path]] <module-path | directory>")
+	}
+
+	if localSet {
+		if local == "" {
+			return fmt.Errorf("--local needs a path to an airway checkout")
+		}
+		dir, err := resolveLocalCheckout(local)
+		if err != nil {
+			return err
+		}
+		local = dir
+	} else if dir, ok := impliedLocalCheckout(); ok {
+		local = dir
+		fmt.Printf("Inside an airway checkout; implying --local=%s\n", dir)
+	}
+
+	return newProject(strings.TrimSpace(rest[0]), true, local)
 }
 
-func newProject(arg string, tidy bool) error {
+func newProject(arg string, tidy bool, localDir string) error {
 	destDir, module, err := resolveNewTarget(arg)
 	if err != nil {
 		return err
@@ -94,9 +125,21 @@ func newProject(arg string, tidy bool) error {
 
 	fmt.Printf("Created a new Airway project in %s (module %s)\n", destDir, module)
 
-	pinned, err := pinScaffoldAirwayVersion(destDir)
-	if err != nil {
-		return fmt.Errorf("pin airway version in go.mod: %w", err)
+	pinned := false
+	if localDir != "" {
+		// A replace to the local checkout makes the pin moot: `go mod tidy`
+		// resolves the framework from disk, so the proxy lookup (and its
+		// unpin fallback) never comes into play.
+		if err := replaceScaffoldAirway(destDir, localDir); err != nil {
+			return fmt.Errorf("replace airway with local checkout: %w", err)
+		}
+		fmt.Printf("Replaced github.com/daqing/airway with the local checkout %s\n", localDir)
+	} else {
+		var err error
+		pinned, err = pinScaffoldAirwayVersion(destDir)
+		if err != nil {
+			return fmt.Errorf("pin airway version in go.mod: %w", err)
+		}
 	}
 
 	if tidy {
@@ -130,11 +173,11 @@ func newProject(arg string, tidy bool) error {
 
 	fmt.Println("\nNext steps:")
 	fmt.Printf("  cd %s\n", destDir)
-	fmt.Println("  # edit .env — set AIRWAY_DB_DSN and AIRWAY_PORT")
+	fmt.Println("  # edit .env — set DSN and PORT")
 	fmt.Println("  airway db:create")
 	fmt.Println("  airway db:migrate")
 	fmt.Println("  airway js:install           # fetch frontend deps from js.pkg.json (no Node required)")
-	fmt.Println("  go run .               # start the HTTP server")
+	fmt.Println("  airway server               # start the HTTP server")
 
 	return nil
 }
@@ -191,6 +234,55 @@ func pinScaffoldAirwayVersion(destDir string) (bool, error) {
 	}
 
 	return true, nil
+}
+
+// resolveLocalCheckout validates that dir is an airway source checkout and
+// returns its absolute path. Bare `--local` passes ".", so running `go run .
+// new` inside the framework repository picks the checkout in $PWD.
+func resolveLocalCheckout(dir string) (string, error) {
+	abs, err := filepath.Abs(dir)
+	if err != nil {
+		return "", err
+	}
+
+	notCheckout := func(reason string) error {
+		return fmt.Errorf("--local: %s is not an airway checkout (%s)", abs, reason)
+	}
+
+	data, err := os.ReadFile(filepath.Join(abs, "go.mod"))
+	if err != nil {
+		return "", notCheckout("go.mod not found")
+	}
+	for _, line := range strings.Split(string(data), "\n") {
+		if !strings.HasPrefix(line, "module ") {
+			continue
+		}
+		if strings.TrimSpace(strings.TrimPrefix(line, "module ")) != "github.com/daqing/airway" {
+			return "", notCheckout("module is not github.com/daqing/airway")
+		}
+		if _, err := os.Stat(filepath.Join(abs, "VERSION")); err != nil {
+			return "", notCheckout("VERSION not found")
+		}
+		return abs, nil
+	}
+	return "", notCheckout("no module line in go.mod")
+}
+
+// impliedLocalCheckout reports the airway checkout containing the current
+// directory, if any. `go run . new` inside the framework repository embeds
+// the working tree's template, which may reference APIs no published version
+// has yet — so the new project should depend on that same tree instead of a
+// version pin that predates the template.
+func impliedLocalCheckout() (string, bool) {
+	dir, err := resolveLocalCheckout(".")
+	if err != nil {
+		return "", false
+	}
+	return dir, true
+}
+
+func replaceScaffoldAirway(destDir, checkoutDir string) error {
+	return runScaffoldCommand(destDir, scaffoldCommandTimeout, false, "go", "mod", "edit", "-replace", "github.com/daqing/airway="+checkoutDir)
 }
 
 func unpinScaffoldAirwayVersion(destDir string) error {
@@ -282,10 +374,12 @@ func rewriteScaffoldPort(destDir string) error {
 
 func printCLINewUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "usage:")
-	_, _ = fmt.Fprintln(w, "  airway new <module-path | directory>")
+	_, _ = fmt.Fprintln(w, "  airway new [--local[=path]] <module-path | directory>")
 	_, _ = fmt.Fprintln(w, "")
 	_, _ = fmt.Fprintln(w, "examples:")
 	_, _ = fmt.Fprintln(w, "  airway new myapp")
 	_, _ = fmt.Fprintln(w, "  airway new github.com/me/myapp")
 	_, _ = fmt.Fprintln(w, "  airway new /path/to/myapp    # create at that path; module: myapp")
+	_, _ = fmt.Fprintln(w, "  airway new --local myapp     # develop against the airway checkout in $PWD")
+	_, _ = fmt.Fprintln(w, "  airway new --local ~/src/airway myapp")
 }

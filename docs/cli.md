@@ -7,17 +7,26 @@ go install github.com/daqing/airway@latest
 ```
 
 This gives you the `airway` command. Commands auto-load `.env` from the current
-project root. Inside a project (or the framework repo itself) the same commands
-also work as `go run . <command>` — and some commands (`repl`,
-`plugin:install`) *should* be run that way, because they only see the models
-and plugins compiled into the running binary (see below).
+project root. Inside a project, the globally installed `airway` detects the
+host application (go.mod requiring `github.com/daqing/airway` plus a main.go)
+and transparently re-runs every project-scoped command through `go run .`, so
+plugins, REPL models and Go-code migrations always come from the project's own
+binary — one command to remember, `airway <command>`, works everywhere. The
+proxy prints a `proxying to project binary: go run . ...` notice on stderr.
+The proxy only runs when the globally installed CLI's version matches the
+airway version the project pins in go.mod (a `replace` onto a local airway
+checkout compares against that checkout's `VERSION` file instead); on a
+mismatch the command aborts with an error instead of silently running the
+project binary's older CLI logic. `new`, `version` and `help` always run
+locally, as does everything outside a project; running `go run . <command>`
+yourself remains equivalent.
 
 The legacy form `airway cli <command>` still works as a compatibility alias.
 
 ## Command Overview
 
 ```bash
-airway new <module-path | directory>                    # scaffold a new project skeleton
+airway new [--local[=path]] <module-path | directory>   # scaffold a new project skeleton
 airway server                                           # start the HTTP server
 airway db:create
 airway db:drop
@@ -33,6 +42,7 @@ airway js:build                                        # bundle the frontend int
 airway generate [action|api|model|migration|service|island|scaffold|cmd] [params]
 airway schema:dump
 airway schema:show
+airway openapi:generate [--out path]                     # write the OpenAPI 3.2 document (default ./openapi.json)
 airway upload /path/to/file
 airway repl
 airway version                                           # or -v / --version; prints the VERSION file contents
@@ -46,7 +56,17 @@ Running `airway` with no arguments prints usage.
 airway new myapp                    # directory: myapp
 airway new github.com/me/myapp      # module path; directory is the last path segment
 airway new /path/to/myapp           # create at that local path; module: myapp
+airway new --local myapp            # develop against the airway checkout in $PWD
+airway new --local ~/src/airway myapp
 ```
+
+`--local` adds a `replace github.com/daqing/airway => <checkout>` to the new
+project's go.mod, for developing the framework itself: the scaffolded code can
+reference APIs that no published version contains yet. The target must be an
+airway source checkout (its go.mod declares the framework module and it has a
+`VERSION` file); bare `--local` uses the current directory. Running `new`
+from inside the framework repository implies `--local` automatically — the
+template comes from that working tree, so the project must depend on it too.
 
 `airway new` generates a fresh project skeleton based on the framework's `app/`
 scaffold, seeds `.env` from `.env.example`, runs `go mod tidy`, and prints the
@@ -57,7 +77,7 @@ cd myapp
 # edit .env — set DSN and PORT
 airway db:create
 airway db:migrate
-go run .                # starts the server (same as: go run . server)
+airway server             # starts the HTTP server
 ```
 
 A generated project's binary starts the HTTP server when run with no arguments
@@ -72,6 +92,12 @@ airway server        # or, from source: go run . server
 The framework repository's own `main.go` no longer starts the server by
 default — use `go run . server` when developing Airway itself. The Docker image
 already runs the binary with `server`.
+
+Environment values always win over `.env` values: `.env` is loaded as a
+fallback for keys the process environment does not set, so
+`PORT=1988 go run . server` listens on 1988 even when `.env` defines
+`PORT` or `AIRWAY_PORT`. The server starts without `AIRWAY_ENV` in the
+environment as long as `.env` provides it.
 
 ## Upload a file
 
@@ -251,20 +277,21 @@ airway plugin:new im                              # directory: im, plugin name: 
 airway plugin:new github.com/me/airway-im-plugin  # name derived from the last path segment
 ```
 
-Unlike the commands below, `plugin:new` works fine with the globally installed
-`airway` — it writes files and does not depend on compile-time registration.
+Unlike `plugin:list`, `plugin:new` never touches the project binary — it just
+writes files.
 
 Plugins are optional feature modules enabled with blank imports in
 `plugins.go` (see [docs/plugin.md](plugin.md)):
 
 ```bash
-go run . plugin:list           # list registered plugins and mount paths
-go run . plugin:install <module> # copy a plugin's embedded SQL migrations into db/migrate
+airway plugin:list               # list registered plugins and mount paths
+airway plugin:install <module>   # install a plugin's SQL migrations, host/ tree, and deps/ directory
 ```
 
-Plugins register at compile time, so run these through the project binary
-(`go run . ...` in the project directory): the globally installed `airway` can
-only list and install the plugins compiled into itself.
+Plugins register at compile time, so inside a project the globally installed
+`airway` re-runs these through `go run .` automatically (the project's binary
+is what can see your enabled plugins); `go run . plugin:list` does the same
+thing directly.
 
 `plugin:install` takes the plugin's module path (e.g.
 `github.com/daqing/airway-im-plugin`); the plugin name is derived from the
@@ -304,6 +331,26 @@ The registry defaults to `https://registry.npmjs.org`; set
 `https://registry.npmmirror.com`. The `vendor/` directory is committed so a
 fresh clone builds offline.
 
+## OpenAPI Commands
+
+```bash
+airway openapi:generate                    # write ./openapi.json (OpenAPI 3.2)
+airway openapi:generate --out docs/api.json
+```
+
+Writes a deterministic OpenAPI 3.2 document for every route registered on the
+Gin engine (plugin routes included); the output is sorted, so regenerating
+after a change keeps diffs clean. The file is a local build artifact
+(git-ignored). A running server also serves the document live at
+`GET /openapi.json` (under the `URL_PREFIX` when one is configured), with a
+`servers` entry derived from the request host.
+
+Routes without declarations are documented with the framework's default JSON
+envelope; modules add request/response schemas in an `openapi.go` file — see
+the [OpenAPI guide](openapi.md) for the declaration API and client-generation
+recipes (openapi-typescript / orval for Vue 3 and React,
+swift-openapi-generator for SwiftUI).
+
 ## REPL
 
 ```bash
@@ -312,8 +359,9 @@ go run . repl
 
 The REPL only sees the models compiled into the binary you run — project models
 register through `registerREPLModel` in `app/models`, which delegates to
-`github.com/daqing/airway/lib/replreg`. Use `go run . repl` inside your project;
-the globally installed `airway repl` only sees the framework's built-in models.
+`github.com/daqing/airway/lib/replreg`. Inside a project the globally installed
+`airway repl` proxies to `go run . repl` for you; outside a project it only
+sees the framework's built-in models.
 
 ## Practical Example
 

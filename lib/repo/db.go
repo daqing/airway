@@ -222,7 +222,11 @@ func normalizeMySQLDSN(dsn string) string {
 // rebind translates `?` placeholders into the driver-native bind style.
 // Postgres uses $N dollar placeholders; MySQL and SQLite keep `?`.
 func (db *DB) rebind(query string) string {
-	if db == nil || db.driver != DriverPostgres {
+	return db.driver.rebind(query)
+}
+
+func (driver Driver) rebind(query string) string {
+	if driver != DriverPostgres {
 		return query
 	}
 

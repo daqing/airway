@@ -8,21 +8,25 @@ import (
 )
 
 func InsertByType(db *DB, b buildersql.Stmt, modelType reflect.Type) (any, error) {
+	return InsertByTypeWith(db.executor(), b, modelType)
+}
+
+func InsertByTypeWith(ex *Executor, b buildersql.Stmt, modelType reflect.Type) (any, error) {
 	modelType, err := normalizeModelType(modelType)
 	if err != nil {
 		return nil, err
 	}
 
-	if db.Driver() == DriverMySQL {
-		return insertMySQLByType(db, b, modelType)
+	if ex.driver == DriverMySQL {
+		return insertMySQLByType(ex, b, modelType)
 	}
 
-	query, args, err := db.prepareBuilder(b)
+	query, args, err := ex.prepareBuilder(b)
 	if err != nil {
 		return nil, err
 	}
 
-	rows, err := db.conn.QueryContext(context.Background(), query, args...)
+	rows, err := ex.q.QueryContext(context.Background(), query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -44,30 +48,30 @@ func InsertByType(db *DB, b buildersql.Stmt, modelType reflect.Type) (any, error
 	return record.Interface(), nil
 }
 
-func insertMySQLByType(db *DB, b buildersql.Stmt, modelType reflect.Type) (any, error) {
-	query, args, err := db.prepareInsertBuilder(b)
+func insertMySQLByType(ex *Executor, b buildersql.Stmt, modelType reflect.Type) (any, error) {
+	query, args, err := ex.prepareInsertBuilder(b)
 	if err != nil {
 		return nil, err
 	}
 
-	result, err := db.conn.ExecContext(context.Background(), query, args...)
+	result, err := ex.q.ExecContext(context.Background(), query, args...)
 	if err != nil {
 		return nil, err
 	}
 
-	lookupColumn, lookupValue, err := db.resolveInsertLookup(b, result)
+	lookupColumn, lookupValue, err := resolveInsertLookup(ex, b, result)
 	if err != nil {
 		return nil, err
 	}
 
 	selectQuery := "SELECT * FROM " + b.TableName() + " WHERE " + lookupColumn + " = @lookup LIMIT 1"
-	compiledQuery, compiledArgs, err := db.prepareQuery(selectQuery, buildersql.NamedArgs{"lookup": lookupValue})
+	compiledQuery, compiledArgs, err := ex.prepareQuery(selectQuery, buildersql.NamedArgs{"lookup": lookupValue})
 	if err != nil {
 		return nil, err
 	}
 
 	record := reflect.New(modelType)
-	if err := getStruct(context.Background(), db.conn, record.Interface(), compiledQuery, compiledArgs...); err != nil {
+	if err := getStruct(context.Background(), ex.q, record.Interface(), compiledQuery, compiledArgs...); err != nil {
 		return nil, err
 	}
 

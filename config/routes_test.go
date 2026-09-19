@@ -20,6 +20,7 @@ func TestRoutesRegistersCoreEndpoints(t *testing.T) {
 	expected := []string{
 		"GET /",
 		"GET /health",
+		"GET /openapi.json",
 		"GET /ws",
 		"POST /ws/publish",
 		"POST /api/v1/storage",
