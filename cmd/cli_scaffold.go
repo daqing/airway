@@ -116,6 +116,12 @@ func generateScaffold(args []string) error {
 		return err
 	}
 
+	// OpenAPI declarations so the new resource is documented from birth
+	if err := writeTemplateFile(scaffoldOpenAPITemplate,
+		filepath.Join(apiDir, "openapi.go"), data); err != nil {
+		return err
+	}
+
 	// server-rendered page hosting the CRUD island
 	if err := writeTemplateFile(scaffoldViewTemplate,
 		filepath.Join(".", "app", "views", plural, "index.templ"), data); err != nil {

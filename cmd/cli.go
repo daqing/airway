@@ -35,6 +35,8 @@ func runCLI(args []string) error {
 		return runCLISchemaDump(xargs)
 	case "schema":
 		return runCLISchema(xargs)
+	case "openapi:generate":
+		return runCLIOpenAPIGenerate(xargs)
 	case "db:drop":
 		return runCLIDBDrop(xargs)
 	case "db:create":
@@ -89,6 +91,7 @@ func printUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "  airway db:status")
 	_, _ = fmt.Fprintln(w, "  airway schema:dump")
 	_, _ = fmt.Fprintln(w, "  airway schema:show")
+	_, _ = fmt.Fprintln(w, "  airway openapi:generate [--out path]     write the OpenAPI 3.2 document (default ./openapi.json)")
 	_, _ = fmt.Fprintln(w, "  airway plugin:new <module-path>")
 	_, _ = fmt.Fprintln(w, "  airway plugin:list")
 	_, _ = fmt.Fprintln(w, "  airway plugin:install <module>")

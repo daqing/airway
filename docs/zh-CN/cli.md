@@ -35,6 +35,7 @@ airway plugin:install <module>
 airway generate [action|api|model|migration|service|cmd] [params]
 airway schema:dump
 airway schema:show
+airway openapi:generate [--out path]                     # 生成 OpenAPI 3.2 文档（默认 ./openapi.json）
 airway upload /path/to/file
 airway repl
 airway version                                           # 或 -v / --version；打印 VERSION 文件内容
@@ -254,6 +255,23 @@ Plugin 在编译期注册，所以在项目内全局安装的 `airway` 会自动
 `plugin:install` 的参数是 Plugin 的模块路径（如 `github.com/daqing/airway-im-plugin`)，
 插件名从路径最后一段推导（与 `plugin:new` 相同）。它会为复制的迁移文件分配新的时间戳，并跳过已安装的文件；复制后它们就是
 普通迁移，由 `db:migrate` / `db:rollback` / `db:status` 统一管理。
+
+## OpenAPI 命令
+
+```bash
+airway openapi:generate                    # 生成 ./openapi.json（OpenAPI 3.2）
+airway openapi:generate --out docs/api.json
+```
+
+为 Gin 引擎上注册的每一条路由（含 Plugin 挂载的路由）生成确定性的 OpenAPI
+3.2 文档；输出经过排序，提交进仓库后 diff 干净。运行中的服务同时在
+`GET /openapi.json` 上提供实时文档（配置了 `URL_PREFIX` 时挂载在前缀之下），
+`servers` 由请求 Host 推导。
+
+未声明的路由按框架默认 JSON 信封生成文档；模块通过 `openapi.go` 文件补充
+请求/响应 schema——声明 API 与客户端生成方案（Vue 3 / React 用
+openapi-typescript 或 orval，SwiftUI 用 swift-openapi-generator）见
+[OpenAPI 指南](openapi.md)。
 
 ## REPL
 

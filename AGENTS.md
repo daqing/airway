@@ -76,9 +76,13 @@ lib/
                  storage.Current() after boot.
   redis_client/  Redis setup helper.
   render/        Response helpers: JSON (ok, error, found) and HTML via templ.
+  openapi/       OpenAPI 3.2 document generation: route metadata registry,
+                 JSON-schema inference from Go types, deterministic build
+                 behind `airway openapi:generate` and GET /openapi.json
+                 (see docs/openapi.md).
   utils/         Env/config helpers, password hashing, tokens, dates, markdown.
   validation/    Input validation helpers.
-docs/            Guides: cli.md, plugin.md, storage.md,
+docs/            Guides: cli.md, plugin.md, storage.md, openapi.md,
                  docker-compose.yml.example, zh-CN/ (Chinese docs).
   homegen/       //go:build ignore script run by the docs workflow after the
                  VitePress build; renders the app/views/home templ landing page
@@ -134,6 +138,7 @@ airway db:migrate [version]                           # apply migrations
 airway db:rollback [step]
 airway db:status
 airway schema:dump | schema:show                      # writes/reads db/schema.json
+airway openapi:generate [--out path]                  # write the OpenAPI 3.2 document (default ./openapi.json); served live at GET /openapi.json
 airway upload [key] /path/to/file                     # upload via configured storage
 airway js:add <pkg>[@version]                         # add a frontend npm dependency (no Node required)
 airway js:install                                     # install js.pkg.json deps into app/assets/js/vendor/
@@ -167,6 +172,13 @@ Migration and schema commands read `AIRWAY_DB_DSN` first and fall back to the le
 - **API modules** (`app/api/<name>_api/`): one package per namespace. `routes.go` exposes `Routes(r *gin.RouterGroup)`; handlers live in `<action>_action.go` as `func XxxAction(c *gin.Context)`. New modules must be wired into `config/routes.go`.
 - **Data access:** prefer the generics API in `lib/repo` (`repo.FindBy[T]`, `repo.CreateFrom[T]`, `repo.UpdateByID[T]`, `repo.DeleteByID[T]`, `repo.Preload(...)`, `repo.Join(...)`) and the `lib/sql` builder for conditions (`sql.Eq`, `sql.And`, `sql.Gt`, ...). Use `repo.Preload` instead of hand-written loops to avoid N+1 queries.
 - **Responses:** use the `lib/render` helpers rather than hand-rolled JSON.
+- **OpenAPI:** every API route is documented automatically (handler-derived
+  operationId, default `render` envelope as the 200 response). Modules enrich
+  their docs with an `openapi.go` file declaring operations via `lib/openapi`
+  (`openapi.Get(...)` etc., matched by method+path; see docs/openapi.md);
+  document-level settings live in `app/api/openapi_api/doc.go`. After changing
+  routes or declared types run `go run . openapi:generate` and commit the
+  refreshed `openapi.json` (same living-file policy as `db/schema.json`).
 - **HTML views:** server-rendered pages live under `app/views/<module>/` as templ files, one folder per API module (e.g. `app/views/home/` for `home_api`); a shared shell lives in `app/views/layouts/`. Actions render them with `render.HTML(c, view.Component())` (see `home_api`). Re-run `go generate ./...` when you edit a `.templ` file and keep the generated `*_templ.go`.
 - **Interactive islands:** embed Preact TSX components in templ views with `@assets.Island("name", props)`; the component file is `app/assets/js/islands/<name>.tsx` (default-export; file path = island name, case-sensitive). `base.templ` loads the bundle via `assets.Scripts()` and styles via `assets.Stylesheet()`. After changing frontend sources run `go run . js:build` and commit the dist output (see PLAN.md Phase 3).
 - **airway-ui components:** build islands from the library under `app/assets/js/ui/` (Button, inputs + Field, Form on react-hook-form, DataTable on TanStack Table, Modal, Toast via `useToast`, Tabs, Pagination, `apiFetch`/`useApiQuery`); live reference at `/ui`. Frontend sources import `react` (aliased onto preact/compat at build time) — React semantics apply, so custom inputs used with `register()` must forwardRef.

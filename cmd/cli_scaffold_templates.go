@@ -52,6 +52,47 @@ func Routes(r *gin.Engine) {
 }
 `
 
+const scaffoldOpenAPITemplate = `package {{.APIName}}
+
+import (
+	"github.com/daqing/airway/lib/openapi"
+
+	"{{.Module}}/app/models"
+)
+
+func init() {
+	openapi.Get("/api/v1/{{.SlugPlural}}", func(o *openapi.Operation) {
+		o.Summary("List {{.NamePlural}}").Tag("{{.SlugPlural}}").
+			OK(openapi.List[models.{{.Name}}]())
+	})
+
+	openapi.Post("/api/v1/{{.SlugPlural}}", func(o *openapi.Operation) {
+		o.Summary("Create a {{.Slug}}").Tag("{{.SlugPlural}}").
+			Body(openapi.Item[{{.Slug}}Params]()).
+			OK(openapi.Item[models.{{.Name}}]())
+	})
+
+	openapi.Put("/api/v1/{{.SlugPlural}}/{id}", func(o *openapi.Operation) {
+		o.Summary("Update a {{.Slug}}").Tag("{{.SlugPlural}}").
+			Path("id", openapi.Int(), "{{.Name}} id").
+			Body(openapi.Item[{{.Slug}}Params]()).
+			OK()
+	})
+
+	openapi.Delete("/api/v1/{{.SlugPlural}}/{id}", func(o *openapi.Operation) {
+		o.Summary("Delete a {{.Slug}}").Tag("{{.SlugPlural}}").
+			Path("id", openapi.Int(), "{{.Name}} id").
+			OK()
+	})
+
+	openapi.Get("/{{.SlugPlural}}", func(o *openapi.Operation) {
+		o.Summary("{{.NamePlural}} page").Tag("{{.SlugPlural}}")
+		o.Respond(200, "text/html", openapi.Str()).
+			Description("Server-rendered page hosting the CRUD island")
+	})
+}
+`
+
 const scaffoldActionsTemplate = `package {{.APIName}}
 
 import (

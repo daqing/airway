@@ -42,6 +42,7 @@ airway js:build                                        # bundle the frontend int
 airway generate [action|api|model|migration|service|island|scaffold|cmd] [params]
 airway schema:dump
 airway schema:show
+airway openapi:generate [--out path]                     # write the OpenAPI 3.2 document (default ./openapi.json)
 airway upload /path/to/file
 airway repl
 airway version                                           # or -v / --version; prints the VERSION file contents
@@ -323,6 +324,25 @@ The registry defaults to `https://registry.npmjs.org`; set
 `AIRWAY_JS_REGISTRY` (or `JS_REGISTRY`) to use a mirror, e.g.
 `https://registry.npmmirror.com`. The `vendor/` directory is committed so a
 fresh clone builds offline.
+
+## OpenAPI Commands
+
+```bash
+airway openapi:generate                    # write ./openapi.json (OpenAPI 3.2)
+airway openapi:generate --out docs/api.json
+```
+
+Writes a deterministic OpenAPI 3.2 document for every route registered on the
+Gin engine (plugin routes included); the output is sorted, so the committed
+file diffs cleanly. A running server also serves the document live at
+`GET /openapi.json` (under the `URL_PREFIX` when one is configured), with a
+`servers` entry derived from the request host.
+
+Routes without declarations are documented with the framework's default JSON
+envelope; modules add request/response schemas in an `openapi.go` file — see
+the [OpenAPI guide](openapi.md) for the declaration API and client-generation
+recipes (openapi-typescript / orval for Vue 3 and React,
+swift-openapi-generator for SwiftUI).
 
 ## REPL
 
