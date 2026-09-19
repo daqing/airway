@@ -21,7 +21,7 @@ func TestNewPluginScaffoldsModule(t *testing.T) {
 	if !strings.Contains(pluginFile, `func (Plugin) Name() string      { return "im" }`) {
 		t.Fatalf("expected plugin name in plugin.go, got:\n%s", pluginFile)
 	}
-	if !strings.Contains(pluginFile, `"im/install/app/api/im_api"`) {
+	if !strings.Contains(pluginFile, `"im/install/lib/api/im_api"`) {
 		t.Fatalf("expected plugin api import, got:\n%s", pluginFile)
 	}
 
@@ -30,7 +30,7 @@ func TestNewPluginScaffoldsModule(t *testing.T) {
 		t.Fatalf("expected module path in go.mod, got:\n%s", goMod)
 	}
 
-	routes := readFile(t, filepath.Join(wd, "im", "install", "app", "api", "im_api", "routes.go"))
+	routes := readFile(t, filepath.Join(wd, "im", "install", "lib", "api", "im_api", "routes.go"))
 	if !strings.Contains(routes, "package im_api") {
 		t.Fatalf("expected im_api package, got:\n%s", routes)
 	}
@@ -53,7 +53,7 @@ func TestNewPluginDerivesNameFromModulePath(t *testing.T) {
 	if !strings.Contains(pluginFile, `{ return "billing" }`) {
 		t.Fatalf("expected derived plugin name, got:\n%s", pluginFile)
 	}
-	if !strings.Contains(pluginFile, `"github.com/example/airway-billing-plugin/install/app/api/billing_api"`) {
+	if !strings.Contains(pluginFile, `"github.com/example/airway-billing-plugin/install/lib/api/billing_api"`) {
 		t.Fatalf("expected module import rewritten, got:\n%s", pluginFile)
 	}
 }

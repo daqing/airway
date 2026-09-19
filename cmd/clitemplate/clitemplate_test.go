@@ -95,9 +95,9 @@ func TestScaffoldPluginWritesTemplateWithPlaceholdersReplaced(t *testing.T) {
 		"plugin.go",
 		"README.md",
 		".gitignore",
-		"install/app/api/im_api/routes.go",
-		"install/app/api/im_api/index_action.go",
-		"install/app/models/.keep",
+		"install/lib/api/im_api/routes.go",
+		"install/lib/api/im_api/index_action.go",
+		"install/lib/models/.keep",
 		"install/host/db/migrate/.keep",
 		"install/deps/.keep",
 		"install/ignore/.keep",
@@ -113,7 +113,7 @@ func TestScaffoldPluginWritesTemplateWithPlaceholdersReplaced(t *testing.T) {
 	}
 
 	pluginFile := readFile(t, filepath.Join(destDir, "plugin.go"))
-	if !strings.Contains(pluginFile, `"github.com/example/airway-im-plugin/install/app/api/im_api"`) {
+	if !strings.Contains(pluginFile, `"github.com/example/airway-im-plugin/install/lib/api/im_api"`) {
 		t.Fatalf("expected plugin import rewritten, got:\n%s", pluginFile)
 	}
 	if !strings.Contains(pluginFile, `{ return "im" }`) {

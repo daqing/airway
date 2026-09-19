@@ -64,8 +64,8 @@ airway plugin:new github.com/me/airway-im-plugin  # plugin name derived from
 ```
 
 This generates `go.mod`, `plugin.go` (Plugin implementation + `init()`
-registration), a sample API module under `install/app/api/<name>_api/`, and
-empty `install/app/models/` and `install/host/db/migrate/` directories, then
+registration), a sample API module under `install/lib/api/<name>_api/`, and
+empty `install/lib/models/` and `install/host/db/migrate/` directories, then
 runs `go mod tidy`.
 
 A Plugin repository keeps everything the host consumes under `install/`:
@@ -76,8 +76,8 @@ airway-im-plugin/
                           # requires github.com/daqing/airway
   plugin.go               # Plugin implementation + init() registration
   install/                # everything the host consumes lives here
-    app/                  # plugin source code — compiled into the host
-                          # binary through the module import, never
+    lib/                  # plugin implementation — compiled into the
+                          # plugin binary through the module import, never
                           # installed as files
       api/im_api/         # routes + actions, same conventions as a host app
       models/             # model structs with db tags and TableName()
@@ -100,7 +100,7 @@ installable-looking content.
 
 Content reaches the host through two channels, depending on what it is:
 
-- **Compiled in — `install/app/`.** Go code joins the host binary through
+- **Compiled in — `install/lib/`.** Go code joins the host binary through
   the import graph: the host's blank import pulls in the plugin's root
   package, whose `init()` registers routes, models, and Go-code
   migrations. `go build` resolves the module (proxy download or local
@@ -116,7 +116,9 @@ Content reaches the host through two channels, depending on what it is:
 `airway plugin:lint` checks the current plugin project and reports layout
 issues, with a non-zero exit when it finds any: for now it flags legacy
 top-level `app/`, `host/`, `deps/`, and `ignore/` directories —
-`plugin:install` reads only `install/`, so those need to move under it.
+`plugin:install` reads only `install/`, so those need to move under it —
+and `install/app/`, the previous name of the compiled-in implementation
+tree, which should move to `install/lib/`.
 
 ### 1. Implement and register the Plugin
 
@@ -125,7 +127,7 @@ package implugin
 
 import (
     "github.com/daqing/airway/lib/plugin"
-    "github.com/example/airway-im-plugin/install/app/api/im_api"
+    "github.com/example/airway-im-plugin/install/lib/api/im_api"
     "github.com/gin-gonic/gin"
 )
 
@@ -279,7 +281,7 @@ Two Go module rules shape what you can ship:
 One caveat if your plugin also uses templ views: `templ generate` parses
 every `.templ` file under its working directory, including `install/deps/`. Scope the
 generate directive to the views directory
-(`//go:generate go tool templ generate -path app/views`) so install templates
+(`//go:generate go tool templ generate -path install/lib/views`) so install templates
 are left alone.
 
 Don't commit build artifacts (compiled binaries, caches) under `install/deps/` — they
@@ -287,8 +289,9 @@ would be merged into every host project's `deps/`.
 
 ### 5. Views and WebSocket
 
-- templ views compile to Go, so a plugin keeps its own `app/views/` package
-  and commits the generated `*_templ.go` files — no special handling needed.
+- templ views compile to Go, so a plugin keeps its own `install/lib/views/`
+  package and commits the generated `*_templ.go` files — no special handling
+  needed.
 - Plugins may import `github.com/daqing/airway/app/websocket` to publish
   real-time events through the host's hub.
 

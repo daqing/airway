@@ -719,6 +719,8 @@ func TestRunCLIPluginLintReportsLegacyDirs(t *testing.T) {
 	for _, dir := range pluginLegacyDirs {
 		makeDirs(t, filepath.Join(wd, dir))
 	}
+	// install/app is the pre-lib name of the compiled-in implementation tree.
+	makeDirs(t, filepath.Join(wd, "install", "app"))
 
 	var lintErr error
 	output := captureStdout(t, func() {
@@ -728,13 +730,16 @@ func TestRunCLIPluginLintReportsLegacyDirs(t *testing.T) {
 	if lintErr == nil {
 		t.Fatal("expected lint to report issues")
 	}
-	if !strings.Contains(lintErr.Error(), "4 issue(s)") {
+	if !strings.Contains(lintErr.Error(), "5 issue(s)") {
 		t.Fatalf("expected an issue count in the error, got: %v", lintErr)
 	}
 	for _, dir := range pluginLegacyDirs {
 		if !strings.Contains(output, "install/"+dir) {
 			t.Fatalf("expected a hint to move %s into install/, got: %s", dir, output)
 		}
+	}
+	if !strings.Contains(output, "legacy install/app/: move it to install/lib") {
+		t.Fatalf("expected a hint to rename install/app to install/lib, got: %s", output)
 	}
 	// captureStdout pipes stdout, so findings must stay plain text there.
 	if strings.Contains(output, "\x1b[") {
@@ -768,6 +773,18 @@ func TestLintFindingMessage(t *testing.T) {
 	}
 	plain := lintFindingMessage("host", false)
 	if plain != "legacy top-level host/: plugin:install no longer reads it; move it to install/host" {
+		t.Fatalf("expected plain finding, got %q", plain)
+	}
+}
+
+func TestLintInstallFindingMessage(t *testing.T) {
+	colored := lintInstallFindingMessage("install/app", "lib", true)
+	want := "\x1b[94mlegacy install/app/\x1b[0m: \x1b[33mmove it to install/lib\x1b[0m"
+	if colored != want {
+		t.Fatalf("expected two-color finding, got %q", colored)
+	}
+	plain := lintInstallFindingMessage("install/app", "lib", false)
+	if plain != "legacy install/app/: move it to install/lib" {
 		t.Fatalf("expected plain finding, got %q", plain)
 	}
 }

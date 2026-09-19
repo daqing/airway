@@ -53,9 +53,11 @@ func runCLIPluginList() error {
 // install/host/ tree into the host project root, and merges the plugin's
 // install/deps/ directory into the host project's deps/ directory. The
 // installer's view of the plugin is exactly its install/ directory: host/ and
-// deps/ inside it are installed, install/ignore/ (and any ignore/ directory
-// inside the installable trees) is skipped, and every other directory at the
-// plugin's top level is ignored. When the plugin is read from disk, its root
+// deps/ inside it are installed, install/lib/ (the plugin's implementation,
+// compiled into the plugin binary through the host's blank import) and
+// install/ignore/ (and any ignore/ directory inside the installable trees)
+// are never copied, and every other directory at the plugin's top level is
+// ignored. When the plugin is read from disk, its root
 // .gitignore rules exclude matching files too (node_modules, build outputs,
 // ...) — a module download from the proxy only carries committed files anyway.
 // The argument is the plugin's module path (e.g. github.com/daqing/airway-im-plugin),
@@ -413,9 +415,11 @@ func pluginMigrationInstalled(dstDir string, name string) bool {
 }
 
 // pluginInstallDir is the directory inside a plugin module holding everything
-// `plugin:install` reads: host/ (mirrored into the host project's own tree),
-// deps/ (merged into the host project's deps/ directory), and ignore/
-// (local-only files, never read). Nothing outside install/ is installed.
+// `plugin:install` knows about: host/ (mirrored into the host project's own
+// tree), deps/ (merged into the host project's deps/ directory), lib/ (the
+// plugin's implementation, never copied — it compiles into the plugin
+// binary), and ignore/ (local-only files, never read). Nothing outside
+// install/ is installed.
 const pluginInstallDir = "install"
 
 // pluginHostDir is the directory inside a plugin's install/ directory holding
@@ -427,6 +431,15 @@ const pluginInstallDir = "install"
 // SQL migrations are installed with fresh timestamps by the migration
 // installer, and Go DSL migrations are compiled into the plugin.
 const pluginHostDir = "host"
+
+// pluginLibDir is the reserved name of the install/ subdirectory holding the
+// plugin's own implementation packages. They reach the host compiled into
+// the plugin binary through the blank import, so the installer never reads
+// or copies them — unlike host/ and deps/, no file from install/lib/ lands
+// in the host project. The name is reserved at the install/ top level only:
+// inside install/host/ and install/deps/ a lib/ directory is ordinary
+// installable content.
+const pluginLibDir = "lib"
 
 // pluginIgnoreDir is the reserved directory name marking local-only files
 // that stay in the plugin checkout and never reach the host project.
