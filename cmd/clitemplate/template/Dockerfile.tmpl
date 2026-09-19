@@ -1,9 +1,9 @@
-FROM golang:1.27-alpine AS builder
+FROM m.daocloud.io/docker.io/library/golang:1.27-alpine AS builder
 WORKDIR /app
 COPY . /app
 RUN go build -o ./bin/app .
 
-FROM alpine
+FROM m.daocloud.io/docker.io/library/alpine
 WORKDIR /app
 COPY --from=builder /app/bin/app /app
 COPY --from=builder /app/db /app/db
