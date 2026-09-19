@@ -26,7 +26,7 @@ func runCLIPlugin(args []string) error {
 
 func printCLIPluginUsage(w *os.File) {
 	_, _ = fmt.Fprintln(w, "usage:")
-	_, _ = fmt.Fprintln(w, "  airway plugin:new <module-path>")
+	_, _ = fmt.Fprintln(w, "  airway plugin:new <module-path> | <path>")
 	_, _ = fmt.Fprintln(w, "  airway plugin:list")
 	_, _ = fmt.Fprintln(w, "  airway plugin:install <module>[@version] | <local-dir>")
 	_, _ = fmt.Fprintln(w, "  airway plugin:lint")

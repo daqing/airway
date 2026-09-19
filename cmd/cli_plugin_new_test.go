@@ -81,6 +81,14 @@ func TestNewPluginRejectsExistingNonEmptyDirectory(t *testing.T) {
 	if err := newPlugin("im", false); err == nil {
 		t.Fatalf("expected error for non-empty directory")
 	}
+
+	// The same check applies to the path form.
+	dest := filepath.Join(wd, "airway-occupied-plugin")
+	makeDirs(t, dest)
+	writeFile(t, filepath.Join(dest, "existing.txt"), "occupied\n")
+	if err := newPlugin(dest, false); err == nil || !strings.Contains(err.Error(), "not empty") {
+		t.Fatalf("expected a not-empty error for the path form, got: %v", err)
+	}
 }
 
 func TestNewPluginRejectsInvalidModulePath(t *testing.T) {
@@ -100,7 +108,45 @@ func TestRunPluginNewHelpPrintsUsage(t *testing.T) {
 		}
 	})
 
-	if !strings.Contains(output, "airway plugin:new <module-path>") {
+	if !strings.Contains(output, "airway plugin:new <module-path> | <path>") {
 		t.Fatalf("expected plugin:new usage output, got:\n%s", output)
+	}
+}
+
+func TestNewPluginScaffoldsAtPath(t *testing.T) {
+	wd := useTempWorkingDir(t)
+
+	dest := filepath.Join(wd, "sites", "airway-foo-plugin")
+	if err := newPlugin(dest, false); err != nil {
+		t.Fatalf("new plugin: %v", err)
+	}
+
+	pluginFile := readFile(t, filepath.Join(dest, "plugin.go"))
+	if !strings.Contains(pluginFile, "package fooplugin") {
+		t.Fatalf("expected fooplugin package, got:\n%s", pluginFile)
+	}
+	if !strings.Contains(pluginFile, `{ return "foo" }`) {
+		t.Fatalf("expected derived plugin name, got:\n%s", pluginFile)
+	}
+	if !strings.Contains(pluginFile, `"airway-foo-plugin/install/lib/api/foo_api"`) {
+		t.Fatalf("expected plugin api import, got:\n%s", pluginFile)
+	}
+
+	goMod := readFile(t, filepath.Join(dest, "go.mod"))
+	if !strings.Contains(goMod, "module airway-foo-plugin") {
+		t.Fatalf("expected module airway-foo-plugin in go.mod, got:\n%s", goMod)
+	}
+}
+
+func TestNewPluginScaffoldsAtRelativePath(t *testing.T) {
+	wd := useTempWorkingDir(t)
+
+	if err := newPlugin("./bar", false); err != nil {
+		t.Fatalf("new plugin: %v", err)
+	}
+
+	pluginFile := readFile(t, filepath.Join(wd, "bar", "plugin.go"))
+	if !strings.Contains(pluginFile, "package barplugin") {
+		t.Fatalf("expected barplugin package, got:\n%s", pluginFile)
 	}
 }

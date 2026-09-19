@@ -143,7 +143,7 @@ airway upload [key] /path/to/file                     # upload via configured st
 airway js:add <pkg>[@version]                         # add a frontend npm dependency (no Node required)
 airway js:install                                     # install js.pkg.json deps into app/assets/js/vendor/
 airway js:build                                       # bundle the frontend into app/assets/dist
-airway plugin:new <module-path>                       # scaffold a new plugin module
+airway plugin:new <module-path> | <path>              # scaffold a new plugin module (a path like /tmp/foo scaffolds there)
 airway plugin:list                                    # registered plugins and mount paths
 airway plugin:lint                                    # check the current plugin project for legacy layout issues
 airway version                                          # or -v / --version; prints the VERSION file contents

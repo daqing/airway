@@ -61,6 +61,9 @@ Scaffold a new plugin module with the CLI (works with the globally installed
 airway plugin:new im                              # directory: im
 airway plugin:new github.com/me/airway-im-plugin  # plugin name derived from
                                                   # the last path segment
+airway plugin:new /tmp/airway-im-plugin           # scaffold at an absolute path
+                                                  # (or ./, ../); the module path is
+                                                  # the last segment
 ```
 
 This generates `go.mod`, `plugin.go` (Plugin implementation + `init()`
