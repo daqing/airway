@@ -140,6 +140,7 @@ airway js:install                                     # install js.pkg.json deps
 airway js:build                                       # bundle the frontend into app/assets/dist
 airway plugin:new <module-path>                       # scaffold a new plugin module
 airway plugin:list                                    # registered plugins and mount paths
+airway plugin:lint                                    # check the current plugin project for legacy layout issues
 airway version                                          # or -v / --version; prints the VERSION file contents
 airway --version | -v                                   # print VERSION contents without loading .env
 go run . plugin:install <module>                      # enable a plugin (go get + blank import) and install its SQL migrations + deps/ directory

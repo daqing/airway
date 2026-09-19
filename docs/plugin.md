@@ -113,6 +113,11 @@ Content reaches the host through two channels, depending on what it is:
 - **Never — `install/ignore/`.** Local-only files stay in the plugin
   checkout.
 
+`airway plugin:lint` checks the current plugin project and reports layout
+issues, with a non-zero exit when it finds any: for now it flags legacy
+top-level `app/`, `host/`, `deps/`, and `ignore/` directories —
+`plugin:install` reads only `install/`, so those need to move under it.
+
 ### 1. Implement and register the Plugin
 
 ```go

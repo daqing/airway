@@ -672,3 +672,129 @@ func TestInstallPluginMigrationsHonorsGitIgnore(t *testing.T) {
 		t.Fatalf("expected the gitignored scratch migration to be skipped, got %d files", got)
 	}
 }
+
+// pluginProjectAt recognizes an Airway plugin project: a go.mod requiring
+// the framework, with a module path of its own and no main.go beside it.
+func TestPluginProjectAt(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "go.mod"), "module github.com/example/airway-im-plugin\n\ngo 1.26\n\nrequire github.com/daqing/airway v0.9.3\n")
+
+	if !pluginProjectAt(dir) {
+		t.Fatal("expected a plugin project")
+	}
+
+	// A host application ships a main.go and is not a plugin.
+	writeFile(t, filepath.Join(dir, "main.go"), "package main\n")
+	if pluginProjectAt(dir) {
+		t.Fatal("expected a host project not to count as a plugin")
+	}
+	if err := os.Remove(filepath.Join(dir, "main.go")); err != nil {
+		t.Fatal(err)
+	}
+
+	// The framework repository itself is not a plugin project.
+	writeFile(t, filepath.Join(dir, "go.mod"), "module github.com/daqing/airway\n\ngo 1.26\n")
+	if pluginProjectAt(dir) {
+		t.Fatal("expected the framework not to count as a plugin")
+	}
+
+	// A module that does not require the framework is not a plugin project.
+	writeFile(t, filepath.Join(dir, "go.mod"), "module github.com/example/plain\n\ngo 1.26\n")
+	if pluginProjectAt(dir) {
+		t.Fatal("expected a plain module not to count as a plugin")
+	}
+
+	// No go.mod at all.
+	if err := os.Remove(filepath.Join(dir, "go.mod")); err != nil {
+		t.Fatal(err)
+	}
+	if pluginProjectAt(dir) {
+		t.Fatal("expected a directory without go.mod not to count as a plugin")
+	}
+}
+
+func TestRunCLIPluginLintReportsLegacyDirs(t *testing.T) {
+	wd := useTempWorkingDir(t)
+	writeFile(t, filepath.Join(wd, "go.mod"), "module github.com/example/airway-im-plugin\n\ngo 1.26\n\nrequire github.com/daqing/airway v0.9.3\n")
+	for _, dir := range pluginLegacyDirs {
+		makeDirs(t, filepath.Join(wd, dir))
+	}
+
+	var lintErr error
+	output := captureStdout(t, func() {
+		lintErr = runCLIPluginLint(nil)
+	})
+
+	if lintErr == nil {
+		t.Fatal("expected lint to report issues")
+	}
+	if !strings.Contains(lintErr.Error(), "4 issue(s)") {
+		t.Fatalf("expected an issue count in the error, got: %v", lintErr)
+	}
+	for _, dir := range pluginLegacyDirs {
+		if !strings.Contains(output, "install/"+dir) {
+			t.Fatalf("expected a hint to move %s into install/, got: %s", dir, output)
+		}
+	}
+	// captureStdout pipes stdout, so findings must stay plain text there.
+	if strings.Contains(output, "\x1b[") {
+		t.Fatalf("expected no ANSI codes on non-terminal output, got: %q", output)
+	}
+}
+
+func TestHighlightLightBlue(t *testing.T) {
+	if got := highlightLightBlue("issue", true); got != "\x1b[94missue\x1b[0m" {
+		t.Fatalf("expected light-blue wrapping, got %q", got)
+	}
+	if got := highlightLightBlue("issue", false); got != "issue" {
+		t.Fatalf("expected plain text when disabled, got %q", got)
+	}
+}
+
+func TestHighlightDarkYellow(t *testing.T) {
+	if got := highlightDarkYellow("issue", true); got != "\x1b[33missue\x1b[0m" {
+		t.Fatalf("expected dark-yellow wrapping, got %q", got)
+	}
+	if got := highlightDarkYellow("issue", false); got != "issue" {
+		t.Fatalf("expected plain text when disabled, got %q", got)
+	}
+}
+
+func TestLintFindingMessage(t *testing.T) {
+	colored := lintFindingMessage("host", true)
+	want := "\x1b[94mlegacy top-level host/\x1b[0m: \x1b[33mplugin:install no longer reads it; move it to install/host\x1b[0m"
+	if colored != want {
+		t.Fatalf("expected two-color finding, got %q", colored)
+	}
+	plain := lintFindingMessage("host", false)
+	if plain != "legacy top-level host/: plugin:install no longer reads it; move it to install/host" {
+		t.Fatalf("expected plain finding, got %q", plain)
+	}
+}
+
+func TestRunCLIPluginLintClean(t *testing.T) {
+	wd := useTempWorkingDir(t)
+	writeFile(t, filepath.Join(wd, "go.mod"), "module github.com/example/airway-im-plugin\n\ngo 1.26\n\nrequire github.com/daqing/airway v0.9.3\n")
+	makeDirs(t, filepath.Join(wd, "install", "host", "db", "migrate"))
+
+	var lintErr error
+	output := captureStdout(t, func() {
+		lintErr = runCLIPluginLint(nil)
+	})
+
+	if lintErr != nil {
+		t.Fatalf("expected a clean lint, got: %v", lintErr)
+	}
+	if !strings.Contains(output, "no issues found") {
+		t.Fatalf("expected a clean report, got: %s", output)
+	}
+}
+
+func TestRunCLIPluginLintOutsidePlugin(t *testing.T) {
+	useTempWorkingDir(t)
+
+	err := runCLIPluginLint(nil)
+	if err == nil || !strings.Contains(err.Error(), "not an Airway plugin") {
+		t.Fatalf("expected a not-a-plugin error, got: %v", err)
+	}
+}
