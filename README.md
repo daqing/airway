@@ -363,6 +363,56 @@ n, err := repo.CountWhere[User](sql.H{"active": true})
 n, err := repo.CountEvery[User]()
 ```
 
+### Transactions
+
+`repo.WithTx` runs a callback on a single transaction-bound connection. The
+callback receives a `*repo.Tx` whose helper methods execute on that
+transaction; the generic helpers take `tx.Executor()` via the `*With`
+variants:
+
+```go
+users := sql.TableOf("users")
+
+err := repo.WithTx(db, func(tx *repo.Tx) error {
+	if _, err := repo.InsertWith[User](tx.Executor(), sql.Insert(sql.H{"name": "John"}).IntoTable(users)); err != nil {
+		return err
+	}
+
+	n, err := tx.Count(sql.SelectColumns("count(*)").FromTable(users))
+	if err != nil {
+		return err
+	}
+
+	return nil // commit; a non-nil return rolls back
+})
+```
+
+Use `tx.Raw()` to drop down to `*sql.Tx` for hand-written SQL. There is no
+public `Commit`/`Rollback` — the outcome follows the callback's return value,
+and `repo.WithTxContext` accepts a context. `JoinQuery`/`Preloader` remain
+pool-only and cannot run inside a transaction.
+
+Optimistic locking recipe: `UpdateAffected` with a version check, so exactly
+one concurrent writer wins:
+
+```go
+affected, err := tx.UpdateAffected(
+	sql.UpdateTable(users).
+		Set(sql.H{"name": "Jane", "version": sql.Expr("version + 1")}).
+		Where(sql.AllOf(sql.Eq("id", 1), sql.Eq("version", currentVersion))),
+)
+if err != nil {
+	return err
+}
+if affected == 0 {
+	return errors.New("stale record")
+}
+```
+
+PostgreSQL is the primary target for transactions. The MySQL insert path
+issues a second lookup statement on the same connection, which is best-effort
+inside a transaction.
+
 ### Preload (eager loading)
 
 Preload replaces N+1 loops with a couple of queries:

@@ -2,7 +2,6 @@ package repo
 
 import (
 	"context"
-	sqlstd "database/sql"
 	"errors"
 	"fmt"
 	"testing"
@@ -77,16 +76,16 @@ func TestTransactionCommitAndRollback(t *testing.T) {
 		tableName := createTodoTable(t, db)
 		insertSQL := db.rebind(fmt.Sprintf("INSERT INTO %s (title, completed) VALUES (?, ?)", quoteTestIdentifierForDriver(db.Driver(), tableName)))
 
-		if err := Tx(db, func(tx *sqlstd.Tx) error {
-			_, err := tx.ExecContext(context.Background(), insertSQL, "committed", false)
+		if err := WithTx(db, func(tx *Tx) error {
+			_, err := tx.Raw().ExecContext(context.Background(), insertSQL, "committed", false)
 			return err
 		}); err != nil {
 			t.Fatalf("commit transaction: %v", err)
 		}
 
 		rollbackErr := errors.New("force rollback")
-		err := Tx(db, func(tx *sqlstd.Tx) error {
-			if _, execErr := tx.ExecContext(context.Background(), insertSQL, "rolled-back", true); execErr != nil {
+		err := WithTx(db, func(tx *Tx) error {
+			if _, execErr := tx.Raw().ExecContext(context.Background(), insertSQL, "rolled-back", true); execErr != nil {
 				return execErr
 			}
 

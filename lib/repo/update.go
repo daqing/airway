@@ -7,18 +7,26 @@ import (
 )
 
 func Update(db *DB, b buildersql.Stmt) error {
-	_, err := UpdateAffected(db, b)
+	return UpdateWith(db.executor(), b)
+}
+
+func UpdateWith(ex *Executor, b buildersql.Stmt) error {
+	_, err := UpdateAffectedWith(ex, b)
 
 	return err
 }
 
 func UpdateAffected(db *DB, b buildersql.Stmt) (int64, error) {
-	query, args, err := db.prepareBuilder(b)
+	return UpdateAffectedWith(db.executor(), b)
+}
+
+func UpdateAffectedWith(ex *Executor, b buildersql.Stmt) (int64, error) {
+	query, args, err := ex.prepareBuilder(b)
 	if err != nil {
 		return 0, err
 	}
 
-	result, err := db.conn.ExecContext(context.Background(), query, args...)
+	result, err := ex.q.ExecContext(context.Background(), query, args...)
 	if err != nil {
 		return 0, err
 	}

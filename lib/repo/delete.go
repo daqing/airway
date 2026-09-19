@@ -7,18 +7,26 @@ import (
 )
 
 func Delete(db *DB, b buildersql.Stmt) error {
-	_, err := DeleteAffected(db, b)
+	return DeleteWith(db.executor(), b)
+}
+
+func DeleteWith(ex *Executor, b buildersql.Stmt) error {
+	_, err := DeleteAffectedWith(ex, b)
 
 	return err
 }
 
 func DeleteAffected(db *DB, b buildersql.Stmt) (int64, error) {
-	query, args, err := db.prepareBuilder(b)
+	return DeleteAffectedWith(db.executor(), b)
+}
+
+func DeleteAffectedWith(ex *Executor, b buildersql.Stmt) (int64, error) {
+	query, args, err := ex.prepareBuilder(b)
 	if err != nil {
 		return 0, err
 	}
 
-	result, err := db.conn.ExecContext(context.Background(), query, args...)
+	result, err := ex.q.ExecContext(context.Background(), query, args...)
 	if err != nil {
 		return 0, err
 	}

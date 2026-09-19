@@ -9,17 +9,21 @@ import (
 )
 
 func FindByType(db *DB, b buildersql.Stmt, modelType reflect.Type) (any, error) {
+	return FindByTypeWith(db.executor(), b, modelType)
+}
+
+func FindByTypeWith(ex *Executor, b buildersql.Stmt, modelType reflect.Type) (any, error) {
 	modelType, err := normalizeModelType(modelType)
 	if err != nil {
 		return nil, err
 	}
 
-	query, args, err := db.prepareBuilder(b)
+	query, args, err := ex.prepareBuilder(b)
 	if err != nil {
 		return nil, err
 	}
 
-	rows, err := db.conn.QueryContext(context.Background(), query, args...)
+	rows, err := ex.q.QueryContext(context.Background(), query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +49,11 @@ func FindByType(db *DB, b buildersql.Stmt, modelType reflect.Type) (any, error) 
 }
 
 func FindOneByType(db *DB, b buildersql.Stmt, modelType reflect.Type) (any, error) {
-	rows, err := FindByType(db, b, modelType)
+	return FindOneByTypeWith(db.executor(), b, modelType)
+}
+
+func FindOneByTypeWith(ex *Executor, b buildersql.Stmt, modelType reflect.Type) (any, error) {
+	rows, err := FindByTypeWith(ex, b, modelType)
 	if err != nil {
 		return nil, err
 	}

@@ -11,8 +11,16 @@ func Preview(db *DB, b buildersql.Stmt) (string, []any, error) {
 	return db.prepareBuilder(b)
 }
 
+func PreviewWith(ex *Executor, b buildersql.Stmt) (string, []any, error) {
+	return ex.prepareBuilder(b)
+}
+
 func FindOneMap(db *DB, b buildersql.Stmt) (map[string]any, error) {
-	rows, err := FindMaps(db, b)
+	return FindOneMapWith(db.executor(), b)
+}
+
+func FindOneMapWith(ex *Executor, b buildersql.Stmt) (map[string]any, error) {
+	rows, err := FindMapsWith(ex, b)
 	if err != nil {
 		return nil, err
 	}
@@ -29,12 +37,16 @@ func FindOneMap(db *DB, b buildersql.Stmt) (map[string]any, error) {
 }
 
 func FindMaps(db *DB, b buildersql.Stmt) ([]map[string]any, error) {
-	query, args, err := db.prepareBuilder(b)
+	return FindMapsWith(db.executor(), b)
+}
+
+func FindMapsWith(ex *Executor, b buildersql.Stmt) ([]map[string]any, error) {
+	query, args, err := ex.prepareBuilder(b)
 	if err != nil {
 		return nil, err
 	}
 
-	rows, err := db.conn.QueryContext(context.Background(), query, args...)
+	rows, err := ex.q.QueryContext(context.Background(), query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -45,16 +57,20 @@ func FindMaps(db *DB, b buildersql.Stmt) ([]map[string]any, error) {
 }
 
 func InsertMap(db *DB, b buildersql.Stmt) (map[string]any, error) {
-	if db.Driver() == DriverMySQL {
-		return insertMySQLMap(db, b)
+	return InsertMapWith(db.executor(), b)
+}
+
+func InsertMapWith(ex *Executor, b buildersql.Stmt) (map[string]any, error) {
+	if ex.driver == DriverMySQL {
+		return insertMySQLMap(ex, b)
 	}
 
-	query, args, err := db.prepareBuilder(b)
+	query, args, err := ex.prepareBuilder(b)
 	if err != nil {
 		return nil, err
 	}
 
-	rows, err := db.conn.QueryContext(context.Background(), query, args...)
+	rows, err := ex.q.QueryContext(context.Background(), query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -77,29 +93,29 @@ func InsertMap(db *DB, b buildersql.Stmt) (map[string]any, error) {
 	return records[0], nil
 }
 
-func insertMySQLMap(db *DB, b buildersql.Stmt) (map[string]any, error) {
-	query, args, err := db.prepareInsertBuilder(b)
+func insertMySQLMap(ex *Executor, b buildersql.Stmt) (map[string]any, error) {
+	query, args, err := ex.prepareInsertBuilder(b)
 	if err != nil {
 		return nil, err
 	}
 
-	result, err := db.conn.ExecContext(context.Background(), query, args...)
+	result, err := ex.q.ExecContext(context.Background(), query, args...)
 	if err != nil {
 		return nil, err
 	}
 
-	lookupColumn, lookupValue, err := db.resolveInsertLookup(b, result)
+	lookupColumn, lookupValue, err := resolveInsertLookup(ex, b, result)
 	if err != nil {
 		return nil, err
 	}
 
 	selectQuery := "SELECT * FROM " + b.TableName() + " WHERE " + lookupColumn + " = @lookup LIMIT 1"
-	compiledQuery, compiledArgs, err := db.prepareQuery(selectQuery, buildersql.NamedArgs{"lookup": lookupValue})
+	compiledQuery, compiledArgs, err := ex.prepareQuery(selectQuery, buildersql.NamedArgs{"lookup": lookupValue})
 	if err != nil {
 		return nil, err
 	}
 
-	rows, err := db.conn.QueryContext(context.Background(), compiledQuery, compiledArgs...)
+	rows, err := ex.q.QueryContext(context.Background(), compiledQuery, compiledArgs...)
 	if err != nil {
 		return nil, err
 	}
