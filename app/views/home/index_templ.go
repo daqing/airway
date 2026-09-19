@@ -1475,7 +1475,7 @@ func Index(counterStart int) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 103, "</div><p class=\"terminal-requirement\">Requires Go 1.26.2 or later · Live reload with <code>just dev</code></p><p class=\"copy-status\" role=\"status\" aria-live=\"polite\"></p></div></div></section><section class=\"community-section container\" aria-labelledby=\"community-title\"><div><p class=\"eyebrow\">OPEN SOURCE. OPEN POSSIBILITIES.</p><h2 id=\"community-title\">Good things are built together.</h2><p>Read the code. Open an issue. Make your first contribution.<br>There’s a place for your ideas in Airway.</p></div><a class=\"button button-primary\" href=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 103, "</div><p class=\"terminal-requirement\">Requires Go 1.27.1 or later · Live reload with <code>just dev</code></p><p class=\"copy-status\" role=\"status\" aria-live=\"polite\"></p></div></div></section><section class=\"community-section container\" aria-labelledby=\"community-title\"><div><p class=\"eyebrow\">OPEN SOURCE. OPEN POSSIBILITIES.</p><h2 id=\"community-title\">Good things are built together.</h2><p>Read the code. Open an issue. Make your first contribution.<br>There’s a place for your ideas in Airway.</p></div><a class=\"button button-primary\" href=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

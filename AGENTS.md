@@ -13,7 +13,7 @@ The project supports PostgreSQL, SQLite 3, and MySQL 8 from the same codebase; t
 
 ## Tech Stack
 
-- **Language:** Go 1.26 (module `github.com/daqing/airway`); pure-Go SQLite driver (`modernc.org/sqlite`).
+- **Language:** Go 1.27 (module `github.com/daqing/airway`); pure-Go SQLite driver (`modernc.org/sqlite`).
 - **HTTP framework:** Gin (`gin-gonic/gin`), with `gin-contrib/cors`.
 - **HTML views:** [templ](https://templ.guide/) templates under `app/views`, compiled to Go and rendered via `lib/render.HTML`. Generated `*_templ.go` files are committed.
 - **Database access:** `database/sql` on top of `jackc/pgx/v5/stdlib` (PostgreSQL), `go-sql-driver/mysql`, `modernc.org/sqlite`.
@@ -216,7 +216,7 @@ keys the environment does not set), so `PORT=1988 airway server` overrides a
 
 ## Deployment
 
-- **Docker:** multi-stage `Dockerfile` (golang:1.26-alpine builder, alpine runtime; pure-Go build). Build with `just docker` or `docker build -t airway .`. The image sets `AIRWAY_ENV=production`, exposes port `1900`, copies `db/` into the image, and starts with `CMD ["/app/airway", "server"]`. Note the Dockerfile points the Go module proxy at goproxy.cn (Chinese mirror).
+- **Docker:** multi-stage `Dockerfile` (golang:1.27-alpine builder, alpine runtime; pure-Go build). Build with `just docker` or `docker build -t airway .`. The image sets `AIRWAY_ENV=production`, exposes port `1900`, copies `db/` into the image, and starts with `CMD ["/app/airway", "server"]`. Note the Dockerfile points the Go module proxy at goproxy.cn (Chinese mirror).
 - **docker-compose:** see `docs/docker-compose.yml.example`.
 - The binary is self-contained; run migrations with `./airway db:migrate` before/after deploy as needed.
 
