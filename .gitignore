@@ -22,3 +22,5 @@ docs/.vitepress/dist/
 docs/.vitepress/cache/
 
 .zcode
+
+openapi.json

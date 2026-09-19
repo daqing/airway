@@ -5,8 +5,8 @@ Airway 可以自动生成 [OpenAPI](https://spec.openapis.org) 3.2 格式的 API
 
 文档有两种消费方式：
 
-- **文件**：`airway openapi:generate` 生成 `./openapi.json`，提交进仓库，代码
-  生成工具直接指向它。
+- **文件**：`airway openapi:generate` 生成 `./openapi.json`（本地构建产物，
+  已被 git 忽略；路由或声明类型变化后重新生成），代码生成工具直接指向它。
 - **实时端点**：运行中的服务在 `GET /openapi.json` 上提供文档，代码生成工具
   可以直接指向已部署的服务。
 
@@ -15,7 +15,8 @@ airway openapi:generate                    # 生成 ./openapi.json
 airway openapi:generate --out docs/api.json
 ```
 
-输出是确定性的（paths、operation、schema 均排序），提交后 diff 干净。
+输出是确定性的（paths、operation、schema 均排序），变化后重新生成不会产生
+无意义的 diff；该文件是本地构建产物，已被 git 忽略。
 `info.version` 取自项目 `VERSION` 文件；`servers` 在实时端点模式下由请求
 Host 与 `URL_PREFIX` 推导，在 CLI 模式下由 `AIRWAY_PORT`（或 `PORT`）与
 `URL_PREFIX` 推导。当应用通过 `URL_PREFIX=/airway` 部署在反向代理之后时，

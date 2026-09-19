@@ -6,8 +6,8 @@ with standard code-generation tools.
 
 Two ways to consume the document:
 
-- **File**: `airway openapi:generate` writes `./openapi.json` — commit it and
-  point your generators at it.
+- **File**: `airway openapi:generate` writes `./openapi.json` — point your
+  generators at it (regenerate whenever routes or declared types change).
 - **Live endpoint**: a running server answers `GET /openapi.json` (code
   generators can target a deployed server directly).
 
@@ -16,8 +16,9 @@ airway openapi:generate                    # writes ./openapi.json
 airway openapi:generate --out docs/api.json
 ```
 
-The output is deterministic (paths, operations and schemas are sorted), so the
-committed file diffs cleanly. `info.version` comes from the project's
+The output is deterministic (paths, operations and schemas are sorted), so
+regenerating after a change keeps diffs clean; the file itself is a local
+build artifact (git-ignored). `info.version` comes from the project's
 `VERSION` file, and the `servers` entry is derived from the request host and
 `URL_PREFIX` on the live endpoint, or `AIRWAY_PORT` / `PORT` and `URL_PREFIX`
 on the CLI. When the app is deployed behind a reverse proxy with

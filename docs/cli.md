@@ -93,6 +93,12 @@ The framework repository's own `main.go` no longer starts the server by
 default — use `go run . server` when developing Airway itself. The Docker image
 already runs the binary with `server`.
 
+Environment values always win over `.env` values: `.env` is loaded as a
+fallback for keys the process environment does not set, so
+`PORT=1988 go run . server` listens on 1988 even when `.env` defines
+`PORT` or `AIRWAY_PORT`. The server starts without `AIRWAY_ENV` in the
+environment as long as `.env` provides it.
+
 ## Upload a file
 
 Upload a local file using the storage configuration from `.env`:
@@ -333,8 +339,9 @@ airway openapi:generate --out docs/api.json
 ```
 
 Writes a deterministic OpenAPI 3.2 document for every route registered on the
-Gin engine (plugin routes included); the output is sorted, so the committed
-file diffs cleanly. A running server also serves the document live at
+Gin engine (plugin routes included); the output is sorted, so regenerating
+after a change keeps diffs clean. The file is a local build artifact
+(git-ignored). A running server also serves the document live at
 `GET /openapi.json` (under the `URL_PREFIX` when one is configured), with a
 `servers` entry derived from the request host.
 

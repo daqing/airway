@@ -74,6 +74,10 @@ airway server        # 或者在源码目录中：go run . server
 框架仓库根目录的 `main.go` 不再默认启动 HTTP 服务——开发框架本身时请使用
 `go run . server`。Docker 镜像已经以 `server` 参数启动。
 
+环境变量始终优先于 `.env`：`.env` 只为进程环境未设置的键提供回退值，因此
+`PORT=1988 go run . server` 即使在 `.env` 定义了 `PORT` 或 `AIRWAY_PORT` 时
+也会监听 1988。只要 `.env` 提供了 `AIRWAY_ENV`，环境中不带它也能启动服务。
+
 ## 上传文件
 
 使用 `.env` 中的 storage 配置上传本地文件：
@@ -264,7 +268,8 @@ airway openapi:generate --out docs/api.json
 ```
 
 为 Gin 引擎上注册的每一条路由（含 Plugin 挂载的路由）生成确定性的 OpenAPI
-3.2 文档；输出经过排序，提交进仓库后 diff 干净。运行中的服务同时在
+3.2 文档；输出经过排序，路由变化后重新生成不会产生无意义的 diff，该文件是
+本地构建产物（已被 git 忽略）。运行中的服务同时在
 `GET /openapi.json` 上提供实时文档（配置了 `URL_PREFIX` 时挂载在前缀之下），
 `servers` 由请求 Host 推导。
 

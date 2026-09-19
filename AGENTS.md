@@ -176,9 +176,9 @@ Migration and schema commands read `AIRWAY_DB_DSN` first and fall back to the le
   operationId, default `render` envelope as the 200 response). Modules enrich
   their docs with an `openapi.go` file declaring operations via `lib/openapi`
   (`openapi.Get(...)` etc., matched by method+path; see docs/openapi.md);
-  document-level settings live in `app/api/openapi_api/doc.go`. After changing
-  routes or declared types run `go run . openapi:generate` and commit the
-  refreshed `openapi.json` (same living-file policy as `db/schema.json`).
+  document-level settings live in `app/api/openapi_api/doc.go`. The generated
+  `openapi.json` is a local build artifact (git-ignored); regenerate it with
+  `go run . openapi:generate` whenever routes or declared types change.
 - **HTML views:** server-rendered pages live under `app/views/<module>/` as templ files, one folder per API module (e.g. `app/views/home/` for `home_api`); a shared shell lives in `app/views/layouts/`. Actions render them with `render.HTML(c, view.Component())` (see `home_api`). Re-run `go generate ./...` when you edit a `.templ` file and keep the generated `*_templ.go`.
 - **Interactive islands:** embed Preact TSX components in templ views with `@assets.Island("name", props)`; the component file is `app/assets/js/islands/<name>.tsx` (default-export; file path = island name, case-sensitive). `base.templ` loads the bundle via `assets.Scripts()` and styles via `assets.Stylesheet()`. After changing frontend sources run `go run . js:build` and commit the dist output (see PLAN.md Phase 3).
 - **airway-ui components:** build islands from the library under `app/assets/js/ui/` (Button, inputs + Field, Form on react-hook-form, DataTable on TanStack Table, Modal, Toast via `useToast`, Tabs, Pagination, `apiFetch`/`useApiQuery`); live reference at `/ui`. Frontend sources import `react` (aliased onto preact/compat at build time) — React semantics apply, so custom inputs used with `register()` must forwardRef.
@@ -200,7 +200,10 @@ Migration and schema commands read `AIRWAY_DB_DSN` first and fall back to the le
 
 ## Configuration
 
-All configuration is via environment variables (see `.env.example`):
+All configuration is via environment variables (see `.env.example`). The
+process environment always wins over `.env` values (loaded as fallbacks for
+keys the environment does not set), so `PORT=1988 airway server` overrides a
+`PORT`/`AIRWAY_PORT` in `.env`:
 
 - `AIRWAY_ENV` — `local` enables `.env` loading and Gin debug mode; anything else runs Gin in release mode.
 - `AIRWAY_DB_DSN` — database URL; driver inferred from scheme: `postgres://...`, `sqlite://./tmp/airway.db`, `sqlite://:memory:`, `mysql://...` (native Go MySQL driver DSN format also accepted).
