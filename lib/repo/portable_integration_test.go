@@ -175,3 +175,35 @@ func TestSQLiteExecutesILikeAndForUpdateFallback(t *testing.T) {
 		t.Fatalf("unexpected rows: %#v", rows)
 	}
 }
+
+func TestSQLiteExecutesAllLockClauses(t *testing.T) {
+	db := requireSQLiteTestDB(t)
+	tableName := createTodoTable(t, db)
+	todos := sql.TableOf(tableName)
+	insertTodoRow(t, db, tableName, "Alpha task", false)
+
+	locks := map[string]func(*sql.Builder) *sql.Builder{
+		"for update":             func(b *sql.Builder) *sql.Builder { return b.ForUpdate() },
+		"for share":              func(b *sql.Builder) *sql.Builder { return b.ForShare() },
+		"for update skip locked": func(b *sql.Builder) *sql.Builder { return b.ForUpdateSkipLocked() },
+		"for share skip locked":  func(b *sql.Builder) *sql.Builder { return b.ForShareSkipLocked() },
+		"raw skip locked":        func(b *sql.Builder) *sql.Builder { return b.For("FOR UPDATE SKIP LOCKED") },
+		"raw nowait":             func(b *sql.Builder) *sql.Builder { return b.For("FOR SHARE NOWAIT") },
+	}
+
+	for name, apply := range locks {
+		t.Run(name, func(t *testing.T) {
+			base := sql.SelectFields(todos.AllFields()).FromTable(todos).
+				Where(sql.FieldEq(todos.Field("title"), "Alpha task"))
+
+			rows, err := Find[Todo](db, apply(base))
+			if err != nil {
+				t.Fatalf("sqlite lock clause query: %v", err)
+			}
+
+			if len(rows) != 1 || rows[0].Title != "Alpha task" {
+				t.Fatalf("unexpected rows: %#v", rows)
+			}
+		})
+	}
+}

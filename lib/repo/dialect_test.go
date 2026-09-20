@@ -31,8 +31,8 @@ func TestCompileNamedQueryFailsWhenArgMissing(t *testing.T) {
 	}
 }
 
-func TestTransformQueryForDriverSQLiteRemovesLockAndILike(t *testing.T) {
-	query := `SELECT "users".* FROM "users" WHERE "email" ILIKE @right FOR UPDATE`
+func TestTransformQueryForDriverSQLiteRewritesILike(t *testing.T) {
+	query := `SELECT "users".* FROM "users" WHERE "email" ILIKE @right`
 
 	transformed, err := transformQueryForDriver(DriverSQLite, query)
 	if err != nil {
@@ -42,6 +42,59 @@ func TestTransformQueryForDriverSQLiteRemovesLockAndILike(t *testing.T) {
 	expected := `SELECT "users".* FROM "users" WHERE "email" LIKE @right`
 	if transformed != expected {
 		t.Fatalf("expected %q, got %q", expected, transformed)
+	}
+}
+
+func TestPrepareBuilderStripsLockClausesForSQLite(t *testing.T) {
+	jobs := buildersql.TableOf("jobs")
+
+	cases := map[string]*buildersql.Builder{
+		"for update":             buildersql.SelectFields(jobs.AllFields()).FromTable(jobs).ForUpdate(),
+		"for share":              buildersql.SelectFields(jobs.AllFields()).FromTable(jobs).ForShare(),
+		"for update skip locked": buildersql.SelectFields(jobs.AllFields()).FromTable(jobs).ForUpdateSkipLocked(),
+		"for share skip locked":  buildersql.SelectFields(jobs.AllFields()).FromTable(jobs).ForShareSkipLocked(),
+		"raw clause":             buildersql.SelectFields(jobs.AllFields()).FromTable(jobs).For("FOR UPDATE SKIP LOCKED"),
+	}
+
+	for name, stmt := range cases {
+		query, args, err := DriverSQLite.prepareBuilder(stmt)
+		if err != nil {
+			t.Fatalf("%s: prepare builder: %v", name, err)
+		}
+
+		expected := `SELECT "jobs".* FROM "jobs"`
+		if query != expected {
+			t.Fatalf("%s: expected %q, got %q", name, expected, query)
+		}
+
+		if len(args) != 0 {
+			t.Fatalf("%s: expected no args, got %#v", name, args)
+		}
+	}
+}
+
+func TestPrepareBuilderUnwrapsDeleteSubqueryForMySQL(t *testing.T) {
+	todos := buildersql.TableOf("todos")
+	stmt := buildersql.DeleteFrom(todos).OrderBy(todos.Field("id").Asc()).Limit(1)
+
+	mysqlQuery, _, err := DriverMySQL.prepareBuilder(stmt)
+	if err != nil {
+		t.Fatalf("prepare mysql builder: %v", err)
+	}
+
+	expected := "DELETE FROM `todos` ORDER BY `todos`.`id` ASC LIMIT 1"
+	if mysqlQuery != expected {
+		t.Fatalf("expected %q, got %q", expected, mysqlQuery)
+	}
+
+	sqliteQuery, _, err := DriverSQLite.prepareBuilder(stmt)
+	if err != nil {
+		t.Fatalf("prepare sqlite builder: %v", err)
+	}
+
+	expected = `DELETE FROM "todos" WHERE id IN (SELECT id FROM "todos" ORDER BY "todos"."id" ASC LIMIT 1)`
+	if sqliteQuery != expected {
+		t.Fatalf("expected %q, got %q", expected, sqliteQuery)
 	}
 }
 

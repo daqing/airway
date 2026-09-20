@@ -322,8 +322,30 @@ func SubQuery(query *Builder) sql.SQLExpr { return sql.SubQuery(query.inner) }
 
 // --- MySQL-specific builder methods ---
 
+func (b *Builder) For(clause string) *Builder {
+	b.inner.For(clause)
+	return b
+}
 func (b *Builder) ForUpdate() *Builder {
 	b.inner.ForUpdate()
 	return b
+}
+func (b *Builder) ForShare() *Builder {
+	b.inner.ForShare()
+	return b
+}
+func (b *Builder) ForUpdateSkipLocked() *Builder {
+	b.inner.ForUpdateSkipLocked()
+	return b
+}
+func (b *Builder) ForShareSkipLocked() *Builder {
+	b.inner.ForShareSkipLocked()
+	return b
+}
+func (b *Builder) WithoutLocking() sql.Stmt {
+	return wrap(b.inner.WithoutLocking().(*sql.Builder))
+}
+func (b *Builder) WithoutDeleteSubquery() sql.Stmt {
+	return wrap(b.inner.WithoutDeleteSubquery().(*sql.Builder))
 }
 

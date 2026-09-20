@@ -40,3 +40,38 @@ func TestNestedConditionsGetUniqueNamedArgs(t *testing.T) {
 		t.Fatalf("unexpected args: %#v", args)
 	}
 }
+
+func TestSelectLockClauses(t *testing.T) {
+	issues := TableOf("issues")
+
+	cases := []struct {
+		name string
+		stmt func() *Builder
+		want string
+	}{
+		{"for update skip locked", func() *Builder {
+			return SelectFields(issues.AllFields()).FromTable(issues).ForUpdateSkipLocked()
+		}, `SELECT "issues".* FROM "issues" FOR UPDATE SKIP LOCKED`},
+		{"for share skip locked", func() *Builder {
+			return SelectFields(issues.AllFields()).FromTable(issues).ForShareSkipLocked()
+		}, `SELECT "issues".* FROM "issues" FOR SHARE SKIP LOCKED`},
+	}
+
+	for _, tc := range cases {
+		query, _ := tc.stmt().ToSQL()
+		if query != tc.want {
+			t.Fatalf("%s: expected SQL %q, got %q", tc.name, tc.want, query)
+		}
+	}
+}
+
+func TestWithoutLockingDropsLockClause(t *testing.T) {
+	issues := TableOf("issues")
+	b := SelectFields(issues.AllFields()).FromTable(issues).ForShareSkipLocked()
+
+	query, _ := b.WithoutLocking().ToSQL()
+	expected := `SELECT "issues".* FROM "issues"`
+	if query != expected {
+		t.Fatalf("expected SQL %q, got %q", expected, query)
+	}
+}

@@ -368,6 +368,17 @@ func (b *Builder) ForShare() *Builder {
 	b.inner.ForShare()
 	return b
 }
+func (b *Builder) ForUpdateSkipLocked() *Builder {
+	b.inner.ForUpdateSkipLocked()
+	return b
+}
+func (b *Builder) ForShareSkipLocked() *Builder {
+	b.inner.ForShareSkipLocked()
+	return b
+}
+func (b *Builder) WithoutLocking() sql.Stmt {
+	return wrap(b.inner.WithoutLocking().(*sql.Builder))
+}
 func (b *Builder) IntersectAll(query *Builder) *Builder {
 	b.inner.IntersectAll(query.inner)
 	return b

@@ -2,7 +2,9 @@
 //
 // Supported SQLite features: RETURNING (3.35+), FULL JOIN (3.39+),
 // ON CONFLICT (3.24+), Window (3.25+), CTE (3.8.3+).
-// Not available: ILIKE, FOR UPDATE/SHARE, LATERAL JOIN, UPDATE...FROM, DELETE...USING.
+// Not available: ILIKE, FOR UPDATE/SHARE (row locking; lib/repo drops lock
+// clauses via WithoutLocking when executing on SQLite), LATERAL JOIN,
+// UPDATE...FROM, DELETE...USING.
 package sqlite
 
 import (
