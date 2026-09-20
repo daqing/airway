@@ -29,15 +29,15 @@ func TestResolveVersion(t *testing.T) {
 		rng  string
 		want string
 	}{
-		{"1.2.3", "1.2.3"},           // exact
-		{"^1.2.3", "1.9.0"},          // caret, major>0
-		{"^0.2.3", "0.2.9"},          // caret, major==0
-		{"^0.0.3", "0.0.3"},          // caret, major==0 minor==0
-		{"~1.2.3", "1.2.9"},          // tilde patch
-		{"~1.2", "1.2.9"},            // tilde minor
-		{"~1", "1.9.0"},              // tilde major
-		{">=1.2.0 <2.0.0", "1.9.0"},  // AND comparators
-		{"1.x", "1.9.0"},             // x-range
+		{"1.2.3", "1.2.3"},          // exact
+		{"^1.2.3", "1.9.0"},         // caret, major>0
+		{"^0.2.3", "0.2.9"},         // caret, major==0
+		{"^0.0.3", "0.0.3"},         // caret, major==0 minor==0
+		{"~1.2.3", "1.2.9"},         // tilde patch
+		{"~1.2", "1.2.9"},           // tilde minor
+		{"~1", "1.9.0"},             // tilde major
+		{">=1.2.0 <2.0.0", "1.9.0"}, // AND comparators
+		{"1.x", "1.9.0"},            // x-range
 		{"1.2.x", "1.2.9"},
 		{"*", "2.0.0"},
 		{"", "2.0.0"},
@@ -85,8 +85,8 @@ func TestSatisfyingAll(t *testing.T) {
 
 func TestParseSpec(t *testing.T) {
 	cases := []struct {
-		in              string
-		name, version   string
+		in            string
+		name, version string
 	}{
 		{"preact", "preact", ""},
 		{"preact@10.29.8", "preact", "10.29.8"},

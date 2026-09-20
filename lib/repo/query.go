@@ -10,8 +10,6 @@ import (
 
 var compiledArgPattern = regexp.MustCompile(`@([A-Za-z_][A-Za-z0-9_]*)`)
 
-var sqliteForClausePattern = regexp.MustCompile(`\s+FOR\s+(UPDATE|SHARE)\b`)
-
 var sqliteILikePattern = regexp.MustCompile(`\bILIKE\b`)
 
 var sqliteNotILikePattern = regexp.MustCompile(`\bNOT\s+ILIKE\b`)
@@ -36,7 +34,27 @@ func (db *DB) prepareQuery(query string, vals buildersql.NamedArgs) (string, []a
 	return db.driver.prepareQuery(query, vals)
 }
 
+type lockStripper interface {
+	WithoutLocking() buildersql.Stmt
+}
+
+type deleteSubqueryStripper interface {
+	WithoutDeleteSubquery() buildersql.Stmt
+}
+
 func (driver Driver) prepareBuilder(b buildersql.Stmt) (string, []any, error) {
+	if driver == DriverSQLite {
+		if strippable, ok := b.(lockStripper); ok {
+			b = strippable.WithoutLocking()
+		}
+	}
+
+	if driver == DriverMySQL {
+		if unwrappable, ok := b.(deleteSubqueryStripper); ok {
+			b = unwrappable.WithoutDeleteSubquery()
+		}
+	}
+
 	query, vals := b.ToSQL()
 	return driver.prepareQuery(query, vals)
 }
@@ -102,7 +120,6 @@ func transformQueryForDriver(driver Driver, query string) (string, error) {
 			return "", fmt.Errorf("sqlite does not support ON CONFLICT ON CONSTRAINT")
 		}
 
-		query = sqliteForClausePattern.ReplaceAllString(query, "")
 		query = sqliteNotILikePattern.ReplaceAllString(query, "NOT LIKE")
 		query = sqliteILikePattern.ReplaceAllString(query, "LIKE")
 

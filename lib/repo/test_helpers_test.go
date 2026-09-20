@@ -3,6 +3,7 @@ package repo
 import (
 	"context"
 	"fmt"
+	"hash/fnv"
 	"os"
 	"strings"
 	"testing"
@@ -32,12 +33,23 @@ func quoteTestIdentifierForDriver(driver Driver, name string) string {
 	return quoteTestIdentifier(name)
 }
 
+const maxTestIdentifierLen = 64
+
 func testTableName(t *testing.T) string {
 	t.Helper()
 
 	name := strings.ToLower(t.Name())
 	name = strings.NewReplacer("/", "_", " ", "_", "-", "_").Replace(name)
-	return fmt.Sprintf("airway_%s_%d", name, time.Now().UnixNano())
+
+	suffix := fmt.Sprintf("_%d", time.Now().UnixNano())
+	if budget := maxTestIdentifierLen - len("airway_") - len(suffix); len(name) > budget {
+		sum := fnv.New32a()
+		_, _ = sum.Write([]byte(name))
+		hash := fmt.Sprintf("%08x", sum.Sum32())
+		name = name[:budget-len(hash)-1] + "_" + hash
+	}
+
+	return "airway_" + name + suffix
 }
 
 func createTodoTable(t *testing.T, db *DB) string {
@@ -78,7 +90,7 @@ CREATE TABLE %s (
 		query = fmt.Sprintf(`
 CREATE TABLE %s (
 	id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-	title TEXT NOT NULL,
+	title VARCHAR(255) NOT NULL,
 	completed BOOLEAN NOT NULL DEFAULT FALSE,
 	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP%s

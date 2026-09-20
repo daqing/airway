@@ -8,9 +8,9 @@ import (
 type RelationType string
 
 const (
-	HasOneRelation    RelationType = "has_one"
-	HasManyRelation   RelationType = "has_many"
-	BelongsTo         RelationType = "belongs_to"
+	HasOneRelation  RelationType = "has_one"
+	HasManyRelation RelationType = "has_many"
+	BelongsTo       RelationType = "belongs_to"
 )
 
 // Relation 定义模型关联配置

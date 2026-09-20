@@ -27,11 +27,13 @@ type Builder struct {
 	usingTables []string
 	distinct    bool
 	distinctOn  []string
-	lockClause  string
+	lockClause  *lockClause
 	conflict    *conflictClause
 	deleteKey   string
 	offset      int
 	limit       int
+
+	nativeDeleteLimit bool
 }
 
 type cteClause struct {
@@ -58,6 +60,29 @@ type conflictClause struct {
 	constraint string
 	doNothing  bool
 	set        H
+}
+
+type lockClause struct {
+	strength string
+	option   string
+	raw      string
+}
+
+func (l *lockClause) String() string {
+	if l == nil {
+		return ""
+	}
+
+	if l.raw != "" {
+		return l.raw
+	}
+
+	clause := "FOR " + l.strength
+	if l.option != "" {
+		clause += " " + l.option
+	}
+
+	return clause
 }
 
 func baseBuilder(kind string) *Builder {
@@ -176,16 +201,48 @@ func (b *Builder) For(clause string) *Builder {
 		return b
 	}
 
-	b.lockClause = clause
+	b.lockClause = &lockClause{raw: clause}
 	return b
 }
 
 func (b *Builder) ForUpdate() *Builder {
-	return b.For("FOR UPDATE")
+	b.lockClause = &lockClause{strength: "UPDATE"}
+	return b
 }
 
 func (b *Builder) ForShare() *Builder {
-	return b.For("FOR SHARE")
+	b.lockClause = &lockClause{strength: "SHARE"}
+	return b
+}
+
+func (b *Builder) ForUpdateSkipLocked() *Builder {
+	b.lockClause = &lockClause{strength: "UPDATE", option: "SKIP LOCKED"}
+	return b
+}
+
+func (b *Builder) ForShareSkipLocked() *Builder {
+	b.lockClause = &lockClause{strength: "SHARE", option: "SKIP LOCKED"}
+	return b
+}
+
+// WithoutLocking returns a copy of the statement with any row-locking clause
+// (FOR UPDATE / FOR SHARE and their SKIP LOCKED variants, or a raw For clause)
+// removed, so it can run on dialects without row locks such as SQLite.
+func (b *Builder) WithoutLocking() Stmt {
+	copied := *b
+	copied.lockClause = nil
+	return &copied
+}
+
+// WithoutDeleteSubquery returns a copy of the statement whose DELETE with
+// ORDER BY / LIMIT is emitted in the dialect-native form (DELETE ... WHERE ...
+// ORDER BY ... LIMIT) instead of the portable `WHERE key IN (SELECT key ...
+// LIMIT n)` wrapper. MySQL rejects the subquery form (Error 1235) but supports
+// the native one; lib/repo swaps it in when executing on MySQL.
+func (b *Builder) WithoutDeleteSubquery() Stmt {
+	copied := *b
+	copied.nativeDeleteLimit = true
+	return &copied
 }
 
 func (b *Builder) With(name string, query *Builder) *Builder {
@@ -479,9 +536,9 @@ func (b *Builder) buildSelect(state *buildState) string {
 		var sql strings.Builder
 		sql.WriteString(baseSQL)
 		b.writeOrderLimitOffset(&sql)
-		if b.lockClause != "" {
+		if clause := b.lockClause.String(); clause != "" {
 			sql.WriteString(" ")
-			sql.WriteString(b.lockClause)
+			sql.WriteString(clause)
 		}
 
 		return sql.String()
@@ -501,9 +558,9 @@ func (b *Builder) buildSelect(state *buildState) string {
 	}
 
 	b.writeOrderLimitOffset(&sql)
-	if b.lockClause != "" {
+	if clause := b.lockClause.String(); clause != "" {
 		sql.WriteString(" ")
-		sql.WriteString(b.lockClause)
+		sql.WriteString(clause)
 	}
 
 	return sql.String()
@@ -677,6 +734,26 @@ func (b *Builder) buildDelete(state *buildState) string {
 	if len(b.usingTables) > 0 {
 		sql.WriteString(" USING ")
 		sql.WriteString(strings.Join(b.usingTables, ", "))
+	}
+
+	if b.nativeDeleteLimit && len(b.usingTables) == 0 && b.offset < 0 && (len(b.orderBys) > 0 || b.limit > -1) {
+		where := compileCond(b.cond, state)
+		if where != "" {
+			sql.WriteString(" WHERE ")
+			sql.WriteString(where)
+		}
+
+		if len(b.orderBys) > 0 {
+			sql.WriteString(" ORDER BY ")
+			sql.WriteString(strings.Join(b.orderBys, ", "))
+		}
+
+		if b.limit > -1 {
+			sql.WriteString(fmt.Sprintf(" LIMIT %d", b.limit))
+		}
+
+		b.writeReturningClause(&sql, false)
+		return sql.String()
 	}
 
 	if len(b.orderBys) > 0 || b.limit > -1 || b.offset > -1 {

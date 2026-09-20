@@ -16,11 +16,11 @@ type Builder struct {
 func wrap(b *sql.Builder) *Builder { return &Builder{inner: b} }
 
 func (b *Builder) ToSQL() (string, sql.NamedArgs) { return b.inner.ToSQL() }
-func (b *Builder) Kind() string                    { return b.inner.Kind() }
-func (b *Builder) TableName() string               { return b.inner.TableName() }
-func (b *Builder) InsertValues() sql.H             { return b.inner.InsertValues() }
-func (b *Builder) InsertRows() []sql.H             { return b.inner.InsertRows() }
-func (b *Builder) ConflictTarget() []string        { return b.inner.ConflictTarget() }
+func (b *Builder) Kind() string                   { return b.inner.Kind() }
+func (b *Builder) TableName() string              { return b.inner.TableName() }
+func (b *Builder) InsertValues() sql.H            { return b.inner.InsertValues() }
+func (b *Builder) InsertRows() []sql.H            { return b.inner.InsertRows() }
+func (b *Builder) ConflictTarget() []string       { return b.inner.ConflictTarget() }
 
 // --- SELECT ---
 
@@ -258,39 +258,39 @@ var (
 // --- Condition constructors ---
 
 var (
-	Eq           = sql.Eq
-	NotEq        = sql.NotEq
-	Gt           = sql.Gt
-	Gte          = sql.Gte
-	Lt           = sql.Lt
-	Lte          = sql.Lte
-	Like         = sql.Like
-	NotLike      = sql.NotLike
-	AllOf        = sql.AllOf
-	AnyOf        = sql.AnyOf
-	Not          = sql.Not
-	IsNull       = sql.IsNull
-	IsNotNull    = sql.IsNotNull
-	Between      = sql.Between
-	NotBetween   = sql.NotBetween
-	HCond        = sql.HCond
-	Compare      = sql.Compare
-	FieldEq      = sql.FieldEq
-	EqRef        = sql.EqRef
-	FieldNotEq   = sql.FieldNotEq
-	FieldGt      = sql.FieldGt
-	FieldGte     = sql.FieldGte
-	FieldLt      = sql.FieldLt
-	FieldLte     = sql.FieldLte
-	FieldLike    = sql.FieldLike
-	MatchFields  = sql.MatchFields
-	HCondRef     = sql.HCondRef
-	HCondTable   = sql.HCondTable
-	MatchTable   = sql.MatchTable
-	RawCondition = sql.RawCondition
-	ILike        = sql.ILike
-	NotILike     = sql.NotILike
-	FieldILike   = sql.FieldILike
+	Eq               = sql.Eq
+	NotEq            = sql.NotEq
+	Gt               = sql.Gt
+	Gte              = sql.Gte
+	Lt               = sql.Lt
+	Lte              = sql.Lte
+	Like             = sql.Like
+	NotLike          = sql.NotLike
+	AllOf            = sql.AllOf
+	AnyOf            = sql.AnyOf
+	Not              = sql.Not
+	IsNull           = sql.IsNull
+	IsNotNull        = sql.IsNotNull
+	Between          = sql.Between
+	NotBetween       = sql.NotBetween
+	HCond            = sql.HCond
+	Compare          = sql.Compare
+	FieldEq          = sql.FieldEq
+	EqRef            = sql.EqRef
+	FieldNotEq       = sql.FieldNotEq
+	FieldGt          = sql.FieldGt
+	FieldGte         = sql.FieldGte
+	FieldLt          = sql.FieldLt
+	FieldLte         = sql.FieldLte
+	FieldLike        = sql.FieldLike
+	MatchFields      = sql.MatchFields
+	HCondRef         = sql.HCondRef
+	HCondTable       = sql.HCondTable
+	MatchTable       = sql.MatchTable
+	RawCondition     = sql.RawCondition
+	ILike            = sql.ILike
+	NotILike         = sql.NotILike
+	FieldILike       = sql.FieldILike
 	ArrayContains    = sql.ArrayContains
 	ArrayContainedBy = sql.ArrayContainedBy
 	ArrayOverlap     = sql.ArrayOverlap
@@ -327,9 +327,9 @@ var (
 	Func      = sql.Func
 	Op        = sql.Op
 	Cast      = sql.Cast
-	Array   = sql.Array
-	Any     = sql.Any
-	AllExpr = sql.AllExpr
+	Array     = sql.Array
+	Any       = sql.Any
+	AllExpr   = sql.AllExpr
 )
 
 func SubQuery(query *Builder) sql.SQLExpr { return sql.SubQuery(query.inner) }
@@ -367,6 +367,17 @@ func (b *Builder) ForUpdate() *Builder {
 func (b *Builder) ForShare() *Builder {
 	b.inner.ForShare()
 	return b
+}
+func (b *Builder) ForUpdateSkipLocked() *Builder {
+	b.inner.ForUpdateSkipLocked()
+	return b
+}
+func (b *Builder) ForShareSkipLocked() *Builder {
+	b.inner.ForShareSkipLocked()
+	return b
+}
+func (b *Builder) WithoutLocking() sql.Stmt {
+	return wrap(b.inner.WithoutLocking().(*sql.Builder))
 }
 func (b *Builder) IntersectAll(query *Builder) *Builder {
 	b.inner.IntersectAll(query.inner)
@@ -407,4 +418,3 @@ func (b *Builder) Using(tables ...string) *Builder {
 	b.inner.Using(tables...)
 	return b
 }
-

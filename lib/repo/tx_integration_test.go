@@ -108,6 +108,31 @@ func TestWithTxPostgresIsolation(t *testing.T) {
 	}
 }
 
+func TestWithTxPostgresSkipLocked(t *testing.T) {
+	db := requirePostgresTestDB(t)
+	tableName := createTodoTable(t, db)
+	todos := sql.TableOf(tableName)
+	insertTodoRow(t, db, tableName, "Alpha task", false)
+
+	err := WithTx(db, func(tx *Tx) error {
+		rows, err := FindWith[Todo](tx.Executor(), sql.SelectFields(todos.AllFields()).FromTable(todos).
+			Where(sql.FieldEq(todos.Field("title"), "Alpha task")).
+			ForUpdateSkipLocked())
+		if err != nil {
+			return err
+		}
+
+		if len(rows) != 1 || rows[0].Title != "Alpha task" {
+			return fmt.Errorf("skip locked find returned %#v", rows)
+		}
+
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("skip locked transaction: %v", err)
+	}
+}
+
 func TestTxExecutorCompileEquivalence(t *testing.T) {
 	forEachPortableTestDB(t, func(t *testing.T, db *DB) {
 		tableName := createTodoTable(t, db)
@@ -171,7 +196,7 @@ CREATE TABLE %s (
 	id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
 	title TEXT NOT NULL,
 	version BIGINT NOT NULL DEFAULT 0
-)`, quoteTestIdentifier(tableName))
+)`, quoteTestIdentifierForDriver(db.Driver(), tableName))
 		}
 
 		if _, err := db.conn.ExecContext(context.Background(), createQuery); err != nil {

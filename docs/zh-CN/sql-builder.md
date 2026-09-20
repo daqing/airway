@@ -38,7 +38,7 @@
 例如：
 
 - `pg.Builder` 支持 `DistinctOn`、`JoinLateral`、`ForShare`、`UpdateFrom`、`Using`、`ILike`、JSONB/ARRAY helper
-- `mysql.Builder` 不支持这些方法，因此不会误用
+- `mysql.Builder` 支持 `For`、`ForUpdate`、`ForShare` 及其 `SkipLocked` 变体（MySQL 8.0.1+），不支持 `DistinctOn`、`JoinLateral` 等
 - `sqlite.Builder` 支持 `Returning`，但不支持 `LATERAL JOIN`、`FOR UPDATE`、`ILIKE`
 
 ### 0.1 你应该导入哪个包
@@ -92,7 +92,8 @@ import sqlite "github.com/daqing/airway/lib/sql/sqlite"
 | `JOIN LATERAL` | `Yes` | `No` | `No` |
 | `FULL JOIN` | `Yes` | `No` | `Yes` |
 | `FOR UPDATE` | `Yes` | `Yes` | `No` |
-| `FOR SHARE` | `Yes` | `No` | `No` |
+| `FOR SHARE` | `Yes` | `Yes` | `No` |
+| `SKIP LOCKED` | `Yes` | `Yes` | `No` |
 | `UPDATE ... FROM` | `Yes` | `No` | `No` |
 | `DELETE ... USING` | `Yes` | `No` | `No` |
 | `ON CONFLICT (columns)` | `Yes` | `Yes` | `Yes` |
@@ -106,6 +107,9 @@ import sqlite "github.com/daqing/airway/lib/sql/sqlite"
 
 - `mysql.OnConflictDoNothing(...)` 最终会在 `repo` 层转换为 `INSERT IGNORE`
 - `mysql.OnConflictDoUpdate(...)` 最终会在 `repo` 层转换为 `ON DUPLICATE KEY UPDATE`
+- 带 ORDER BY / LIMIT 的 DELETE 默认生成可移植的 `WHERE id IN (SELECT id ... LIMIT n)` 子查询形式（pg、sqlite 可用）；`lib/repo` 在 MySQL 上执行时会通过 `WithoutDeleteSubquery()` 自动改写为 MySQL 原生的 `DELETE ... ORDER BY ... LIMIT`（MySQL 不支持 IN 子查询内使用 LIMIT）
+- `SKIP LOCKED` 需要 PostgreSQL 9.5+ 或 MySQL 8.0.1+
+- SQLite 没有行锁，`lib/repo` 在 SQLite 上执行语句时会通过 `WithoutLocking()` 自动丢弃锁子句（包括 `For(clause)` 传入的裸字符串），同一份查询代码可以直接跑在三个数据库上
 - `sqlite.Returning(...)` 依赖 SQLite 3.35+
 - `sqlite.FullJoin(...)` 依赖 SQLite 3.39+
 
@@ -662,12 +666,32 @@ b.OrderBy(users.Field("id").Desc())
 - `For(clause)`
 - `ForUpdate()`
 - `ForShare()`
+- `ForUpdateSkipLocked()`
+- `ForShareSkipLocked()`
 
 可用性：
 
-- `For(clause)`：仅 `pg`
+- `For(clause)`：`pg`、`mysql`（以及核心 `sql.Builder`）
 - `ForUpdate()`：`pg`、`mysql`
-- `ForShare()`：仅 `pg`
+- `ForShare()`：`pg`、`mysql`
+- `ForUpdateSkipLocked()`：`pg`、`mysql`
+- `ForShareSkipLocked()`：`pg`、`mysql`
+
+SQLite 没有行锁，`lib/repo` 在 SQLite 上执行时会通过 `WithoutLocking()` 自动丢弃锁子句，因此带锁查询在三个数据库间可移植。典型用法（任务队列抢占）：
+
+```go
+err := repo.WithTx(db, func(tx *repo.Tx) error {
+    rows, err := repo.FindWith[Job](tx.Executor(), sql.All(jobsTable).
+        Where(sql.FieldEq(jobsTable.Field("status"), "pending")).
+        Limit(10).
+        ForUpdateSkipLocked())
+    if err != nil {
+        return err
+    }
+    // ... 处理并更新 rows，事务提交后锁释放
+    return nil
+})
+```
 
 
 ### 6.6 CTE

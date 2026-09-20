@@ -75,6 +75,108 @@ func TestSelectSupportsWithJoinHavingAndLock(t *testing.T) {
 	}
 }
 
+func TestSelectLockClauseVariants(t *testing.T) {
+	jobs := TableOf("jobs")
+
+	cases := []struct {
+		name string
+		stmt func() *Builder
+		want string
+	}{
+		{"for update", func() *Builder {
+			return SelectFields(jobs.AllFields()).FromTable(jobs).ForUpdate()
+		}, `SELECT "jobs".* FROM "jobs" FOR UPDATE`},
+		{"for share", func() *Builder {
+			return SelectFields(jobs.AllFields()).FromTable(jobs).ForShare()
+		}, `SELECT "jobs".* FROM "jobs" FOR SHARE`},
+		{"for update skip locked", func() *Builder {
+			return SelectFields(jobs.AllFields()).FromTable(jobs).ForUpdateSkipLocked()
+		}, `SELECT "jobs".* FROM "jobs" FOR UPDATE SKIP LOCKED`},
+		{"for share skip locked", func() *Builder {
+			return SelectFields(jobs.AllFields()).FromTable(jobs).ForShareSkipLocked()
+		}, `SELECT "jobs".* FROM "jobs" FOR SHARE SKIP LOCKED`},
+		{"raw clause", func() *Builder {
+			return SelectFields(jobs.AllFields()).FromTable(jobs).For("FOR UPDATE NOWAIT")
+		}, `SELECT "jobs".* FROM "jobs" FOR UPDATE NOWAIT`},
+		{"empty raw clause ignored", func() *Builder {
+			return SelectFields(jobs.AllFields()).FromTable(jobs).For("  ")
+		}, `SELECT "jobs".* FROM "jobs"`},
+	}
+
+	for _, tc := range cases {
+		query, _ := tc.stmt().ToSQL()
+		if query != tc.want {
+			t.Fatalf("%s: expected SQL %q, got %q", tc.name, tc.want, query)
+		}
+	}
+}
+
+func TestWithoutLockingReturnsCopyWithoutLockClause(t *testing.T) {
+	jobs := TableOf("jobs")
+	locked := SelectFields(jobs.AllFields()).FromTable(jobs).ForUpdateSkipLocked()
+
+	stripped := locked.WithoutLocking()
+
+	query, _ := locked.ToSQL()
+	if want := `SELECT "jobs".* FROM "jobs" FOR UPDATE SKIP LOCKED`; query != want {
+		t.Fatalf("expected original SQL %q, got %q", want, query)
+	}
+
+	strippedQuery, _ := stripped.ToSQL()
+	if want := `SELECT "jobs".* FROM "jobs"`; strippedQuery != want {
+		t.Fatalf("expected stripped SQL %q, got %q", want, strippedQuery)
+	}
+}
+
+func TestWithoutLockingDropsRawForClause(t *testing.T) {
+	jobs := TableOf("jobs")
+	locked := SelectFields(jobs.AllFields()).FromTable(jobs).For("FOR UPDATE SKIP LOCKED")
+
+	query, _ := locked.WithoutLocking().ToSQL()
+	if want := `SELECT "jobs".* FROM "jobs"`; query != want {
+		t.Fatalf("expected stripped SQL %q, got %q", want, query)
+	}
+}
+
+func TestDeleteOrderLimitUsesSubqueryByDefault(t *testing.T) {
+	todos := TableOf("todos")
+	b := DeleteFrom(todos).Where(FieldEq(todos.Field("completed"), true)).
+		OrderBy(todos.Field("id").Asc()).
+		Limit(5)
+
+	query, args := b.ToSQL()
+	expected := `DELETE FROM "todos" WHERE id IN (SELECT id FROM "todos" WHERE "todos"."completed" = @right ORDER BY "todos"."id" ASC LIMIT 5)`
+	if query != expected {
+		t.Fatalf("expected SQL %q, got %q", expected, query)
+	}
+
+	if len(args) != 1 || args["right"] != true {
+		t.Fatalf("unexpected args: %#v", args)
+	}
+}
+
+func TestWithoutDeleteSubqueryEmitsNativeOrderLimit(t *testing.T) {
+	todos := TableOf("todos")
+	b := DeleteFrom(todos).Where(FieldEq(todos.Field("completed"), true)).
+		OrderBy(todos.Field("id").Asc()).
+		Limit(5)
+
+	native, args := b.WithoutDeleteSubquery().ToSQL()
+	expected := `DELETE FROM "todos" WHERE "todos"."completed" = @right ORDER BY "todos"."id" ASC LIMIT 5`
+	if native != expected {
+		t.Fatalf("expected SQL %q, got %q", expected, native)
+	}
+
+	if len(args) != 1 || args["right"] != true {
+		t.Fatalf("unexpected args: %#v", args)
+	}
+
+	original, _ := b.ToSQL()
+	if original == native {
+		t.Fatal("expected original builder to keep the subquery form")
+	}
+}
+
 func TestInsertRowsOnConflictDoUpdate(t *testing.T) {
 	b := InsertRows(
 		H{"id": 1, "name": "alpha"},

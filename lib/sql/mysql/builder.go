@@ -18,11 +18,11 @@ type Builder struct {
 func wrap(b *sql.Builder) *Builder { return &Builder{inner: b} }
 
 func (b *Builder) ToSQL() (string, sql.NamedArgs) { return b.inner.ToSQL() }
-func (b *Builder) Kind() string                    { return b.inner.Kind() }
-func (b *Builder) TableName() string               { return b.inner.TableName() }
-func (b *Builder) InsertValues() sql.H             { return b.inner.InsertValues() }
-func (b *Builder) InsertRows() []sql.H             { return b.inner.InsertRows() }
-func (b *Builder) ConflictTarget() []string        { return b.inner.ConflictTarget() }
+func (b *Builder) Kind() string                   { return b.inner.Kind() }
+func (b *Builder) TableName() string              { return b.inner.TableName() }
+func (b *Builder) InsertValues() sql.H            { return b.inner.InsertValues() }
+func (b *Builder) InsertRows() []sql.H            { return b.inner.InsertRows() }
+func (b *Builder) ConflictTarget() []string       { return b.inner.ConflictTarget() }
 
 // --- SELECT ---
 
@@ -290,7 +290,6 @@ var (
 	HCondTable   = sql.HCondTable
 	MatchTable   = sql.MatchTable
 	RawCondition = sql.RawCondition
-
 )
 
 func In[T any](column string, vals []T) *sql.InCond[T]       { return sql.In(column, vals) }
@@ -315,15 +314,35 @@ var (
 	Func      = sql.Func
 	Op        = sql.Op
 	Cast      = sql.Cast
-
 )
 
 func SubQuery(query *Builder) sql.SQLExpr { return sql.SubQuery(query.inner) }
 
 // --- MySQL-specific builder methods ---
 
+func (b *Builder) For(clause string) *Builder {
+	b.inner.For(clause)
+	return b
+}
 func (b *Builder) ForUpdate() *Builder {
 	b.inner.ForUpdate()
 	return b
 }
-
+func (b *Builder) ForShare() *Builder {
+	b.inner.ForShare()
+	return b
+}
+func (b *Builder) ForUpdateSkipLocked() *Builder {
+	b.inner.ForUpdateSkipLocked()
+	return b
+}
+func (b *Builder) ForShareSkipLocked() *Builder {
+	b.inner.ForShareSkipLocked()
+	return b
+}
+func (b *Builder) WithoutLocking() sql.Stmt {
+	return wrap(b.inner.WithoutLocking().(*sql.Builder))
+}
+func (b *Builder) WithoutDeleteSubquery() sql.Stmt {
+	return wrap(b.inner.WithoutDeleteSubquery().(*sql.Builder))
+}
