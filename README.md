@@ -58,7 +58,8 @@ cd myapp
 ```
 
 `airway new` generates a fresh project skeleton from the framework's `app/`
-scaffold, seeds `.env` from `.env.example`, runs `go mod tidy`, and prints the
+scaffold, seeds `.env` from `.env.example`, runs `go mod tidy`, installs the
+frontend dependencies (`airway js:install`), and prints the
 follow-up steps. To hack on the framework itself instead, clone the repository:
 
 ```bash

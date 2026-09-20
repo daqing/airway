@@ -37,7 +37,8 @@ cd myapp
 ```
 
 `airway new` 会以框架的 `app/` 骨架为模板生成一个新项目，自动从 `.env.example`
-生成 `.env`，执行 `go mod tidy`，并打印后续步骤。如果你是想开发框架本身，可以改为克隆仓库：
+生成 `.env`，执行 `go mod tidy`，安装前端依赖（`airway js:install`），并打印
+后续步骤。如果你是想开发框架本身，可以改为克隆仓库：
 
 ```bash
 git clone https://github.com/daqing/airway.git

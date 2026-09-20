@@ -52,7 +52,8 @@ airway new /path/to/myapp           # 本地路径；在该位置创建项目，
 ```
 
 `airway new` 会以框架仓库的 `app/` 骨架为模板生成一个新项目，自动从
-`.env.example` 生成 `.env`，执行 `go mod tidy`，并打印后续步骤：
+`.env.example` 生成 `.env`，执行 `go mod tidy`，安装前端依赖（`airway
+js:install`），并打印后续步骤：
 
 ```bash
 cd myapp

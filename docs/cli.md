@@ -69,7 +69,8 @@ from inside the framework repository implies `--local` automatically — the
 template comes from that working tree, so the project must depend on it too.
 
 `airway new` generates a fresh project skeleton based on the framework's `app/`
-scaffold, seeds `.env` from `.env.example`, runs `go mod tidy`, and prints the
+scaffold, seeds `.env` from `.env.example`, runs `go mod tidy`, installs the
+frontend dependencies (`airway js:install`), and prints the
 follow-up steps:
 
 ```bash

@@ -11,7 +11,7 @@ import (
 func TestNewProjectScaffoldsModule(t *testing.T) {
 	wd := useTempWorkingDir(t)
 
-	if err := newProject("github.com/example/demo", false, ""); err != nil {
+	if err := newProject("github.com/example/demo", false, false, ""); err != nil {
 		t.Fatalf("new project: %v", err)
 	}
 
@@ -57,7 +57,7 @@ func TestNewProjectPinsAirwayVersion(t *testing.T) {
 	Version = "v9.9.9"
 	t.Cleanup(func() { Version = oldVersion })
 
-	if err := newProject("pinned", false, ""); err != nil {
+	if err := newProject("pinned", false, false, ""); err != nil {
 		t.Fatalf("new project: %v", err)
 	}
 
@@ -74,7 +74,7 @@ func TestNewProjectSkipsPinForDevBuild(t *testing.T) {
 	Version = "dev"
 	t.Cleanup(func() { Version = oldVersion })
 
-	if err := newProject("devbuild", false, ""); err != nil {
+	if err := newProject("devbuild", false, false, ""); err != nil {
 		t.Fatalf("new project: %v", err)
 	}
 
@@ -89,7 +89,7 @@ func TestNewProjectRejectsExistingNonEmptyDirectory(t *testing.T) {
 	makeDirs(t, filepath.Join(wd, "demo"))
 	writeFile(t, filepath.Join(wd, "demo", "existing.txt"), "occupied\n")
 
-	if err := newProject("demo", false, ""); err == nil {
+	if err := newProject("demo", false, false, ""); err == nil {
 		t.Fatalf("expected error for non-empty directory")
 	}
 }
@@ -98,7 +98,7 @@ func TestNewProjectFromAbsolutePath(t *testing.T) {
 	wd := useTempWorkingDir(t)
 
 	destDir := filepath.Join(wd, "nested", "foobar")
-	if err := newProject(destDir, false, ""); err != nil {
+	if err := newProject(destDir, false, false, ""); err != nil {
 		t.Fatalf("new project: %v", err)
 	}
 
@@ -116,7 +116,7 @@ func TestNewProjectRejectsInvalidModulePath(t *testing.T) {
 	useTempWorkingDir(t)
 
 	for _, module := range []string{"", "UPPER Case", "has space", "/tmp/UPPER Case"} {
-		if err := newProject(module, false, ""); err == nil {
+		if err := newProject(module, false, false, ""); err == nil {
 			t.Fatalf("expected error for module path %q", module)
 		}
 	}
@@ -182,7 +182,7 @@ func TestNewProjectReplacesWithLocalCheckout(t *testing.T) {
 	writeFile(t, filepath.Join(checkout, "go.mod"), "module github.com/daqing/airway\n")
 	writeFile(t, filepath.Join(checkout, "VERSION"), "0.9.3\n")
 
-	if err := newProject("localdev", false, checkout); err != nil {
+	if err := newProject("localdev", false, false, checkout); err != nil {
 		t.Fatalf("new project: %v", err)
 	}
 
@@ -231,5 +231,52 @@ func TestRunNewLocalFlagRejectsNonCheckout(t *testing.T) {
 	err = run([]string{"new", "--local=", "demo"})
 	if err == nil || !strings.Contains(err.Error(), "--local needs a path") {
 		t.Fatalf("run new --local= = %v, want path-required error", err)
+	}
+}
+
+func TestNewProjectRunsJsInstall(t *testing.T) {
+	wd := useTempWorkingDir(t)
+
+	// A closed registry port fails fast; the failed install must degrade to a
+	// warning instead of aborting the scaffolded project.
+	t.Setenv("AIRWAY_JS_REGISTRY", "http://127.0.0.1:1")
+
+	output := captureStdout(t, func() {
+		if err := newProject("jsfail", false, true, ""); err != nil {
+			t.Fatalf("new project: %v", err)
+		}
+	})
+
+	if !strings.Contains(output, "WARNING: `airway js:install` failed") {
+		t.Fatalf("expected js:install warning, got:\n%s", output)
+	}
+	if !strings.Contains(output, "Next steps") || !strings.Contains(output, "airway js:install") {
+		t.Fatalf("expected manual js:install hint in next steps, got:\n%s", output)
+	}
+
+	if _, err := os.Stat(filepath.Join(wd, "jsfail", "main.go")); err != nil {
+		t.Fatalf("expected project scaffolded despite js:install failure: %v", err)
+	}
+}
+
+func TestInstallScaffoldJSUsesCachedVendor(t *testing.T) {
+	wd := useTempWorkingDir(t)
+
+	root := filepath.Join(wd, "cached")
+	makeDirs(t, root)
+	writeFile(t, filepath.Join(root, "js.pkg.json"),
+		`{"deps":{"preact":"10.29.8"},"lock":{"preact":{"version":"10.29.8"}}}`)
+	vendor := filepath.Join(root, "app", "assets", "js", "vendor", "preact")
+	makeDirs(t, vendor)
+	writeFile(t, filepath.Join(vendor, "package.json"), `{"name":"preact","version":"10.29.8"}`)
+
+	output := captureStdout(t, func() {
+		if err := installScaffoldJS(root); err != nil {
+			t.Fatalf("installScaffoldJS: %v", err)
+		}
+	})
+
+	if !strings.Contains(output, "cached preact@10.29.8") {
+		t.Fatalf("expected cached install without network, got:\n%s", output)
 	}
 }
