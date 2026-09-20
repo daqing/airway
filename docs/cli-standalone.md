@@ -25,7 +25,8 @@ go run . server                     # start the HTTP server
 
 `airway new` scaffolds a complete project skeleton (routes, models, views,
 WebSocket hub, storage, Docker setup) from an embedded template, replaces the
-`{{module}}` placeholder with your module path, and runs `go mod tidy`. The
+`{{module}}` placeholder with your module path, runs `go mod tidy`, and
+installs the frontend dependencies (`airway js:install`). The
 target directory is the last path segment of the module path
 (`github.com/me/myapp` → `./myapp`) and must not already exist as a non-empty
 directory.

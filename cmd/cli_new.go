@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/daqing/airway/cmd/clitemplate"
+	"github.com/daqing/airway/lib/jspkg"
 )
 
 var modulePathPattern = regexp.MustCompile(`^[a-z0-9]+([\w./-]*[\w.])?$`)
@@ -88,10 +89,10 @@ func runCLINew(args []string) error {
 		fmt.Printf("Inside an airway checkout; implying --local=%s\n", dir)
 	}
 
-	return newProject(strings.TrimSpace(rest[0]), true, local)
+	return newProject(strings.TrimSpace(rest[0]), true, true, local)
 }
 
-func newProject(arg string, tidy bool, localDir string) error {
+func newProject(arg string, tidy, installJS bool, localDir string) error {
 	destDir, module, err := resolveNewTarget(arg)
 	if err != nil {
 		return err
@@ -171,15 +172,37 @@ func newProject(arg string, tidy bool, localDir string) error {
 		fmt.Printf("WARNING: `git init` failed: %v\n", err)
 	}
 
+	jsInstalled := false
+	if installJS {
+		fmt.Println("\nInstalling frontend dependencies...")
+		if err := installScaffoldJS(destDir); err != nil {
+			fmt.Printf("WARNING: `airway js:install` failed: %v\nRun it manually inside %s before starting the server.\n", err, destDir)
+		} else {
+			jsInstalled = true
+		}
+	}
+
 	fmt.Println("\nNext steps:")
 	fmt.Printf("  cd %s\n", destDir)
 	fmt.Println("  # edit .env — set DSN and PORT")
 	fmt.Println("  airway db:create")
 	fmt.Println("  airway db:migrate")
-	fmt.Println("  airway js:install           # fetch frontend deps from js.pkg.json (no Node required)")
+	if !jsInstalled {
+		fmt.Println("  airway js:install           # fetch frontend deps from js.pkg.json (no Node required)")
+	}
 	fmt.Println("  airway server               # start the HTTP server")
 
 	return nil
+}
+
+// installScaffoldJS fetches the frontend dependencies pinned in the
+// scaffolded js.pkg.json into app/assets/js/vendor, so a fresh project can
+// serve and build its bundle without a manual `airway js:install`.
+func installScaffoldJS(destDir string) error {
+	return jspkg.Install(destDir, jspkg.Options{
+		Registry: jsRegistry(),
+		Log:      func(format string, args ...any) { fmt.Printf(format+"\n", args...) },
+	})
 }
 
 // scaffoldCommandTimeout bounds every external command run during

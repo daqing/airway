@@ -55,15 +55,10 @@ templ Index(counterStart int) {
 							</a>
 						</div>
 						<div class="hero-island">
-							@assets.Island("counter", map[string]any{"start": counterStart, "label": "try an island"})
+							@assets.Island("counter", map[string]any{"start": counterStart, "label": "TanStack Works"})
 						</div>
-						<div class="hero-meta"><span>@checkIcon()
-Open source</span><span>@checkIcon()
-Written in Go</span><span>@checkIcon()
-Yours to build on</span></div>
 					</div>
 					<div class="hero-preview">
-						<div class="preview-orbit" aria-hidden="true"><span>IDEA</span><span>APPLICATION</span></div>
 						<div class="code-window" data-tabs>
 							<div class="window-heading"><div class="window-dots" aria-hidden="true"><i></i><i></i><i></i></div><span>your-next-big-idea /</span><span class="window-language">GO</span></div>
 							<div class="code-tabs" role="tablist" aria-label="Framework code examples">
@@ -162,6 +157,10 @@ index_action.go</button>
 						<div id="panel-island" role="tabpanel" aria-labelledby="tab-island" tabindex="0"><pre><code><span class="syntax-comment">{ "// In any templ view — an island, seeded server-side:" }</span>{ "\n" }{ "@assets." }<span class="syntax-blue">Island</span>(<span class="syntax-green">"chart"</span>, map[string]any{ "{" }{ "\n" }{ "    " }<span class="syntax-green">"points"</span>: []int{ "{4, 8, 15}" }{ "),\n\n" }<span class="syntax-comment">{ "// What ships to the browser:" }</span>{ "\n" }{ "<div data-island=\"chart\"></div>\n" }{ "<script type=\"application/json\" id=\"island-data-1\">\n" }{ "    " }{ "{" }<span class="syntax-green">"points"</span>:{ "[4, 8, 15]" }{ "}" }{ "\n" }{ "</script>\n\n" }<span class="syntax-comment">{ "// The runtime scans data-island nodes and mounts the" }</span>{ "\n" }<span class="syntax-comment">{ "// component with the adjacent JSON as props." }</span></code></pre></div>
 						<div id="panel-ui" role="tabpanel" aria-labelledby="tab-ui" tabindex="0" hidden><pre><code><span class="syntax-comment">{ "// app/assets/js/islands/chart.tsx — the default export" }</span>{ "\n" }<span class="syntax-comment">{ "// is the island; its file path is its name." }</span>{ "\n" }<span class="syntax-purple">import</span> { "{ DataTable, useToast }" } <span class="syntax-purple">from</span> <span class="syntax-green">"../ui"</span>;{ "\n\n" }<span class="syntax-purple">export default function</span> <span class="syntax-blue">Chart</span>({ "{ posts }" }: { "{ posts: Post[] }" }{ ") {\n    const toast = useToast();\n    return (\n        <DataTable\n            data={posts}\n            pageSize={10}\n            onRowClick={(post) => toast.show(post.title)}\n        />\n    );\n}\n\n" }<span class="syntax-comment">{ "// React-ecosystem logic, an in-house visual layer." }</span>{ "\n" }<span class="syntax-comment">{ "// See every component live at /ui on your server." }</span></code></pre></div>
 						<div id="panel-js" role="tabpanel" aria-labelledby="tab-js" tabindex="0" hidden><pre><code><span class="syntax-comment"># Frontend dependencies, no Node required:</span>{ "\n" }airway js:add <span class="syntax-green">{ "@tanstack/react-table@9.2.4" }</span><span class="syntax-comment">{ "   # pinned in js.pkg.json + lock" }</span>{ "\n" }airway js:install<span class="syntax-comment">{ "                           # node_modules layout, committed" }</span>{ "\n" }airway js:build<span class="syntax-comment">{ "                             # esbuild -> app/assets/dist" }</span>{ "\n\n" }<span class="syntax-comment"># Scaffold the interactive parts:</span>{ "\n" }airway generate island chart<span class="syntax-comment">{ "                # a new island component" }</span>{ "\n" }airway generate scaffold post title:string<span class="syntax-comment">{ " # CRUD: API + page + island" }</span>{ "\n\n" }<span class="syntax-comment"># AIRWAY_ENV=local airway server</span>{ "\n" }<span class="syntax-comment"># -> in-memory rebuilds, livereload on every save</span></code></pre></div>
+						<div class="frontend-live">
+							<div class="frontend-live-heading"><span class="status-dot" aria-hidden="true"></span> LIVE ON THIS PAGE — SORT, PAGE, CLICK A ROW</div>
+							@assets.Island("tanstack-demo", map[string]any{"caption": "This island is generated from TanStack components."})
+						</div>
 						<p class="frontend-footnote">Outgrow the islands? Split the frontend into its own app and keep Airway as your JSON API — the escape hatch is part of the design.</p>
 					</div>
 				</section>

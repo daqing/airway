@@ -25,7 +25,8 @@ go run . server                     # 启动 HTTP 服务器
 
 `airway new` 会基于内嵌模板生成完整的项目骨架（路由、模型、视图、
 WebSocket、存储、Docker 配置），把模板中的 `{{module}}` 占位符替换为你的
-module 路径，并自动执行 `go mod tidy`。目标目录取 module 路径的最后一段
+module 路径，并自动执行 `go mod tidy` 和 `airway js:install`（安装前端依赖）。
+目标目录取 module 路径的最后一段
 （`github.com/me/myapp` → `./myapp`），且该目录不能是非空目录。
 
 ## 二进制文件如何分发命令

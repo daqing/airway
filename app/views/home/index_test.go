@@ -110,6 +110,8 @@ func TestIndexRendersFrontendSection(t *testing.T) {
 		`id="panel-island"`,
 		"data-island",
 		"island-data-1",
+		`data-island="tanstack-demo"`,
+		"This island is generated from TanStack components.",
 		"application/json",
 		"js:add",
 		"js:install",
