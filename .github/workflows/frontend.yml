@@ -5,7 +5,7 @@ name: frontend-no-node
 # inside a pure-Go container.
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
 
 jobs:
@@ -19,7 +19,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: git metadata for scaffolding
-        run: apk add --no-cache git
+        run: apk add --no-cache git curl
 
       - name: build the airway CLI
         run: go build -o /usr/local/bin/airway .
@@ -41,6 +41,7 @@ jobs:
           airway js:build
           airway db:migrate
           go build ./...
+          go build -o demo .
 
       - name: serve and probe
         run: |
