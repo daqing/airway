@@ -37,9 +37,9 @@ func TestGenerateRegistry(t *testing.T) {
 	}
 	write("counter.tsx", "export default 1")
 	write("admin/orders.ts", "export default 2")
-	write("_partial.tsx", "export default 3")        // skipped: partial
-	write("notes.md", "ignored by extension")        // skipped: extension
-	write("_nested/skip.tsx", "export default 4")    // skipped: _ dir
+	write("_partial.tsx", "export default 3")     // skipped: partial
+	write("notes.md", "ignored by extension")     // skipped: extension
+	write("_nested/skip.tsx", "export default 4") // skipped: _ dir
 
 	code, err := generateRegistry(dir)
 	if err != nil {

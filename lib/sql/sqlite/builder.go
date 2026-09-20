@@ -19,11 +19,11 @@ type Builder struct {
 func wrap(b *sql.Builder) *Builder { return &Builder{inner: b} }
 
 func (b *Builder) ToSQL() (string, sql.NamedArgs) { return b.inner.ToSQL() }
-func (b *Builder) Kind() string                    { return b.inner.Kind() }
-func (b *Builder) TableName() string               { return b.inner.TableName() }
-func (b *Builder) InsertValues() sql.H             { return b.inner.InsertValues() }
-func (b *Builder) InsertRows() []sql.H             { return b.inner.InsertRows() }
-func (b *Builder) ConflictTarget() []string        { return b.inner.ConflictTarget() }
+func (b *Builder) Kind() string                   { return b.inner.Kind() }
+func (b *Builder) TableName() string              { return b.inner.TableName() }
+func (b *Builder) InsertValues() sql.H            { return b.inner.InsertValues() }
+func (b *Builder) InsertRows() []sql.H            { return b.inner.InsertRows() }
+func (b *Builder) ConflictTarget() []string       { return b.inner.ConflictTarget() }
 
 // --- SELECT ---
 
@@ -291,7 +291,6 @@ var (
 	HCondTable   = sql.HCondTable
 	MatchTable   = sql.MatchTable
 	RawCondition = sql.RawCondition
-
 )
 
 func In[T any](column string, vals []T) *sql.InCond[T]       { return sql.In(column, vals) }
@@ -316,7 +315,6 @@ var (
 	Func      = sql.Func
 	Op        = sql.Op
 	Cast      = sql.Cast
-
 )
 
 func SubQuery(query *Builder) sql.SQLExpr { return sql.SubQuery(query.inner) }
@@ -354,4 +352,3 @@ func (b *Builder) ReturningAll() *Builder {
 	b.inner.ReturningAll()
 	return b
 }
-

@@ -99,7 +99,7 @@ func cmpInt64(a, b int64) int {
 // --- ranges ---
 
 type comparator struct {
-	op string // "", "=", "^", "~", ">=", ">", "<=", "<"
+	op  string // "", "=", "^", "~", ">=", ">", "<=", "<"
 	ver semVer
 	// partial x-ranges: "1", "1.2", "1.x", "1.2.x" — major-only or
 	// major.minor-only ranges match a whole interval instead of one version
