@@ -1,0 +1,78 @@
+// Package main wraps the project's Airway web app in a Wails v3 desktop
+// shell. The web stack boots exactly as in production — embedded frontend
+// bundle, SQLite in the user data dir, same-origin hardening — the process
+// listens on a random 127.0.0.1 port, and the window loads that address.
+package main
+
+import (
+	"fmt"
+	"net"
+	"net/http"
+	"os"
+	"path/filepath"
+
+	"github.com/wailsapp/wails/v3/pkg/application"
+
+	"github.com/daqing/airway/lib/boot"
+	"{{module}}/config"
+)
+
+func main() {
+	root, err := os.UserConfigDir()
+	if err != nil {
+		fatal(err)
+	}
+	dataDir := filepath.Join(root, "{{app_name}}")
+	if err := os.MkdirAll(filepath.Join(dataDir, "storage"), 0o700); err != nil {
+		fatal(err)
+	}
+
+	a, err := boot.New(boot.Options{
+		AppName:        "{{app_name}}",
+		Env:            "production",
+		DSN:            "sqlite://" + filepath.ToSlash(filepath.Join(dataDir, "data.db")),
+		Migrations:     migrationsFS,
+		StorageRoot:    filepath.Join(dataDir, "storage"),
+		StrictCORS:     true,
+		SameOriginWS:   true,
+		HideScrollbars: true,
+		BootPlugins:    pluginsEnabled,
+		// The project's own routes — without these the binary would serve
+		// the framework's built-in demo pages instead of this project.
+		Routes:       config.Routes,
+		HealthRoutes: config.HealthRoutes,
+	})
+	if err != nil {
+		fatal(err)
+	}
+
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		fatal(err)
+	}
+	go (&http.Server{Handler: a.Handler()}).Serve(ln)
+
+	app := application.New(application.Options{
+		Name:        "{{app_name}}",
+		Description: "{{app_name}} desktop",
+		Mac: application.MacOptions{
+			ApplicationShouldTerminateAfterLastWindowClosed: true,
+		},
+	})
+
+	app.Window.NewWithOptions(application.WebviewWindowOptions{
+		Title:  "{{app_name}}",
+		Width:  1280,
+		Height: 800,
+		URL:    "http://" + ln.Addr().String() + "/",
+	})
+
+	if err := app.Run(); err != nil {
+		fatal(err)
+	}
+}
+
+func fatal(err error) {
+	fmt.Fprintln(os.Stderr, "{{app_name}}:", err)
+	os.Exit(1)
+}

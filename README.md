@@ -280,6 +280,7 @@ airway upload [key] /path/to/file          # upload via the configured storage
 airway js:add <pkg>[@version]              # add a frontend npm dependency (no Node required)
 airway js:install                          # install js.pkg.json deps into app/assets/js/vendor/
 airway js:build                            # bundle app/assets/js into app/assets/dist (esbuild)
+airway desktop:init [--force]              # generate the Wails v3 desktop target in ./desktop (see docs/desktop.md)
 airway version
 ```
 
