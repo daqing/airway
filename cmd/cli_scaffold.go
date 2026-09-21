@@ -137,10 +137,10 @@ func generateScaffold(args []string) error {
 	registerScaffoldRoutes(data)
 
 	fmt.Println("\nNext steps:")
-	fmt.Println("  go generate ./...      # compile the .templ view")
-	fmt.Println("  go run . js:build      # bundle the new island")
-	fmt.Println("  go run . db:migrate    # create the table")
-	fmt.Println("  airway server          # visit /" + plural)
+	fmt.Println("  airway templates:compile   # compile the .templ view")
+	fmt.Println("  airway js:build            # bundle the new island")
+	fmt.Println("  airway db:migrate          # create the table")
+	fmt.Println("  airway server              # visit /" + plural)
 	return nil
 }
 

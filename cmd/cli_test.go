@@ -135,7 +135,7 @@ func TestCLIGenerateHelpPrintsUsage(t *testing.T) {
 		}
 	})
 
-	if !strings.Contains(output, "airway generate [action|api|model|migration|service|cmd] [params]") {
+	if !strings.Contains(output, "airway generate [action|api|model|migration|service|cmd|island|scaffold] [params]") {
 		t.Fatalf("expected generate usage output, got:\n%s", output)
 	}
 }

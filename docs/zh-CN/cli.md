@@ -32,10 +32,14 @@ airway db:status
 airway plugin:new <module-path>                           # 生成新的 Plugin 模块骨架
 airway plugin:list
 airway plugin:install <module>
-airway generate [action|api|model|migration|service|cmd] [params]
+airway generate [action|api|model|migration|service|island|scaffold|cmd] [params]
 airway schema:dump
 airway schema:show
 airway openapi:generate [--out path]                     # 生成 OpenAPI 3.2 文档（默认 ./openapi.json）
+airway admin:generate [config/admin.toml]              # 从 TOML 表配置生成完整 Admin 后台
+airway admin:root <username> <password>               # 创建管理员账号（role admin）
+airway admin:member <username> <password> [--role=r]  # 创建普通账号（editor|viewer）
+airway templates:compile                                 # 重新编译 templ 视图（等价于 `go generate ./...`）
 airway upload /path/to/file
 airway repl
 airway version                                           # 或 -v / --version；打印 VERSION 文件内容
@@ -428,3 +432,88 @@ go run . server
 - `generate api` 只负责生成 API 目录和文件，你仍然需要手动把生成的 `Routes(...)` 接入路由配置。
 - `generate service` 默认假设你的项目里有 `app/services` 包。
 - 生成出来的代码是脚手架起点，通常还需要继续补业务逻辑。
+
+## 生成 Admin 管理后台
+
+`airway admin:generate` 可以把一份 TOML 配置文件变成完整的后台管理系统：
+带 cookie 会话的登录、每个资源一张卡片的仪表盘、侧边栏导航，以及每张表
+的完整 CRUD（JSON API + 类型感知的 CRUD island）。配置文件默认是
+`config/admin.toml`（也可以把其他路径作为唯一参数传入）。每个顶层表就是
+一个资源，键名为**单数**形式；每个字段把列名映射为一个类型：
+
+```toml
+[category]
+name = "string"
+sort_order = "integer"
+parent_id = "references:category"   # 自引用（显式指定目标表）
+
+[post]
+title = "string"
+body = "text"
+views = "integer"
+score = "float"
+published = "boolean"
+published_at = "datetime"
+status = "enum:draft,published,archived"
+cover = "attachment"
+category_id = "references"          # 目标表根据 _id 后缀推断
+```
+
+支持的字段类型：`string`、`text`、`integer`、`float`、`boolean`、
+`datetime`、`enum:a,b,c`、`references[:table]` 和 `attachment`。每张表
+都会自动带上 `id`、`created_at`、`updated_at`，不要在配置里声明。
+
+运行生成器，然后执行标准的后续步骤：
+
+```bash
+airway admin:generate
+airway templates:compile                  # 编译 .templ 视图
+airway js:build                           # 打包 CRUD island
+airway db:migrate                         # 建表
+airway admin:root admin      # 创建第一个管理员账号
+airway server                             # 访问 /admin
+```
+
+生成的内容包括：
+
+- `app/models/` 里每张表一个 model（带 references 字段的表同时生成
+  `Relations()`），以及认证用的 `admin_user.go` / `admin_session.go`。
+- `app/api/admin_api/`：每张表一个自注册的 resource 文件（CRUD 动作和
+  OpenAPI 声明），外加共享文件（registry、路由、登录/登出、通过
+  `storage.Current()` 的附件上传）。
+- `app/views/admin/`：带侧边栏的 Admin 布局、仪表盘、登录页，以及每张
+  表一个承载 CRUD island 的页面。
+- 每次运行一对 migration（首次运行包含认证表，之后按外键依赖顺序创建
+  新表）。
+
+路由挂载在 `/admin`（页面）和 `/api/v1/admin`（JSON API）下，都受
+`AdminAuth` 中间件保护：没有有效会话时页面重定向到 `/admin/login`，
+API 调用返回 401。管理员账号用 `airway admin:root <username> <password>`
+创建，普通账号（editor/viewer）用 `airway admin:member` 创建——密码经
+bcrypt 哈希，会话保存在服务端的 `admin_sessions` 表中。
+
+角色与安全加固开箱即用：
+
+- **角色**——`admin`（全部权限，可查看审计日志）、`editor`（默认；读写）、
+  `viewer`（只读：写操作和上传返回 403）。写路由挂在 `AdminRequireWrite`
+  中间件之后。
+- **CSRF**——登录表单携带 double-submit token，必须与
+  `airway_admin_csrf` cookie 匹配。
+- **限速**——同一 IP 和用户名组合五次登录失败将被锁定十五分钟
+  （`lib/ratelimit`）。
+- **审计日志**——每次增删改都会记录操作账号；admin 可在
+  `/admin/audit-log` 查看。
+- **服务端列表**——列表 API 支持 `page`、`page_size`、`q`（文本搜索）、
+  `sort`/`order`（白名单列）以及对任意声明字段的精确过滤
+  （`?status=published`）。CRUD island 内置搜索框、分页和导出 CSV 按钮。
+- **软删除**——在表里声明 `deleted_at = "datetime"` 后，删除操作改为写入
+  该列，读取时自动过滤。
+- **显示标签**——可选的 `[table.meta]` 段可覆盖侧边栏标签（`label`）和
+  字段标签（`labels`），面板可以使用 TOML 里的任何语言。
+
+往 TOML 里加表之后重新运行 `admin:generate` 是纯增量操作：已有文件不会被
+改写，registry 会自动发现新资源（侧边栏和仪表盘也随之更新）。要重新生成
+已有表的代码——例如修改了 TOML 或想应用新的生成器能力——传入
+`--force`（或 `--force=table1,table2`）：它会重写该表的生成文件并丢弃手改
+内容，但绝不改动 migration，schema 变更仍需手写 migration。从 TOML
+里删除表不会删除已生成的代码。

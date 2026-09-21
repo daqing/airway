@@ -88,6 +88,14 @@ airway generate migration create_posts          # SQL up/down pair in db/migrate
 After `generate api`, remember to wire the generated `Routes(...)` into
 `config/routes.go`.
 
+After editing a `.templ` view under `app/views/`, recompile the generated
+Go code (a shorthand for `go generate ./...`, which runs the templ
+directive declared in `generate.go`):
+
+```bash
+airway templates:compile       # = `go generate ./...`
+```
+
 ### Database and migrations
 
 Migration files are plain SQL pairs under `db/migrate/`:
@@ -162,6 +170,19 @@ airway upload images/foo.png /tmp/foo.png # explicit storage key
 Uploads go through the storage configured in `.env` (`STORAGE_DRIVER`,
 `STORAGE_ROOT`, cloud credentials, ...).
 
+### Admin panel
+
+Create an admin account for a project that generated its admin panel with
+`airway admin:generate` (see [docs/cli.md](cli.md)):
+
+```bash
+go run . admin:user admin@example.com 's3cret'
+```
+
+The account is inserted into the `admin_users` table (bcrypt-hashed
+password), so run `db:migrate` first. The command always runs through the
+project binary; the globally installed `airway` proxies it automatically.
+
 ### REPL
 
 ```bash
@@ -184,6 +205,7 @@ plugins, Go DSL migrations). Use the right binary for each:
 | `plugin:new` | yes | yes |
 | `db:create` / `db:drop` / `db:migrate` / `db:rollback` / `db:status` | yes (SQL migrations) | yes |
 | `schema:dump` / `schema:show`, `upload`, `version` | yes | yes |
+| `templates:compile` | **runs locally** — must work while the project does not compile (right after scaffolding wrote `.templ` files) | yes |
 | `repl` | framework's built-in models only | **use this** — sees your project models |
 | `plugin:list` / `plugin:install` | plugins compiled into `airway` itself | **use this** — sees your project's plugins |
 

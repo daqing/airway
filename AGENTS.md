@@ -102,7 +102,7 @@ just build               # js:build the frontend bundle, then compile the binary
 go build -o ./bin/airway .  # Build binary only (pure-Go SQLite driver; embeds committed dist/)
 go test ./...            # Run the test suite
 go vet ./...             # Lint
-go generate ./...        # Regenerate *_templ.go from the .templ views (just generate)
+go generate ./...        # Regenerate *_templ.go from the .templ views (just generate; also `airway templates:compile`)
 ```
 
 The generated `*_templ.go` files are committed, so plain `go build`/`go test` never need the templ CLI; run `go generate ./...` after editing any `.templ` view and commit the refreshed output. Likewise `app/assets/dist/` is committed: run `go run . js:build` after changing `app/assets/js/` and commit the rebuilt bundle (under AIRWAY_ENV=local the server rebuilds it in memory with livereload instead).
@@ -132,6 +132,10 @@ airway generate action admin show                     # new action in an existin
 airway generate model post                            # new model in app/models/
 airway generate service post title:string             # CRUD service in app/services/
 airway generate scaffold post title:string             # full CRUD: model, migration, JSON API, templ page, island
+airway admin:generate [--force[=tables]] [path]      # full admin backend (auth, roles, audit, CSV, server-side lists) from a TOML table spec
+airway admin:root <username> <password>              # create an administrator account (role admin; bcrypt)
+airway admin:member <username> <password> [--role=r] # create a non-admin account (editor|viewer)
+airway templates:compile                              # regenerate the templ views (shorthand for `go generate ./...`)
 airway generate migration create_posts                # new .up.sql/.down.sql pair in db/migrate/
 airway db:create | db:drop
 airway db:migrate [version]                           # apply migrations

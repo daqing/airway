@@ -94,6 +94,7 @@ func TestProxyableCommand(t *testing.T) {
 		{"help", false},
 		{"-h", false},
 		{"--help", false},
+		{"templates:compile", false},
 		{"server", true},
 		{"repl", true},
 		{"plugin:list", true},
@@ -231,5 +232,28 @@ func TestProxyHostProjectAbortsOnVersionMismatch(t *testing.T) {
 	}
 	if proxied {
 		t.Fatal("expected the command not to be proxied on a version mismatch")
+	}
+}
+
+func TestProxyHostProjectSkipsTemplatesCompile(t *testing.T) {
+	// templates:compile must run locally even inside a host project: the
+	// project may not compile yet — regenerating the templ views is how it
+	// gets fixed — and go run . would abort on the build.
+	oldVersion := Version
+	t.Cleanup(func() { Version = oldVersion })
+	Version = "v0.9.3"
+
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "go.mod"), "module example.com/hostapp\n\nrequire github.com/daqing/airway v0.9.2\n")
+	writeFile(t, filepath.Join(dir, "main.go"), "package main\n\nfunc main() {}\n")
+
+	t.Chdir(dir)
+
+	proxied, err := ProxyHostProject([]string{"templates:compile"})
+	if err != nil {
+		t.Fatalf("ProxyHostProject error = %v, want none", err)
+	}
+	if proxied {
+		t.Fatal("expected templates:compile not to be proxied")
 	}
 }

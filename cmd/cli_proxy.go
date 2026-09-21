@@ -55,10 +55,14 @@ func ProxyHostProject(args []string) (bool, error) {
 // proxyableCommand reports whether a command concerns the current project.
 // `new` scaffolds fresh projects anywhere, and version/help describe the
 // globally installed tool itself; everything else acts on the project at
-// hand.
+// hand. `templates:compile` stays local too: it only shells out to
+// `go generate ./...` (the templ tool version comes from the project's
+// go.mod, not the CLI), and it must work exactly when the project does not
+// compile — right after scaffolding wrote .templ files whose generated
+// counterparts are missing, so `go run .` would fail before it could help.
 func proxyableCommand(command string) bool {
 	switch strings.ToLower(strings.TrimSpace(command)) {
-	case "", "new", "version", "-v", "--version", "help", "-h", "--help":
+	case "", "new", "version", "-v", "--version", "help", "-h", "--help", "templates:compile":
 		return false
 	default:
 		return true
