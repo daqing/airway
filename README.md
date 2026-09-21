@@ -6,6 +6,7 @@ database driver is inferred from the DSN at runtime.
 
 - **[中文文档](docs/zh-CN/README.md)**
 - **[CLI 脚手架指南](docs/cli.md)** / **[文件存储指南](docs/storage.md)**
+- **[Admin panel guide](ADMIN.md)** / **[Admin 后台指南（中文）](ADMIN.zh-CN.md)**
 - **[Frontend guide](docs/frontend.md)** / **[前端指南（中文）](docs/zh-CN/frontend.md)**
 - **[Plugin 扩展机制](docs/plugin.md)** / **[Plugin 扩展机制（中文）](docs/zh-CN/plugin.md)**
 - **[SQL Builder DSL 指南（中文）](docs/zh-CN/sql-builder.md)**

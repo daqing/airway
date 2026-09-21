@@ -45,10 +45,12 @@ import (
 )
 
 // AdminUser signs in to the generated admin panel (see admin_api).
+// Role is one of admin, editor (default — read/write) or viewer (read-only).
 type AdminUser struct {
 	ID             airwaysql.IdType ` + "`db:\"id\" json:\"id\"`" + `
 	Email          string           ` + "`db:\"email\" json:\"email\"`" + `
 	PasswordDigest string           ` + "`db:\"password_digest\" json:\"-\"`" + `
+	Role           string           ` + "`db:\"role\" json:\"role\"`" + `
 	CreatedAt      time.Time        ` + "`db:\"created_at\" json:\"created_at\"`" + `
 	UpdatedAt      time.Time        ` + "`db:\"updated_at\" json:\"updated_at\"`" + `
 }
@@ -117,7 +119,7 @@ func AdminAuth(c *gin.Context) {
 	}
 
 	session, err := repo.FindOneBy[models.AdminSession](sql.H{"token": token})
-	if err != nil {
+	if err != nil || session == nil {
 		adminReject(c)
 		return
 	}
@@ -129,12 +131,13 @@ func AdminAuth(c *gin.Context) {
 	}
 
 	user, err := repo.FindByID[models.AdminUser](sql.IdType(session.AdminUserID))
-	if err != nil {
+	if err != nil || user == nil {
 		adminReject(c)
 		return
 	}
 
 	c.Set("admin_user", user)
+	c.Set("admin_role", user.Role)
 	c.Next()
 }
 
@@ -145,6 +148,38 @@ func adminReject(c *gin.Context) {
 	}
 	c.Redirect(http.StatusFound, utils.URLPrefix()+"/admin/login")
 	c.Abort()
+}
+
+// adminRole returns the signed-in account's role; anything unknown counts as
+// the least-privileged role.
+func adminRole(c *gin.Context) string {
+	if v, ok := c.Get("admin_role"); ok {
+		if role, ok := v.(string); ok && role != "" {
+			return role
+		}
+	}
+	return "viewer"
+}
+
+// AdminRequireWrite guards mutating admin endpoints: viewer accounts are
+// read-only, editor and admin may write.
+func AdminRequireWrite(c *gin.Context) {
+	if adminRole(c) == "viewer" {
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"code": 403, "message": "viewer accounts cannot modify data"})
+		return
+	}
+	c.Next()
+}
+
+// AdminRequireAdmin guards admin-only pages such as the audit log; lesser
+// roles are bounced back to the dashboard instead of getting a 403 page.
+func AdminRequireAdmin(c *gin.Context) {
+	if adminRole(c) != "admin" {
+		c.Redirect(http.StatusFound, utils.URLPrefix()+"/admin")
+		c.Abort()
+		return
+	}
+	c.Next()
 }
 `
 
@@ -157,8 +192,11 @@ import (
 )
 
 // Routes mounts the whole admin module: server-rendered pages under /admin
-// and the CRUD JSON API under /api/v1/admin. Resource routes and sidebar
-// entries register themselves from the per-table *_resource.go init() hooks.
+// and the CRUD JSON API under /api/v1/admin. Reads sit behind AdminAuth,
+// writes additionally behind AdminRequireWrite (viewer accounts are
+// read-only), and the audit log behind AdminRequireAdmin. Resource routes
+// and sidebar entries register themselves from the per-table
+// *_resource.go init() hooks.
 func Routes(r *gin.Engine) {
 	r.GET("/admin/login", LoginPageAction)
 	r.POST("/admin/login", LoginAction)
@@ -169,13 +207,19 @@ func Routes(r *gin.Engine) {
 		pages.GET("", DashboardAction)
 	}
 
-	api := r.Group("/api/v1/admin", middlewares.AdminAuth)
+	adminOnly := r.Group("/admin", middlewares.AdminAuth, middlewares.AdminRequireAdmin)
 	{
-		api.POST("/uploads", UploadAction)
+		adminOnly.GET("/audit-log", AuditLogPageAction)
+	}
+
+	api := r.Group("/api/v1/admin", middlewares.AdminAuth)
+	writes := r.Group("/api/v1/admin", middlewares.AdminAuth, middlewares.AdminRequireWrite)
+	{
+		writes.POST("/uploads", UploadAction)
 	}
 
 	for _, resource := range adminResources {
-		resource.Mount(pages, api)
+		resource.Mount(pages, api, writes)
 	}
 }
 `
@@ -183,11 +227,19 @@ func Routes(r *gin.Engine) {
 const adminRegistryTemplate = `package admin_api
 
 import (
+	"fmt"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/a-h/templ"
 	"github.com/gin-gonic/gin"
 
+	"{{.Module}}/app/models"
 	"{{.Module}}/app/views/admin"
 	"github.com/daqing/airway/lib/render"
+	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/sql"
 )
 
 // AdminResource describes one generated CRUD resource. Re-running
@@ -198,7 +250,7 @@ type AdminResource struct {
 	Label  string
 	Count  func() (int64, error)
 	Page   func(c *gin.Context)
-	Mount  func(pages *gin.RouterGroup, api *gin.RouterGroup)
+	Mount  func(pages *gin.RouterGroup, api *gin.RouterGroup, writes *gin.RouterGroup)
 }
 
 var adminResources []AdminResource
@@ -207,8 +259,9 @@ func registerAdminResource(resource AdminResource) {
 	adminResources = append(adminResources, resource)
 }
 
-// adminNavItems builds the sidebar entries, marking the active page.
-func adminNavItems(active string) []admin.NavItem {
+// adminNavItems builds the sidebar entries, marking the active page. The
+// audit log only appears for admin accounts.
+func adminNavItems(active string, role string) []admin.NavItem {
 	items := []admin.NavItem{{"{{"}}Label: "Dashboard", Href: "/admin", Active: active == ""{{"}}"}}
 	for _, resource := range adminResources {
 		items = append(items, admin.NavItem{
@@ -217,12 +270,15 @@ func adminNavItems(active string) []admin.NavItem {
 			Active: resource.Plural == active,
 		})
 	}
+	if role == "admin" {
+		items = append(items, admin.NavItem{Label: "Audit Log", Href: "/admin/audit-log", Active: active == "@audit"})
+	}
 	return items
 }
 
 // adminPage wraps page content in the admin layout with the sidebar.
-func adminPage(title string, active string, content templ.Component) templ.Component {
-	return admin.AdminLayout(title, adminNavItems(active), content)
+func adminPage(c *gin.Context, title string, active string, content templ.Component) templ.Component {
+	return admin.AdminLayout(title, adminNavItems(active, c.GetString("admin_role")), content)
 }
 
 // DashboardAction renders the admin dashboard: one card per resource.
@@ -241,7 +297,181 @@ func DashboardAction(c *gin.Context) {
 		})
 	}
 
-	render.HTML(c, adminPage("Dashboard", "", admin.Dashboard(cards)))
+	render.HTML(c, adminPage(c, "Dashboard", "", admin.Dashboard(cards)))
+}
+
+// adminListPaging reads the page/page_size query parameters with bounds.
+func adminListPaging(c *gin.Context) (page int, pageSize int) {
+	page, _ = strconv.Atoi(c.DefaultQuery("page", "1"))
+	if page < 1 {
+		page = 1
+	}
+	pageSize, _ = strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	if pageSize < 1 {
+		pageSize = 20
+	}
+	if pageSize > 100 {
+		pageSize = 100
+	}
+	return page, pageSize
+}
+
+// adminListOrder whitelists the sort column against the resource's own
+// fields and clamps the direction, so request input never reaches SQL text.
+func adminListOrder(c *gin.Context, allowed map[string]bool, fallback string) string {
+	column := c.Query("sort")
+	if !allowed[column] {
+		return fallback
+	}
+	dir := strings.ToUpper(c.DefaultQuery("order", "asc"))
+	if dir != "ASC" && dir != "DESC" {
+		dir = "ASC"
+	}
+	return column + " " + dir
+}
+
+// adminQueryInt converts a query value to an exact-match filter value.
+func adminQueryInt(v string) (any, bool) {
+	n, err := strconv.ParseInt(v, 10, 64)
+	if err != nil {
+		return nil, false
+	}
+	return n, true
+}
+
+func adminQueryFloat(v string) (any, bool) {
+	f, err := strconv.ParseFloat(v, 64)
+	if err != nil {
+		return nil, false
+	}
+	return f, true
+}
+
+func adminQueryBool(v string) (any, bool) {
+	switch v {
+	case "true", "1":
+		return true, true
+	case "false", "0":
+		return false, true
+	}
+	return nil, false
+}
+
+// adminAudit records a mutating action in admin_audit_logs. A failed audit
+// write is logged, never fatal: it must not block the business action.
+func adminAudit(c *gin.Context, action string, resource string, resourceID int64) {
+	var userID int64
+	email := ""
+	if v, ok := c.Get("admin_user"); ok {
+		if user, ok := v.(*models.AdminUser); ok {
+			userID = int64(user.ID)
+			email = user.Email
+		}
+	}
+
+	if _, err := repo.InsertMap(repo.CurrentDB(), sql.Insert(sql.H{
+		"admin_user_id": userID,
+		"admin_email":   email,
+		"action":        action,
+		"resource":      resource,
+		"resource_id":   resourceID,
+	}).Into("admin_audit_logs")); err != nil {
+		fmt.Println("admin audit write failed:", err)
+	}
+}
+
+// adminCSVCell neutralizes leading formula characters so spreadsheet apps do
+// not interpret cell content as code, then quotes embedded separators.
+func adminCSVCell(v string) string {
+	if v != "" && strings.ContainsAny(v[:1], "=+-@\t") {
+		v = "'" + v
+	}
+	if strings.ContainsAny(v, ",\"\n\r") {
+		v = "\"" + strings.ReplaceAll(v, "\"", "\"\"") + "\""
+	}
+	return v
+}
+
+func adminCSVTime(t *time.Time) string {
+	if t == nil {
+		return ""
+	}
+	return t.Format(time.RFC3339)
+}
+
+func adminCSVNullableString(v *string) string {
+	if v == nil {
+		return ""
+	}
+	return adminCSVCell(*v)
+}
+
+func adminCSVNullableInt(v *int64) string {
+	if v == nil {
+		return ""
+	}
+	return strconv.FormatInt(*v, 10)
+}
+`
+
+const adminAuditActionsTemplate = `package admin_api
+
+import (
+	"time"
+
+	"github.com/gin-gonic/gin"
+
+	"{{.Module}}/app/views/admin"
+	"github.com/daqing/airway/lib/render"
+	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/sql"
+	"github.com/daqing/airway/lib/utils"
+)
+
+// AuditLogPageAction renders the read-only audit trail for admin accounts:
+// the most recent recorded actions, newest first.
+func AuditLogPageAction(c *gin.Context) {
+	page, pageSize := adminListPaging(c)
+
+	total, err := repo.Count(repo.CurrentDB(),
+		sql.SelectColumns("count(*)").From("admin_audit_logs"))
+	if err != nil {
+		render.Error(c, err)
+		return
+	}
+
+	rows, err := repo.FindMaps(repo.CurrentDB(),
+		sql.Select("*").From("admin_audit_logs").OrderBy("id DESC").Limit(pageSize).Offset((page-1)*pageSize))
+	if err != nil {
+		render.Error(c, err)
+		return
+	}
+
+	entries := make([]admin.AuditLogEntry, 0, len(rows))
+	for _, row := range rows {
+		entry := admin.AuditLogEntry{ResourceID: -1}
+		if t, ok := row["created_at"].(time.Time); ok {
+			entry.Time = t
+		}
+		if email, ok := row["admin_email"].(string); ok {
+			entry.Email = email
+		}
+		if action, ok := row["action"].(string); ok {
+			entry.Action = action
+		}
+		if resource, ok := row["resource"].(string); ok {
+			entry.Resource = resource
+		}
+		if id, ok := row["resource_id"].(int64); ok {
+			entry.ResourceID = id
+		}
+		entries = append(entries, entry)
+	}
+
+	pageCount := int(total)/pageSize + 1
+
+	render.HTML(c, adminPage(c, "Audit Log", "@audit",
+		admin.AuditLogPage(entries, page, pageCount, utils.URLPrefix())))
 }
 `
 
@@ -257,35 +487,74 @@ import (
 	"{{.Module}}/app/middlewares"
 	"{{.Module}}/app/models"
 	"{{.Module}}/app/views/admin"
+	"github.com/daqing/airway/lib/ratelimit"
 	"github.com/daqing/airway/lib/render"
 	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/sql"
 	"github.com/daqing/airway/lib/utils"
 )
 
+// loginLimiter blunts credential stuffing: five failed attempts for the same
+// IP and email pair lock it out for fifteen minutes.
+var loginLimiter = ratelimit.New(5, 15*time.Minute)
+
+const adminCSRFCookie = "airway_admin_csrf"
+
+// issueCSRFToken sets a fresh double-submit token: it must come back both as
+// a cookie and as the hidden form field on the sign-in POST.
+func issueCSRFToken(c *gin.Context) string {
+	token := utils.RandomHex(32)
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     adminCSRFCookie,
+		Value:    token,
+		Path:     utils.URLPrefix() + "/admin",
+		Expires:  time.Now().Add(12 * time.Hour),
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		Secure:   !utils.AppConfig().IsLocal,
+	})
+	return token
+}
+
 // LoginPageAction serves the sign-in form.
 func LoginPageAction(c *gin.Context) {
-	render.HTML(c, admin.Login(""))
+	render.HTML(c, admin.Login("", issueCSRFToken(c)))
 }
 
 type loginForm struct {
-	Email    string ` + "`form:\"email\"`" + `
-	Password string ` + "`form:\"password\"`" + `
+	Email     string ` + "`form:\"email\"`" + `
+	Password  string ` + "`form:\"password\"`" + `
+	CSRFToken string ` + "`form:\"csrf_token\"`" + `
 }
 
-// LoginAction verifies the credentials and starts a cookie session.
+// LoginAction verifies the CSRF token, rate-limits attempts per IP and
+// email, and starts a cookie session on success.
 func LoginAction(c *gin.Context) {
 	var form loginForm
 	if err := c.ShouldBind(&form); err != nil {
-		render.HTML(c, admin.Login("Invalid email or password"))
+		render.HTML(c, admin.Login("Invalid email or password", issueCSRFToken(c)))
 		return
 	}
 
-	user, err := repo.FindOneBy[models.AdminUser](sql.H{"email": strings.TrimSpace(form.Email)})
-	if err != nil || !utils.ComparePassword(utils.PasswordDigest(user.PasswordDigest), form.Password) {
-		render.HTML(c, admin.Login("Invalid email or password"))
+	if cookieToken, err := c.Cookie(adminCSRFCookie); err != nil || cookieToken == "" || cookieToken != form.CSRFToken {
+		render.HTML(c, admin.Login("Your session expired — please try again", issueCSRFToken(c)))
 		return
 	}
+
+	email := strings.TrimSpace(form.Email)
+	limitKey := c.ClientIP() + "|" + email
+	if !loginLimiter.Allowed(limitKey) {
+		render.HTML(c, admin.Login("Too many attempts — try again in a few minutes", issueCSRFToken(c)))
+		return
+	}
+
+	user, err := repo.FindOneBy[models.AdminUser](sql.H{"email": email})
+	if err != nil || user == nil || !utils.ComparePassword(utils.PasswordDigest(user.PasswordDigest), form.Password) {
+		loginLimiter.Fail(limitKey)
+		render.HTML(c, admin.Login("Invalid email or password", issueCSRFToken(c)))
+		return
+	}
+	loginLimiter.Reset(limitKey)
 
 	token := utils.RandomHex(32)
 	expiresAt := time.Now().Add(7 * 24 * time.Hour)
@@ -294,7 +563,7 @@ func LoginAction(c *gin.Context) {
 		"admin_user_id": user.ID,
 		"expires_at":    expiresAt,
 	}); err != nil {
-		render.HTML(c, admin.Login("Could not sign in: "+err.Error()))
+		render.HTML(c, admin.Login("Could not sign in: "+err.Error(), issueCSRFToken(c)))
 		return
 	}
 
@@ -441,13 +710,16 @@ func init() {
 `
 
 const adminResourceTemplate = `// Code generated by ` + "`airway admin:generate`" + ` — edit freely; re-running the
-// generator skips files that already exist.
+// generator skips files that already exist (use --force to overwrite).
 package admin_api
 
 import (
+	"encoding/csv"
 	"strconv"
-{{if .HasDatetime}}	"time"
-{{end}}	"github.com/gin-gonic/gin"
+	"strings"
+	"time"
+
+	"github.com/gin-gonic/gin"
 
 	"{{.Module}}/app/models"
 	"{{.Module}}/app/views/admin"
@@ -457,18 +729,38 @@ import (
 	"github.com/daqing/airway/lib/sql"
 )
 
+// {{.Name}}SortableFields whitelists the columns ` + "`sort`" + ` may target; request
+// values outside this set fall back to the default ordering.
+var {{.Name}}SortableFields = map[string]bool{
+	"id":         true,
+	"created_at": true,
+	"updated_at": true,
+{{range .Fields}}{{if .Form}}	"{{.JSON}}": true,
+{{end}}{{end}}}
+
 func init() {
 	registerAdminResource(AdminResource{
 		Plural: "{{.SlugPlural}}",
-		Label:  "{{.NamePlural}}",
-		Count:  func() (int64, error) { return repo.CountEvery[models.{{.Name}}]() },
-		Page:   {{.Name}}PageAction,
-		Mount:  mount{{.Name}}Routes,
+		Label:  "{{.Label}}",
+		Count: func() (int64, error) {
+			return repo.Count(repo.CurrentDB(),
+				sql.SelectColumns("count(*)").From("{{.SlugPlural}}"){{if .SoftDeletable}}.Where(sql.Eq("deleted_at", nil)){{end}})
+		},
+		Page:  {{.Name}}PageAction,
+		Mount: mount{{.Name}}Routes,
 	})
 
 	openapi.Get("/api/v1/admin/{{.SlugPlural}}", func(o *openapi.Operation) {
 		o.Summary("Admin: list {{.NamePlural}}").Tag("admin").
-			OK(openapi.List[models.{{.Name}}]())
+			Query("page", openapi.Int(), "1-based page number").
+			Query("page_size", openapi.Int(), "rows per page (1-100)").
+			Query("q", openapi.Str(), "text search across string fields").
+			Query("sort", openapi.Str(), "column to order by").
+			Query("order", openapi.Str(), "asc or desc").
+			OK(openapi.Obj(map[string]*openapi.Schema{
+				"items": openapi.List[models.{{.Name}}](),
+				"total": openapi.Int(),
+			}))
 	})
 
 	openapi.Post("/api/v1/admin/{{.SlugPlural}}", func(o *openapi.Operation) {
@@ -497,33 +789,113 @@ func init() {
 	})
 }
 
-func mount{{.Name}}Routes(pages *gin.RouterGroup, api *gin.RouterGroup) {
+func mount{{.Name}}Routes(pages *gin.RouterGroup, api *gin.RouterGroup, writes *gin.RouterGroup) {
 	pages.GET("/{{.SlugPlural}}", {{.Name}}PageAction)
 
 	api.GET("/{{.SlugPlural}}", {{.Name}}IndexAction)
-	api.POST("/{{.SlugPlural}}", {{.Name}}CreateAction)
-	api.PUT("/{{.SlugPlural}}/:id", {{.Name}}UpdateAction)
-	api.DELETE("/{{.SlugPlural}}/:id", {{.Name}}DestroyAction)
+	writes.POST("/{{.SlugPlural}}", {{.Name}}CreateAction)
+	writes.PUT("/{{.SlugPlural}}/:id", {{.Name}}UpdateAction)
+	writes.DELETE("/{{.SlugPlural}}/:id", {{.Name}}DestroyAction)
 }
 
 // {{.Name}}PageAction renders the admin {{.SlugPlural}} page.
 func {{.Name}}PageAction(c *gin.Context) {
-	render.HTML(c, adminPage("{{.NamePlural}}", "{{.SlugPlural}}", admin.{{.NamePlural}}Index()))
+	render.HTML(c, adminPage(c, "{{.Label}}", "{{.SlugPlural}}", admin.{{.NamePlural}}Index()))
 }
 
-// {{.Name}}IndexAction lists every {{.Slug}} as JSON.
+// {{.Name}}IndexAction lists {{.SlugPlural}} with server-side search, field
+// filters, ordering and pagination. ` + "`format=csv`" + ` streams the matching rows
+// as a CSV download instead of JSON.
 func {{.Name}}IndexAction(c *gin.Context) {
-	items, err := repo.FindAll[models.{{.Name}}]()
+	cond := {{.Name}}ListCondition(c)
+
+	if c.Query("format") == "csv" {
+		items, err := repo.Find[models.{{.Name}}](repo.CurrentDB(),
+			sql.Select("*").From("{{.SlugPlural}}").Where(cond).OrderBy("id DESC"))
+		if err != nil {
+			render.Error(c, err)
+			return
+		}
+		{{.Name}}RenderCSV(c, items)
+		return
+	}
+
+	page, pageSize := adminListPaging(c)
+
+	total, err := repo.Count(repo.CurrentDB(),
+		sql.SelectColumns("count(*)").From("{{.SlugPlural}}").Where(cond))
 	if err != nil {
 		render.Error(c, err)
 		return
 	}
-	render.OK(c, items)
+
+	items, err := repo.Find[models.{{.Name}}](repo.CurrentDB(),
+		sql.Select("*").From("{{.SlugPlural}}").Where(cond).
+			OrderBy(adminListOrder(c, {{.Name}}SortableFields, "id DESC")).
+			Limit(pageSize).Offset((page-1)*pageSize))
+	if err != nil {
+		render.Error(c, err)
+		return
+	}
+
+	render.OK(c, gin.H{"items": items, "total": total, "page": page, "page_size": pageSize})
+}
+
+// {{.Name}}ListCondition builds the WHERE clause: ` + "`q`" + ` searches the text
+// fields, every declared column filters exactly, and soft-deleted rows are
+// excluded. Identifiers come from the generated whitelist; request input is
+// only ever bound as values.
+func {{.Name}}ListCondition(c *gin.Context) sql.CondBuilder {
+	var conds []sql.CondBuilder
+
+	if q := strings.TrimSpace(c.Query("q")); q != "" {
+		like := "%" + q + "%"
+		conds = append(conds, &sql.OrCond{Conds: []*sql.Condition{
+{{range .Fields}}{{if .Searchable}}			{Key: "{{.JSON}}", Op: "{{$.SearchOp}}", Val: like},
+{{end}}{{end}}		}})
+	}
+
+{{range .Fields}}{{if and .Form .FilterExpr}}	if v := c.Query("{{.JSON}}"); v != "" {
+{{if eq .FilterExpr "v"}}		conds = append(conds, &sql.Condition{Key: "{{.JSON}}", Op: "=", Val: v})
+{{else}}		if val, ok := {{.FilterExpr}}; ok {
+			conds = append(conds, &sql.Condition{Key: "{{.JSON}}", Op: "=", Val: val})
+		}
+{{end}}	}
+{{end}}{{end}}{{if .SoftDeletable}}	conds = append(conds, &sql.Condition{Key: "deleted_at", Op: "=", Val: nil})
+{{end}}	if len(conds) == 0 {
+		return nil
+	}
+
+	var cond sql.CondBuilder = conds[0]
+	for _, next := range conds[1:] {
+		cond = &sql.ConditionGroup{Left: cond, Op: sql.And, Right: next}
+	}
+	return cond
+}
+
+// {{.Name}}RenderCSV streams items as a CSV download. encoding/csv quotes
+// embedded separators, and adminCSVCell neutralizes leading formula
+// characters so spreadsheets do not execute cell content.
+func {{.Name}}RenderCSV(c *gin.Context, items []*models.{{.Name}}) {
+	c.Header("Content-Disposition", "attachment; filename={{.SlugPlural}}-"+time.Now().Format("20060102150405")+".csv")
+	c.Header("Content-Type", "text/csv; charset=utf-8")
+
+	w := csv.NewWriter(c.Writer)
+	_ = w.Write([]string{"id", "created_at", "updated_at", {{range .Fields}}{{if .Form}}"{{.DisplayName}}", {{end}}{{end}}})
+	for _, row := range items {
+		_ = w.Write([]string{
+			strconv.FormatInt(int64(row.ID), 10),
+			row.CreatedAt.Format(time.RFC3339),
+			row.UpdatedAt.Format(time.RFC3339),
+{{range .Fields}}{{if .Form}}			{{.CSVExpr}},
+{{end}}{{end}}		})
+	}
+	w.Flush()
 }
 
 type {{.Slug}}Params struct {
-{{range .Fields}}	{{.Name}} {{.GoType}} ` + "`json:\"{{.JSON}}\"`" + `
-{{end}}}
+{{range .Fields}}{{if .Form}}	{{.Name}} {{.GoType}} ` + "`json:\"{{.JSON}}\"`" + `
+{{end}}{{end}}}
 
 // {{.Name}}CreateAction inserts a {{.Slug}}.
 func {{.Name}}CreateAction(c *gin.Context) {
@@ -534,12 +906,14 @@ func {{.Name}}CreateAction(c *gin.Context) {
 	}
 
 	item, err := repo.CreateFrom[models.{{.Name}}](sql.H{
-{{range .Fields}}			"{{.JSON}}": p.{{.Name}},
-{{end}}	})
+{{range .Fields}}{{if .Form}}			"{{.JSON}}": p.{{.Name}},
+{{end}}{{end}}	})
 	if err != nil {
 		render.Error(c, err)
 		return
 	}
+
+	adminAudit(c, "create", "{{.SlugPlural}}", int64(item.ID))
 	render.OK(c, item)
 }
 
@@ -557,16 +931,26 @@ func {{.Name}}UpdateAction(c *gin.Context) {
 		return
 	}
 
-	if err := repo.UpdateByID[models.{{.Name}}](sql.IdType(id), sql.H{
-{{range .Fields}}			"{{.JSON}}": p.{{.Name}},
-{{end}}	}); err != nil {
+	{{if .SoftDeletable}}if err := repo.UpdateWhere[models.{{.Name}}](sql.H{
+{{range .Fields}}{{if .Form}}			"{{.JSON}}": p.{{.Name}},
+{{end}}{{end}}	}, &sql.AndCond{Conds: []*sql.Condition{
+		{Key: "id", Op: "=", Val: id},
+		{Key: "deleted_at", Op: "=", Val: nil},
+	}}); err != nil {{"{"}}
+{{else}}	if err := repo.UpdateByID[models.{{.Name}}](sql.IdType(id), sql.H{
+{{range .Fields}}{{if .Form}}			"{{.JSON}}": p.{{.Name}},
+{{end}}{{end}}	}); err != nil {{"{"}}
+{{end}}
 		render.Error(c, err)
 		return
 	}
+
+	adminAudit(c, "update", "{{.SlugPlural}}", id)
 	render.Empty(c)
 }
 
-// {{.Name}}DestroyAction deletes a {{.Slug}} by id.
+// {{.Name}}DestroyAction deletes a {{.Slug}} by id{{if .SoftDeletable}} — a soft
+// delete: it stamps deleted_at and leaves the row in place{{end}}.
 func {{.Name}}DestroyAction(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
@@ -574,15 +958,28 @@ func {{.Name}}DestroyAction(c *gin.Context) {
 		return
 	}
 
-	if err := repo.DeleteByID[models.{{.Name}}](sql.IdType(id)); err != nil {
+{{if .SoftDeletable}}	if err := repo.UpdateWhere[models.{{.Name}}](sql.H{
+		"deleted_at": time.Now(),
+	}, &sql.AndCond{Conds: []*sql.Condition{
+		{Key: "id", Op: "=", Val: id},
+		{Key: "deleted_at", Op: "=", Val: nil},
+	}}); err != nil {{"{"}}
+{{else}}	if err := repo.DeleteByID[models.{{.Name}}](sql.IdType(id)); err != nil {{"{"}}
+{{end}}
 		render.Error(c, err)
 		return
 	}
+
+	adminAudit(c, "delete", "{{.SlugPlural}}", id)
 	render.Empty(c)
 }
 `
 
 const adminTypesTemplate = `package admin
+
+import (
+	"time"
+)
 
 // NavItem is one sidebar entry of the admin layout.
 type NavItem struct {
@@ -596,6 +993,15 @@ type ResourceCard struct {
 	Label string
 	Href  string
 	Count int64
+}
+
+// AuditLogEntry is one recorded mutating action, shown on the audit page.
+type AuditLogEntry struct {
+	Time       time.Time
+	Email      string
+	Action     string
+	Resource   string
+	ResourceID int64
 }
 `
 
@@ -674,8 +1080,10 @@ import (
 	"github.com/daqing/airway/lib/utils"
 )
 
-// Login is the standalone admin sign-in page (no layout, no nav).
-templ Login(errorMessage string) {
+// Login is the standalone admin sign-in page (no layout, no nav). The CSRF
+// token arrives both as a cookie and as this hidden field; the POST handler
+// requires them to match.
+templ Login(errorMessage string, csrfToken string) {
 	<!DOCTYPE html>
 	<html lang="en">
 		<head>
@@ -695,6 +1103,7 @@ templ Login(errorMessage string) {
 					if errorMessage != "" {
 						<p class="aw-field-error" role="alert">{ errorMessage }</p>
 					}
+					<input type="hidden" name="csrf_token" value={ csrfToken }/>
 					<div class="aw-field">
 						<label class="aw-field-label" for="email">Email</label>
 						<input id="email" name="email" type="email" class="aw-input" required autocomplete="username"/>
@@ -708,6 +1117,54 @@ templ Login(errorMessage string) {
 			</div>
 		</body>
 	</html>
+}
+`
+
+const adminAuditLogTemplate = `package admin
+
+import (
+	"fmt"
+)
+
+// AuditLogPage renders the read-only audit trail: who changed what, when.
+templ AuditLogPage(entries []AuditLogEntry, page, pageCount int, prefix string) {
+	<div class="aw-admin-crud">
+		<div class="aw-table-wrap">
+			<table class="aw-table">
+				<thead>
+					<tr>
+						<th>Time</th>
+						<th>Admin</th>
+						<th>Action</th>
+						<th>Resource</th>
+						<th>Record</th>
+					</tr>
+				</thead>
+				<tbody>
+					for _, entry := range entries {
+						<tr>
+							<td>{ entry.Time.Format("2006-01-02 15:04:05") }</td>
+							<td>{ entry.Email }</td>
+							<td>{ entry.Action }</td>
+							<td>{ entry.Resource }</td>
+							<td>{ fmt.Sprintf("%d", entry.ResourceID) }</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
+		if pageCount > 1 {
+			<div class="aw-pagination">
+				if page > 1 {
+					<a href={ templ.URL(fmt.Sprintf("%s/admin/audit-log?page=%d", prefix, page-1)) }>← Previous</a>
+				}
+				<span>{ fmt.Sprintf("Page %d of %d", page, pageCount) }</span>
+				if page < pageCount {
+					<a href={ templ.URL(fmt.Sprintf("%s/admin/audit-log?page=%d", prefix, page+1)) }>Next →</a>
+				}
+			</div>
+		}
+	</div>
 }
 `
 
@@ -738,10 +1195,13 @@ import {
   Form,
   Input,
   Modal,
+  Pagination,
   Select,
   Textarea,
   useToast,
 } from "../ui";
+
+const PAGE_SIZE = 20;
 
 type Row = {
   id: number;
@@ -778,6 +1238,10 @@ function toLocalInput(iso: string | null | undefined): string {
 export default function {{.NamePlural}}Crud() {
   const toast = useToast();
   const [rows, setRows] = useState<Row[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Row | "new" | null>(null);
 {{if .HasRefs}}  const [refOptions, setRefOptions] = useState<Record<string, RefOption[]>>({});
@@ -787,20 +1251,24 @@ export default function {{.NamePlural}}Crud() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      setRows(await apiFetch<Row[]>("/api/v1/admin/{{.SlugPlural}}"));
+      const res = await apiFetch<{ items: Row[]; total: number }>(
+        "/api/v1/admin/{{.SlugPlural}}?page=" + page + "&page_size=" + PAGE_SIZE + "&q=" + encodeURIComponent(search)
+      );
+      setRows(res.items);
+      setTotal(res.total);
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, page, search]);
 
   useEffect(() => { load(); }, [load]);
 {{if .HasRefs}}
   useEffect(() => {
     (async () => {
 {{range .RefTargets}}      try {
-        const list = await apiFetch<any[]>("/api/v1/admin/{{.Plural}}");
+        const list = await apiFetch<any[]>("/api/v1/admin/{{.Plural}}?page_size=100");
         setRefOptions((prev) => ({ ...prev, {{.Plural}}: list.map((item) => ({ id: item.id, label: refLabelOf(item) })) }));
       } catch {
         // {{.Plural}} list unavailable; the select simply has no options.
@@ -808,6 +1276,12 @@ export default function {{.NamePlural}}Crud() {
 {{end}}    })();
   }, []);
 {{end}}
+  const submitSearch = (e: Event) => {
+    e.preventDefault();
+    setPage(1);
+    setSearch(searchInput.trim());
+  };
+
   const openNew = () => {
     form.reset({{"{"}}{{range $i, $f := .Fields}}{{if $i}}, {{end}}{{$f.JSON}}: ""{{end}}{{"}"}});
 {{if .HasAttachment}}    setUploads({});
@@ -880,13 +1354,38 @@ export default function {{.NamePlural}}Crud() {
   ];
 
   const editTitle = editing === "new" ? "New {{.Slug}}" : editing ? "Edit #" + editing.id : "";
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
     <div>
-      <div style="margin-bottom: 10px;">
+      <div class="aw-admin-toolbar">
         <Button variant="primary" onClick={openNew}>New {{.Slug}}</Button>
+        <form class="aw-admin-search" onSubmit={submitSearch}>
+          <Input
+            placeholder="Search…"
+            value={searchInput}
+            onInput={(e) => setSearchInput((e.target as HTMLInputElement).value)}
+          />
+          <button type="submit" class="aw-button">Search</button>
+          {search !== "" && (
+            <button
+              type="button"
+              class="aw-button aw-button-ghost"
+              onClick={() => { setSearchInput(""); setSearch(""); setPage(1); }}
+            >
+              Clear
+            </button>
+          )}
+        </form>
+        <a
+          class="aw-button aw-button-secondary"
+          href={"/api/v1/admin/{{.SlugPlural}}?format=csv&page_size=100&q=" + encodeURIComponent(search)}
+        >
+          Export CSV
+        </a>
       </div>
-      <DataTable columns={columns} data={rows} pageSize={10} loading={loading} />
+      <DataTable columns={columns} data={rows} loading={loading} />
+      {pageCount > 1 && <Pagination page={page} pageCount={pageCount} onPageChange={setPage} />}
 
       <Modal open={editing !== null} onClose={() => setEditing(null)} title={editTitle}>
         <Form
@@ -908,6 +1407,7 @@ CREATE TABLE admin_users (
 	{{.IDColumn}},
 	email VARCHAR(255) NOT NULL,
 	password_digest VARCHAR(255) NOT NULL,
+	role VARCHAR(20) NOT NULL DEFAULT 'editor',
 	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -923,6 +1423,33 @@ CREATE TABLE admin_sessions (
 );
 CREATE INDEX idx_admin_sessions_token ON admin_sessions (token);
 
+{{if .AuthUpgrade}}ALTER TABLE admin_users ADD COLUMN role VARCHAR(20) NOT NULL DEFAULT 'editor';
+
+{{end}}CREATE TABLE admin_audit_logs (
+	{{.IDColumn}},
+	admin_user_id BIGINT NOT NULL DEFAULT 0,
+	admin_email VARCHAR(255) NOT NULL DEFAULT '',
+	action VARCHAR(20) NOT NULL,
+	resource VARCHAR(100) NOT NULL DEFAULT '',
+	resource_id BIGINT NOT NULL DEFAULT 0,
+	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX idx_admin_audit_logs_created_at ON admin_audit_logs (created_at);
+
+{{else if .AuthUpgrade}}-- Upgrade a pre-roles/audit admin install.
+ALTER TABLE admin_users ADD COLUMN role VARCHAR(20) NOT NULL DEFAULT 'editor';
+
+CREATE TABLE admin_audit_logs (
+	{{.IDColumn}},
+	admin_user_id BIGINT NOT NULL DEFAULT 0,
+	admin_email VARCHAR(255) NOT NULL DEFAULT '',
+	action VARCHAR(20) NOT NULL,
+	resource VARCHAR(100) NOT NULL DEFAULT '',
+	resource_id BIGINT NOT NULL DEFAULT 0,
+	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX idx_admin_audit_logs_created_at ON admin_audit_logs (created_at);
+
 {{end}}-- Admin resource tables, generated from config/admin.toml.
 {{range $table := .Tables}}CREATE TABLE {{$table.SlugPlural}} (
 	{{$.IDColumn}},
@@ -934,7 +1461,8 @@ CREATE INDEX idx_admin_sessions_token ON admin_sessions (token);
 {{range .Fields}}{{if eq .Kind "references"}}CREATE INDEX idx_{{$table.SlugPlural}}_{{.JSON}} ON {{$table.SlugPlural}} ({{.JSON}});
 {{end}}{{end}}{{end}}`
 
-const adminMigrationDownTemplate = `{{range .Reversed}}DROP TABLE IF EXISTS {{.SlugPlural}};
+const adminMigrationDownTemplate = `{{if or .Auth .AuthUpgrade}}DROP TABLE IF EXISTS admin_audit_logs;
+{{end}}{{range .Reversed}}DROP TABLE IF EXISTS {{.SlugPlural}};
 {{end}}{{if .Auth}}DROP TABLE IF EXISTS admin_sessions;
 DROP TABLE IF EXISTS admin_users;
 {{end}}`

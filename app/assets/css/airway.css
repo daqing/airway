@@ -251,3 +251,7 @@
 }
 .aw-admin-login-card h1 { font-size: 20px; margin: 0; }
 .aw-admin-upload { display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.aw-admin-toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.aw-admin-search { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 200px; max-width: 360px; }
+.aw-admin-search .aw-input { width: 100%; }
+.aw-admin-pagination-spacer { flex: 1; }

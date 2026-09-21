@@ -29,6 +29,11 @@ status = "enum:draft,published,archived"
 cover = "attachment"
 category_id = "references"
 member_id = "references:member"
+deleted_at = "datetime"
+
+[member.meta]
+label = "成员"
+labels = { name = "姓名", email = "邮箱" }
 
 [member]
 name = "string"
@@ -110,6 +115,25 @@ func TestParseAdminConfig(t *testing.T) {
 
 	if !post.HasRefs {
 		t.Fatalf("expected post table to flag HasRefs")
+	}
+	if !post.SoftDeletable {
+		t.Fatalf("expected deleted_at to opt post into soft deletes")
+	}
+	for _, field := range post.Fields {
+		if field.JSON == "deleted_at" && field.Form {
+			t.Fatalf("deleted_at must be excluded from forms/params/export")
+		}
+	}
+
+	// [table.meta] overrides the display labels.
+	member := cfg.Tables[1]
+	if member.Label != "成员" {
+		t.Fatalf("expected meta label 成员, got %q", member.Label)
+	}
+	for _, field := range member.Fields {
+		if field.JSON == "name" && field.DisplayName != "姓名" {
+			t.Fatalf("expected field label override 姓名, got %q", field.DisplayName)
+		}
 	}
 }
 
@@ -258,16 +282,33 @@ func TestGenerateAdminEndToEnd(t *testing.T) {
 
 	mustContain(filepath.Join("app", "models", "admin_user.go"),
 		"type AdminUser struct",
+		"Role           string",
 		`json:"-"`)
 
 	mustContain(filepath.Join("app", "middlewares", "admin_auth.go"),
 		"func AdminAuth(c *gin.Context)",
+		"func AdminRequireWrite(c *gin.Context)",
+		"func AdminRequireAdmin(c *gin.Context)",
 		"admin_session",
 		"github.com/test/app/app/models")
 
 	mustContain(filepath.Join("app", "api", "admin_api", "routes.go"),
 		"middlewares.AdminAuth",
-		"resource.Mount(pages, api)")
+		"middlewares.AdminRequireWrite",
+		"middlewares.AdminRequireAdmin",
+		"AuditLogPageAction",
+		"resource.Mount(pages, api, writes)")
+
+	mustContain(filepath.Join("app", "api", "admin_api", "registry.go"),
+		"func adminListPaging(c *gin.Context)",
+		"func adminListOrder(c *gin.Context",
+		"func adminAudit(c *gin.Context",
+		"func adminCSVCell(v string) string")
+
+	mustContain(filepath.Join("app", "api", "admin_api", "auth_action.go"),
+		"ratelimit.New(5, 15*time.Minute)",
+		"csrf_token",
+		"adminCSRFCookie")
 
 	mustContain(filepath.Join("app", "api", "admin_api", "post_resource.go"),
 		"registerAdminResource(AdminResource{",
@@ -275,10 +316,29 @@ func TestGenerateAdminEndToEnd(t *testing.T) {
 		"type postParams struct",
 		"Status *string",
 		"repo.CreateFrom[models.Post]",
-		"admin.PostsIndex()")
+		"func PostListCondition(c *gin.Context) sql.CondBuilder",
+		"adminListPaging(c)",
+		"adminListOrder(c, PostSortableFields, \"id DESC\")",
+		"format=csv",
+		"PostRenderCSV",
+		"adminAudit(c, \"create\", \"posts\", int64(item.ID))",
+		"adminAudit(c, \"update\", \"posts\", id)",
+		"adminAudit(c, \"delete\", \"posts\", id)",
+		"Label:  \"Posts\"")
+
+	mustContain(filepath.Join("app", "api", "admin_api", "audit_action.go"),
+		"func AuditLogPageAction(c *gin.Context)",
+		"admin_audit_logs")
 
 	mustContain(filepath.Join("app", "views", "admin", "admin.templ"),
 		"templ AdminLayout(title string, nav []NavItem, content templ.Component)")
+
+	mustContain(filepath.Join("app", "views", "admin", "audit_log.templ"),
+		"templ AuditLogPage(entries []AuditLogEntry, page, pageCount int, prefix string)")
+
+	mustContain(filepath.Join("app", "views", "admin", "login.templ"),
+		"name=\"csrf_token\"",
+		"templ Login(errorMessage string, csrfToken string)")
 
 	mustContain(filepath.Join("app", "views", "admin", "posts_page.templ"),
 		`@assets.Island("admin-posts-crud", map[string]any{})`)
@@ -290,7 +350,13 @@ func TestGenerateAdminEndToEnd(t *testing.T) {
 		"refOptions[\"categories\"]",
 		"refOptions[\"members\"]",
 		"\"/api/v1/admin/uploads\"",
-		"value=\"draft\"")
+		"value=\"draft\"",
+		"Pagination",
+		"const PAGE_SIZE = 20",
+		"submitSearch",
+		"Export CSV",
+		"enableSorting: false",
+		"page_size=100")
 
 	mustContain(filepath.Join("config", "routes.go"),
 		"admin_api.Routes(r)",
@@ -490,5 +556,178 @@ func TestRunAdminUser(t *testing.T) {
 	digest, _ := row["password_digest"].(string)
 	if !utils.ComparePassword(utils.PasswordDigest(digest), "s3cret") {
 		t.Fatalf("stored digest does not verify against the given password")
+	}
+}
+
+func TestGenerateAdminSoftDelete(t *testing.T) {
+	wd := writeAdminTestProject(t)
+
+	if err := generateAdmin(nil); err != nil {
+		t.Fatalf("generateAdmin: %v", err)
+	}
+
+	resource := readFile(t, filepath.Join(wd, "app", "api", "admin_api", "post_resource.go"))
+	for _, want := range []string{
+		`{Key: "deleted_at", Op: "=", Val: nil}`,
+		`"deleted_at": time.Now()`,
+		"repo.UpdateWhere[models.Post]",
+	} {
+		if !strings.Contains(resource, want) {
+			t.Fatalf("post_resource.go: expected %q (soft delete) in:\n%s", want, resource)
+		}
+	}
+
+	// deleted_at is lifecycle, not content: never in params, form controls,
+	// columns or the CSV export.
+	for _, want := range []string{
+		"DeletedAt *time.Time `json:\"deleted_at\"`", // params must not bind it
+		"accessorKey: \"deleted_at\"",
+		"register(\"deleted_at\")",
+	} {
+		if strings.Contains(resource, want) {
+			t.Fatalf("post_resource.go: unexpected %q", want)
+		}
+	}
+
+	island := readFile(t, filepath.Join(wd, "app", "assets", "js", "islands", "admin-posts-crud.tsx"))
+	if strings.Contains(island, "deleted_at") {
+		t.Fatalf("island should not expose deleted_at:\n%s", island)
+	}
+
+	// Non-soft-delete resources keep hard deletes.
+	member := readFile(t, filepath.Join(wd, "app", "api", "admin_api", "member_resource.go"))
+	if !strings.Contains(member, "repo.DeleteByID[models.Member]") {
+		t.Fatalf("expected member_resource.go to hard delete:\n%s", member)
+	}
+}
+
+func TestGenerateAdminForce(t *testing.T) {
+	writeAdminTestProject(t)
+
+	if err := generateAdmin(nil); err != nil {
+		t.Fatalf("first generateAdmin: %v", err)
+	}
+
+	resourcePath := filepath.Join("app", "api", "admin_api", "member_resource.go")
+	markerPath := filepath.Join("app", "api", "admin_api", "post_resource.go")
+
+	// Hand edits survive a plain re-run...
+	if err := os.WriteFile(markerPath, []byte("// hand edit\n"), 0o644); err != nil {
+		t.Fatalf("marker write: %v", err)
+	}
+	if err := generateAdmin(nil); err != nil {
+		t.Fatalf("plain re-run: %v", err)
+	}
+	if content := readFile(t, markerPath); content != "// hand edit\n" {
+		t.Fatalf("plain re-run must not touch existing files, got:\n%s", content)
+	}
+
+	// ...but --force=post rewrites only the named table.
+	if err := os.WriteFile(resourcePath, []byte("// hand edit\n"), 0o644); err != nil {
+		t.Fatalf("marker write: %v", err)
+	}
+
+	migrationsDir := filepath.Join("db", "migrate")
+	before, _ := os.ReadDir(migrationsDir)
+
+	if err := generateAdmin([]string{"--force=post"}); err != nil {
+		t.Fatalf("force run: %v", err)
+	}
+
+	if content := readFile(t, markerPath); strings.Contains(content, "hand edit") {
+		t.Fatalf("--force should rewrite post_resource.go")
+	}
+	if content := readFile(t, resourcePath); content != "// hand edit\n" {
+		t.Fatalf("--force=post must not touch member_resource.go")
+	}
+
+	after, _ := os.ReadDir(migrationsDir)
+	if len(after) != len(before) {
+		t.Fatalf("--force must not generate migrations")
+	}
+}
+
+func TestGenerateAdminAuthUpgradeMigration(t *testing.T) {
+	wd := writeAdminTestProject(t)
+
+	// Simulate a project generated before roles/audit existed.
+	makeDirs(t, filepath.Join(wd, "app", "models"))
+	if err := os.WriteFile(filepath.Join(wd, "app", "models", "admin_user.go"), []byte("package models\n"), 0o644); err != nil {
+		t.Fatalf("seed admin_user.go: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(wd, "app", "models", "admin_session.go"), []byte("package models\n"), 0o644); err != nil {
+		t.Fatalf("seed admin_session.go: %v", err)
+	}
+	// Some content was already generated (all tables present).
+	if err := generateAdmin(nil); err != nil {
+		t.Fatalf("generateAdmin: %v", err)
+	}
+
+	migrationsDir := filepath.Join(wd, "db", "migrate")
+	entries, _ := os.ReadDir(migrationsDir)
+	var upgrade string
+	for _, entry := range entries {
+		content := readFile(t, filepath.Join(migrationsDir, entry.Name()))
+		if strings.Contains(content, "ALTER TABLE admin_users ADD COLUMN role") {
+			upgrade = content
+		}
+	}
+	if upgrade == "" {
+		t.Fatalf("expected an auth upgrade migration with the role column")
+	}
+	if !strings.Contains(upgrade, "CREATE TABLE admin_audit_logs") {
+		t.Fatalf("upgrade migration should create admin_audit_logs:\n%s", upgrade)
+	}
+}
+
+func TestRunAdminUserRole(t *testing.T) {
+	writeAdminTestProject(t)
+
+	dbPath := filepath.Join("tmp", "admin-user-role.db")
+	if err := os.MkdirAll(filepath.Dir(dbPath), 0o755); err != nil {
+		t.Fatalf("mkdir tmp: %v", err)
+	}
+	t.Setenv("AIRWAY_DSN", "sqlite://"+dbPath)
+
+	var upSQL strings.Builder
+	tpl, err := template.New("up").Parse(adminMigrationUpTemplate)
+	if err != nil {
+		t.Fatalf("parse migration template: %v", err)
+	}
+	if err := tpl.Execute(&upSQL, adminMigrationData{
+		IDColumn: "id INTEGER PRIMARY KEY AUTOINCREMENT",
+		Auth:     true,
+	}); err != nil {
+		t.Fatalf("render migration: %v", err)
+	}
+
+	db, err := repo.NewDB("sqlite://" + dbPath)
+	if err != nil {
+		t.Fatalf("open sqlite db: %v", err)
+	}
+	defer db.Close()
+
+	for _, stmt := range strings.Split(upSQL.String(), ";") {
+		if strings.TrimSpace(stmt) == "" {
+			continue
+		}
+		if _, err := db.Conn().Exec(stmt); err != nil {
+			t.Fatalf("exec migration statement: %v", err)
+		}
+	}
+
+	if err := runAdminUser([]string{"viewer@example.com", "pw", "viewer"}); err != nil {
+		t.Fatalf("runAdminUser viewer: %v", err)
+	}
+	if err := runAdminUser([]string{"bad@example.com", "pw", "root"}); err == nil {
+		t.Fatalf("expected unknown role error")
+	}
+
+	row, err := repo.FindOneMap(db, sql.Select("*").From("admin_users").Where(sql.Eq("email", "viewer@example.com")))
+	if err != nil {
+		t.Fatalf("find admin user: %v", err)
+	}
+	if role, _ := row["role"].(string); role != "viewer" {
+		t.Fatalf("expected stored role viewer, got %v", row["role"])
 	}
 }

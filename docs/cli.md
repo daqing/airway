@@ -45,7 +45,7 @@ airway schema:show
 airway openapi:generate [--out path]                     # write the OpenAPI 3.2 document (default ./openapi.json)
 airway templates:compile                                 # regenerate the templ views (shorthand for `go generate ./...`)
 airway admin:generate [config/admin.toml]              # generate the admin backend from a TOML table spec
-airway admin:user <email> <password>                     # create an admin account for the generated admin panel
+airway admin:user <email> <password> [role]              # create an admin account (admin|editor|viewer; default editor)
 airway upload /path/to/file
 airway repl
 airway version                                           # or -v / --version; prints the VERSION file contents
@@ -584,11 +584,35 @@ What gets generated:
 Routes mount under `/admin` (pages) and `/api/v1/admin` (JSON API). Both
 sit behind the `AdminAuth` middleware: pages redirect to `/admin/login`
 when there is no valid session, API calls get a 401. Accounts are created
-with `airway admin:user <email> <password>` — passwords are bcrypt-hashed
-and sessions are stored server-side in `admin_sessions`.
+with `airway admin:user <email> <password> [role]` — passwords are
+bcrypt-hashed and sessions are stored server-side in `admin_sessions`.
+
+Roles and hardening are built in:
+
+- **Roles** — `admin` (full access, sees the audit log), `editor` (default;
+  read/write) and `viewer` (read-only: writes and uploads get a 403).
+  Mutating routes sit behind `AdminRequireWrite`.
+- **CSRF** — the login form carries a double-submit token that must match
+  the `airway_admin_csrf` cookie.
+- **Rate limiting** — five failed sign-ins for the same IP and email lock
+  the pair out for fifteen minutes (`lib/ratelimit`).
+- **Audit log** — every create, update and delete is recorded with the
+  acting account; admins can review it at `/admin/audit-log`.
+- **Server-side lists** — the list API supports `page`, `page_size`,
+  `q` (text search), `sort`/`order` (whitelisted columns) and exact-match
+  filters on any declared field (`?status=published`). The CRUD island
+  ships a search box, pagination and an Export CSV button.
+- **Soft delete** — declaring `deleted_at = "datetime"` on a table makes
+  destroy stamp the column instead of deleting; reads filter it out.
+- **Display labels** — an optional `[table.meta]` section overrides the
+  sidebar label (`label`) and per-field labels (`labels`), so the panel can
+  speak any language the TOML does.
 
 Re-running `admin:generate` after adding tables to the TOML is additive:
 existing files are never rewritten, and the registry picks up new
-resources automatically (sidebar and dashboard included). Removing a table
-from the TOML does not delete generated code; changing a field type does
-not alter existing files or migrations — write a migration by hand.
+resources automatically (sidebar and dashboard included). To regenerate an
+existing table's code — after editing it in the TOML, or to pick up new
+generator features — pass `--force` (or `--force=table1,table2`): it
+rewrites that table's generated files and discards hand edits, but never
+touches migrations, so schema changes still need a hand-written migration.
+Removing a table from the TOML does not delete generated code.

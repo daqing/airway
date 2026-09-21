@@ -37,7 +37,7 @@ airway schema:dump
 airway schema:show
 airway openapi:generate [--out path]                     # 生成 OpenAPI 3.2 文档（默认 ./openapi.json）
 airway admin:generate [config/admin.toml]              # 从 TOML 表配置生成完整 Admin 后台
-airway admin:user <email> <password>                     # 为生成的 Admin 后台创建管理员账号
+airway admin:user <email> <password> [role]              # 创建管理员账号（admin|editor|viewer；默认 editor）
 airway templates:compile                                 # 重新编译 templ 视图（等价于 `go generate ./...`）
 airway upload /path/to/file
 airway repl
@@ -487,10 +487,31 @@ airway server                             # 访问 /admin
 
 路由挂载在 `/admin`（页面）和 `/api/v1/admin`（JSON API）下，都受
 `AdminAuth` 中间件保护：没有有效会话时页面重定向到 `/admin/login`，
-API 调用返回 401。管理员账号用 `airway admin:user <email> <password>`
+API 调用返回 401。管理员账号用 `airway admin:user <email> <password> [role]`
 创建——密码经 bcrypt 哈希，会话保存在服务端的 `admin_sessions` 表中。
 
+角色与安全加固开箱即用：
+
+- **角色**——`admin`（全部权限，可查看审计日志）、`editor`（默认；读写）、
+  `viewer`（只读：写操作和上传返回 403）。写路由挂在 `AdminRequireWrite`
+  中间件之后。
+- **CSRF**——登录表单携带 double-submit token，必须与
+  `airway_admin_csrf` cookie 匹配。
+- **限速**——同一 IP 和邮箱组合五次登录失败将被锁定十五分钟
+  （`lib/ratelimit`）。
+- **审计日志**——每次增删改都会记录操作账号；admin 可在
+  `/admin/audit-log` 查看。
+- **服务端列表**——列表 API 支持 `page`、`page_size`、`q`（文本搜索）、
+  `sort`/`order`（白名单列）以及对任意声明字段的精确过滤
+  （`?status=published`）。CRUD island 内置搜索框、分页和导出 CSV 按钮。
+- **软删除**——在表里声明 `deleted_at = "datetime"` 后，删除操作改为写入
+  该列，读取时自动过滤。
+- **显示标签**——可选的 `[table.meta]` 段可覆盖侧边栏标签（`label`）和
+  字段标签（`labels`），面板可以使用 TOML 里的任何语言。
+
 往 TOML 里加表之后重新运行 `admin:generate` 是纯增量操作：已有文件不会被
-改写，registry 会自动发现新资源（侧边栏和仪表盘也随之更新）。从 TOML
-里删除表不会删除已生成的代码；修改字段类型也不会改动已有文件或
-migration——请手写 migration。
+改写，registry 会自动发现新资源（侧边栏和仪表盘也随之更新）。要重新生成
+已有表的代码——例如修改了 TOML 或想应用新的生成器能力——传入
+`--force`（或 `--force=table1,table2`）：它会重写该表的生成文件并丢弃手改
+内容，但绝不改动 migration，schema 变更仍需手写 migration。从 TOML
+里删除表不会删除已生成的代码。

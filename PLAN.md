@@ -202,10 +202,19 @@ middleware.
    storage); `gofmt`, `go vet ./...`, `go test ./...` with zero no-test
    packages.
 
-## Out of scope (v1, natural follow-ups)
+## Follow-ups (implemented)
 
-Server-side search/filter/pagination (lists load all rows; DataTable
-paginates client-side like scaffold), CSRF tokens on the login form,
-rate limiting, roles/permissions, audit log, soft delete, CSV export,
-table-level display labels / i18n, customizing already-generated tables by
-re-running the generator.
+All of the v1 follow-ups have shipped:
+
+- Server-side search/filter/pagination/sort — list API takes `page`,
+  `page_size`, `q`, `sort`/`order` (whitelisted) and exact-match field
+  filters; the island ships a search box, pagination and Export CSV.
+- CSRF tokens on the login form (double-submit cookie) and login rate
+  limiting (`lib/ratelimit`, 5 failures / 15 min per IP+email).
+- Roles — `admin_users.role` (admin/editor/viewer) with `AdminRequireWrite`
+  and `AdminRequireAdmin` middleware; `admin:user <email> <password> [role]`.
+- Audit log — `admin_audit_logs` written on every mutation, reviewed at
+  `/admin/audit-log` (admin only). Old installs get an upgrade migration.
+- Soft delete — declaring `deleted_at = "datetime"` opts a table in.
+- Display labels / i18n — optional `[table.meta]` (`label`, `labels`).
+- Re-customizing generated tables — `admin:generate --force[=tables]`.

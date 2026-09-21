@@ -10,23 +10,39 @@ import (
 	"github.com/daqing/airway/lib/utils"
 )
 
+// adminRoles are the roles the generated admin panel understands: viewer is
+// read-only, editor (default) reads and writes, admin additionally manages
+// the audit log view.
+var adminRoles = map[string]bool{
+	"admin":  true,
+	"editor": true,
+	"viewer": true,
+}
+
 // runAdminUser creates an admin account for the generated admin panel:
 //
-//	airway admin:user <email> <password>
+//	airway admin:user <email> <password> [role]
 //
 // It talks to admin_users through the map-based repo API, so it works in any
 // project (and in the framework repo) without importing project code.
 func runAdminUser(args []string) error {
-	if len(args) == 1 && isHelpArg(args[0]) {
-		fmt.Println("usage: airway admin:user <email> <password>")
+	if len(args) >= 1 && isHelpArg(args[0]) {
+		fmt.Println("usage: airway admin:user <email> <password> [admin|editor|viewer]")
 		return nil
 	}
-	if len(args) != 2 {
-		return fmt.Errorf("usage: airway admin:user <email> <password>")
+	if len(args) < 2 || len(args) > 3 {
+		return fmt.Errorf("usage: airway admin:user <email> <password> [admin|editor|viewer]")
 	}
 
 	email := strings.TrimSpace(args[0])
 	password := args[1]
+	role := "editor"
+	if len(args) == 3 {
+		role = strings.ToLower(strings.TrimSpace(args[2]))
+	}
+	if !adminRoles[role] {
+		return fmt.Errorf("unknown role %q (use admin, editor or viewer)", role)
+	}
 	if email == "" || !strings.Contains(email, "@") {
 		return fmt.Errorf("invalid admin email %q", email)
 	}
@@ -62,12 +78,13 @@ func runAdminUser(args []string) error {
 	if _, err := repo.InsertMap(db, sql.Insert(sql.H{
 		"email":           email,
 		"password_digest": digest,
+		"role":            role,
 		"created_at":      now,
 		"updated_at":      now,
 	}).Into("admin_users")); err != nil {
 		return err
 	}
 
-	fmt.Printf("admin user created: %s\n", email)
+	fmt.Printf("admin user created: %s (role %s)\n", email, role)
 	return nil
 }

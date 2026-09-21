@@ -1,12 +1,14 @@
 package cmd
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+	"text/template"
 	"time"
 
 	"github.com/pelletier/go-toml/v2"
@@ -38,6 +40,16 @@ type adminField struct {
 	RefPlural   string   // referenced SQL table, for the island's remote select
 	GoType      string   // model / params field type
 	SQLCol      string   // column DDL fragment (table-level FK lines are added separately)
+	// Form marks fields that appear in forms, table columns, params and CSV
+	// export — everything but deleted_at, which is lifecycle, not content.
+	Form bool
+	// Searchable marks string-ish fields matched by the `q` list parameter.
+	Searchable bool
+	// FilterExpr is the Go expression converting a non-empty query string to
+	// a filter value; empty when the kind is not exactly filterable.
+	FilterExpr string
+	// CSVExpr is the Go expression rendering the model field as a CSV cell.
+	CSVExpr string
 }
 
 type adminTable struct {
@@ -45,11 +57,20 @@ type adminTable struct {
 	Name       string // CamelCase singular: Post
 	SlugPlural string // SQL table: posts
 	NamePlural string // CamelCase plural: Posts
+	Label      string // sidebar / page label ([table.meta] label or NamePlural)
 	Fields     []adminField
 	HasRefs    bool
 	// HasDatetime is set when any field is a datetime: the generated
 	// resource file needs the time import for the *time.Time params.
 	HasDatetime bool
+	// SoftDeletable is set when the table declares deleted_at: destroy
+	// becomes an UPDATE and every list read filters NULL deleted_at.
+	SoftDeletable bool
+}
+
+type adminMeta struct {
+	Label  string
+	Labels map[string]string
 }
 
 type adminConfig struct {
@@ -63,7 +84,9 @@ var adminReservedFields = map[string]bool{
 }
 
 func parseAdminConfig(data []byte) (*adminConfig, error) {
-	var raw map[string]map[string]string
+	// Values are any so the optional [table.meta] sub-table can be told
+	// apart from field = type entries; everything else must be a string.
+	var raw map[string]map[string]any
 	if err := toml.Unmarshal(data, &raw); err != nil {
 		return nil, fmt.Errorf("invalid admin config: %w", err)
 	}
@@ -85,11 +108,20 @@ func parseAdminConfig(data []byte) (*adminConfig, error) {
 			return nil, fmt.Errorf("table [%s] declares no fields", slug)
 		}
 
+		meta, err := parseAdminMeta(rawFields["meta"])
+		if err != nil {
+			return nil, fmt.Errorf("table [%s]: %w", slug, err)
+		}
+
 		table := &adminTable{
 			Slug:       slug,
 			Name:       toCamelName(slug),
 			SlugPlural: pluralize(slug),
 			NamePlural: toCamelName(pluralize(slug)),
+			Label:      meta.Label,
+		}
+		if table.Label == "" {
+			table.Label = table.NamePlural
 		}
 		if other, dup := seenPlurals[table.SlugPlural]; dup {
 			return nil, fmt.Errorf("tables [%s] and [%s] both map to SQL table %q", other, slug, table.SlugPlural)
@@ -98,14 +130,27 @@ func parseAdminConfig(data []byte) (*adminConfig, error) {
 
 		fieldNames := make([]string, 0, len(rawFields))
 		for name := range rawFields {
+			if name == "meta" {
+				continue
+			}
 			fieldNames = append(fieldNames, name)
 		}
 		sort.Strings(fieldNames)
+		if len(fieldNames) == 0 {
+			return nil, fmt.Errorf("table [%s] declares no fields", slug)
+		}
 
 		for _, name := range fieldNames {
-			field, err := parseAdminField(name, rawFields[name])
+			spec, ok := rawFields[name].(string)
+			if !ok {
+				return nil, fmt.Errorf("invalid admin config: table [%s] field %q must map to a type string (field = type)", slug, name)
+			}
+			field, err := parseAdminField(name, spec)
 			if err != nil {
 				return nil, fmt.Errorf("table [%s]: %w", slug, err)
+			}
+			if label, ok := meta.Labels[name]; ok {
+				field.DisplayName = label
 			}
 			table.Fields = append(table.Fields, field)
 		}
@@ -143,11 +188,59 @@ func parseAdminConfig(data []byte) (*adminConfig, error) {
 				table.HasRefs = true
 			case adminKindDatetime:
 				table.HasDatetime = true
+				if field.JSON == "deleted_at" {
+					// Declaring deleted_at opts the table into soft deletes:
+					// the column stays on the model and in migrations, but
+					// never in forms, params or exports.
+					field.Form = false
+					table.SoftDeletable = true
+				}
 			}
 		}
 	}
 
 	return cfg, nil
+}
+
+// parseAdminMeta reads the optional [table.meta] sub-table: a display label
+// for the sidebar and pages, plus per-field label overrides.
+func parseAdminMeta(value any) (adminMeta, error) {
+	if value == nil {
+		return adminMeta{}, nil
+	}
+
+	raw, ok := value.(map[string]any)
+	if !ok {
+		return adminMeta{}, fmt.Errorf("[meta] must be a table with `label` and `labels`")
+	}
+
+	var meta adminMeta
+	for key, v := range raw {
+		switch key {
+		case "label":
+			label, ok := v.(string)
+			if !ok || strings.TrimSpace(label) == "" {
+				return adminMeta{}, fmt.Errorf("meta.label must be a non-empty string")
+			}
+			meta.Label = label
+		case "labels":
+			pairs, ok := v.(map[string]any)
+			if !ok {
+				return adminMeta{}, fmt.Errorf("meta.labels must be a table of field = label strings")
+			}
+			meta.Labels = map[string]string{}
+			for field, lv := range pairs {
+				label, ok := lv.(string)
+				if !ok || strings.TrimSpace(label) == "" {
+					return adminMeta{}, fmt.Errorf("meta.labels.%s must be a non-empty string", field)
+				}
+				meta.Labels[field] = label
+			}
+		default:
+			return adminMeta{}, fmt.Errorf("unknown meta key %q (use label or labels)", key)
+		}
+	}
+	return meta, nil
 }
 
 func parseAdminField(name, spec string) (adminField, error) {
@@ -218,6 +311,40 @@ func parseAdminField(name, spec string) (adminField, error) {
 			"field %q has unknown type %q (use string, text, integer, float, boolean, datetime, enum:<a,b,c>, references[:table] or attachment)",
 			name, head)
 	}
+
+	// Form/lifecycle flags and the list-API capabilities per kind. deleted_at
+	// is excluded from forms once soft delete detection flips Form off.
+	field.Form = true
+	switch field.Kind {
+	case adminKindString, adminKindText, adminKindEnum, adminKindAttachment:
+		field.Searchable = true
+	}
+	switch field.Kind {
+	case adminKindInteger:
+		field.FilterExpr = "adminQueryInt(v)"
+		field.CSVExpr = "strconv.FormatInt(row." + field.Name + ", 10)"
+	case adminKindReferences:
+		field.FilterExpr = "adminQueryInt(v)"
+		field.CSVExpr = "adminCSVNullableInt(row." + field.Name + ")"
+	case adminKindFloat:
+		field.FilterExpr = "adminQueryFloat(v)"
+		field.CSVExpr = "strconv.FormatFloat(row." + field.Name + ", 'f', -1, 64)"
+	case adminKindBoolean:
+		field.FilterExpr = "adminQueryBool(v)"
+		field.CSVExpr = "strconv.FormatBool(row." + field.Name + ")"
+	case adminKindDatetime:
+		field.CSVExpr = "adminCSVTime(row." + field.Name + ")"
+	case adminKindString, adminKindText, adminKindAttachment:
+		field.FilterExpr = "v"
+		field.CSVExpr = "adminCSVCell(row." + field.Name + ")"
+	case adminKindEnum:
+		// Enum model fields are *string (NULL round-trips), so the CSV cell
+		// needs the nullable variant.
+		field.FilterExpr = "v"
+		field.CSVExpr = "adminCSVNullableString(row." + field.Name + ")"
+	}
+	// datetime has no exact-match filter; it is only reachable via `q`-less
+	// range queries, which the list API does not expose yet.
 
 	return field, nil
 }
@@ -321,17 +448,39 @@ func (cfg *adminConfig) topoOrder() ([]*adminTable, error) {
 // --- admin:generate: entry point ---
 
 func generateAdmin(args []string) error {
-	if len(args) == 1 && isHelpArg(args[0]) {
-		fmt.Println("usage: airway admin:generate [config/admin.toml]")
+	// --force rewrites the generated files of tables that already exist;
+	// --force=a,b narrows it to the named tables. Schema changes still need
+	// a hand-written migration — the generator never ALTERs live tables.
+	forceAll := false
+	forceTables := map[string]bool{}
+	rest := make([]string, 0, len(args))
+	for _, arg := range args {
+		switch {
+		case arg == "--force":
+			forceAll = true
+		case strings.HasPrefix(arg, "--force="):
+			for _, name := range strings.Split(strings.TrimPrefix(arg, "--force="), ",") {
+				if name = strings.TrimSpace(name); name != "" {
+					forceTables[name] = true
+				}
+			}
+		default:
+			rest = append(rest, arg)
+		}
+	}
+	forced := func(slug string) bool { return forceAll || forceTables[slug] }
+
+	if len(rest) == 1 && isHelpArg(rest[0]) {
+		fmt.Println("usage: airway admin:generate [--force[=table1,table2]] [config/admin.toml]")
 		return nil
 	}
-	if len(args) > 1 {
-		return fmt.Errorf("usage: airway admin:generate [config/admin.toml]")
+	if len(rest) > 1 {
+		return fmt.Errorf("usage: airway admin:generate [--force[=table1,table2]] [config/admin.toml]")
 	}
 
 	path := filepath.Join("config", "admin.toml")
-	if len(args) == 1 {
-		path = args[0]
+	if len(rest) == 1 {
+		path = rest[0]
 	}
 
 	raw, err := os.ReadFile(path)
@@ -368,10 +517,22 @@ func generateAdmin(args []string) error {
 	// Models (per table; a table whose model already exists is considered
 	// already generated and skipped entirely, migrations included).
 	authExists := adminPathExists("app", "models", "admin_user.go")
+	auditExists := adminPathExists("app", "api", "admin_api", "audit_action.go")
+
 	freshSet := map[string]bool{}
+	var rewritten []*adminTable
 	for _, table := range cfg.Tables {
 		if adminPathExists("app", "models", table.Slug+".go") {
-			fmt.Printf("skipped (table %q already generated)\n", table.Slug)
+			if !forced(table.Slug) {
+				fmt.Printf("skipped (table %q already generated)\n", table.Slug)
+				continue
+			}
+			rewritten = append(rewritten, table)
+			if err := forceWrite(adminModelTemplate,
+				filepath.Join("app", "models", table.Slug+".go"),
+				adminModelData{Module: module, adminTable: table}); err != nil {
+				return err
+			}
 			continue
 		}
 		freshSet[table.Slug] = true
@@ -409,11 +570,13 @@ func generateAdmin(args []string) error {
 		{adminAuthActionsTemplate, filepath.Join("app", "api", "admin_api", "auth_action.go"),
 			adminModuleData{Module: module}},
 		{adminUploadsTemplate, filepath.Join("app", "api", "admin_api", "uploads_action.go"), nil},
+		{adminAuditActionsTemplate, filepath.Join("app", "api", "admin_api", "audit_action.go"), nil},
 		{adminOpenAPITemplate, filepath.Join("app", "api", "admin_api", "openapi.go"), nil},
 		{adminTypesTemplate, filepath.Join("app", "views", "admin", "types.go"), nil},
 		{adminLayoutTemplate, filepath.Join("app", "views", "admin", "admin.templ"), nil},
 		{adminDashboardTemplate, filepath.Join("app", "views", "admin", "index.templ"), nil},
 		{adminLoginTemplate, filepath.Join("app", "views", "admin", "login.templ"), nil},
+		{adminAuditLogTemplate, filepath.Join("app", "views", "admin", "audit_log.templ"), nil},
 	} {
 		if file.data == nil {
 			file.data = adminModuleData{Module: module}
@@ -423,30 +586,48 @@ func generateAdmin(args []string) error {
 		}
 	}
 
-	// Per-table admin_api resource, admin page and CRUD island.
-	for _, table := range fresh {
-		if err := write(adminResourceTemplate,
+	// Per-table admin_api resource, admin page and CRUD island: written for
+	// new tables, and overwritten for `--force`d ones.
+	emitTable := func(table *adminTable, overwrite bool) error {
+		emit := write
+		if overwrite {
+			emit = forceWrite
+		}
+
+		if err := emit(adminResourceTemplate,
 			filepath.Join("app", "api", "admin_api", table.Slug+"_resource.go"),
-			adminResourceData{Module: module, adminTable: table}); err != nil {
+			adminResourceData{Module: module, SearchOp: adminSearchOpForDSN(), adminTable: table}); err != nil {
 			return err
 		}
 
-		if err := write(adminPageTemplate,
+		if err := emit(adminPageTemplate,
 			filepath.Join("app", "views", "admin", table.SlugPlural+"_page.templ"),
 			adminPageData{adminTable: table}); err != nil {
 			return err
 		}
 
-		if err := write(adminIslandTemplate,
+		return emit(adminIslandTemplate,
 			filepath.Join("app", "assets", "js", "islands", "admin-"+table.SlugPlural+"-crud.tsx"),
-			islandData(table)); err != nil {
+			islandData(table))
+	}
+
+	for _, table := range fresh {
+		if err := emitTable(table, false); err != nil {
+			return err
+		}
+	}
+	for _, table := range rewritten {
+		fmt.Printf("forced: overwriting generated files for %q (hand edits are lost)\n", table.Slug)
+		if err := emitTable(table, true); err != nil {
 			return err
 		}
 	}
 
-	// One migration pair per run: auth tables on the first run, then every
+	// One migration pair per run: auth tables (or the auth upgrade for
+	// projects generated before roles/audit) on the first run, then every
 	// newly generated table in reference dependency order.
-	if authExists && len(fresh) == 0 {
+	authUpgrade := authExists && !auditExists
+	if authExists && !authUpgrade && len(fresh) == 0 {
 		fmt.Println("skipped migration: no new tables")
 	} else {
 		reversed := make([]*adminTable, len(fresh))
@@ -454,11 +635,12 @@ func generateAdmin(args []string) error {
 			reversed[len(fresh)-1-i] = table
 		}
 		mig := adminMigrationData{
-			Module:   module,
-			IDColumn: idColumn,
-			Auth:     !authExists,
-			Tables:   fresh,
-			Reversed: reversed,
+			Module:      module,
+			IDColumn:    idColumn,
+			Auth:        !authExists,
+			AuthUpgrade: authUpgrade,
+			Tables:      fresh,
+			Reversed:    reversed,
 		}
 		// Migration filenames order db:migrate, so on a same-second re-run
 		// bump the timestamp forward instead of colliding with the existing
@@ -477,6 +659,10 @@ func generateAdmin(args []string) error {
 			filepath.Join("db", "migrate", name+".down.sql"), mig); err != nil {
 			return err
 		}
+	}
+	if len(rewritten) > 0 {
+		fmt.Println("\n--force rewrote generated code only: schema changes for the rewritten")
+		fmt.Println("tables still need a hand-written migration in db/migrate.")
 	}
 
 	registerAdminRoutes(module)
@@ -501,6 +687,8 @@ type adminModelData struct {
 
 type adminResourceData struct {
 	Module string
+	// SearchOp is LIKE or ILIKE, chosen from the configured database.
+	SearchOp string
 	*adminTable
 }
 
@@ -512,13 +700,53 @@ type adminMigrationData struct {
 	Module   string
 	IDColumn string
 	Auth     bool
-	Tables   []*adminTable // topo order for the up migration
-	Reversed []*adminTable // children-first for the down migration
+	// AuthUpgrade upgrades a pre-roles/audit install: adds admin_users.role
+	// and creates admin_audit_logs without touching existing tables.
+	AuthUpgrade bool
+	Tables      []*adminTable // topo order for the up migration
+	Reversed    []*adminTable // children-first for the down migration
 }
 
 func adminPathExists(parts ...string) bool {
 	_, err := os.Stat(filepath.Join(parts...))
 	return err == nil
+}
+
+// forceWrite renders the template and overwrites the target even when it
+// already exists — only ever used for `admin:generate --force`.
+func forceWrite(tpl string, rel string, data any) error {
+	tmpl, err := template.New(filepath.Base(rel)).Parse(tpl)
+	if err != nil {
+		return err
+	}
+
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, data); err != nil {
+		return err
+	}
+
+	if err := os.MkdirAll(filepath.Dir(rel), 0o755); err != nil {
+		return err
+	}
+	if err := os.WriteFile(rel, buf.Bytes(), 0o644); err != nil {
+		return err
+	}
+	fmt.Println("overwrote: " + rel)
+	return nil
+}
+
+// adminSearchOpForDSN picks the case-insensitive LIKE operator the
+// configured database supports for the `q` list search.
+func adminSearchOpForDSN() string {
+	dsn, err := cliDSN()
+	if err != nil {
+		return "LIKE"
+	}
+	lower := strings.ToLower(dsn)
+	if strings.HasPrefix(lower, "postgres://") || strings.HasPrefix(lower, "postgresql://") {
+		return "ILIKE"
+	}
+	return "LIKE"
 }
 
 // registerAdminRoutes wires admin_api.Routes into config/routes.go, once.
@@ -611,6 +839,9 @@ type adminIslandData struct {
 func islandFields(table *adminTable) []adminIslandField {
 	fields := make([]adminIslandField, 0, len(table.Fields))
 	for _, field := range table.Fields {
+		if !field.Form {
+			continue
+		}
 		f := adminIslandField{adminField: field}
 		f.TSRowType = islandRowType(field)
 		f.TSPayload = islandPayload(field)
@@ -626,7 +857,7 @@ func refTargets(table *adminTable) []adminRefTarget {
 	var targets []adminRefTarget
 	seen := map[string]bool{}
 	for _, field := range table.Fields {
-		if field.Kind != adminKindReferences || seen[field.RefPlural] {
+		if !field.Form || field.Kind != adminKindReferences || seen[field.RefPlural] {
 			continue
 		}
 		seen[field.RefPlural] = true
@@ -643,7 +874,7 @@ func islandData(table *adminTable) adminIslandData {
 		Fields:     islandFields(table),
 		RefTargets: refTargets(table),
 	}
-	for _, field := range table.Fields {
+	for _, field := range data.Fields {
 		switch field.Kind {
 		case adminKindDatetime:
 			data.HasDatetime = true
@@ -653,7 +884,7 @@ func islandData(table *adminTable) adminIslandData {
 	}
 	if data.HasAttachment {
 		var parts []string
-		for _, field := range table.Fields {
+		for _, field := range data.Fields {
 			if field.Kind == adminKindAttachment {
 				parts = append(parts, fmt.Sprintf("%s: row.%s ?? \"\"", field.JSON, field.JSON))
 			}
@@ -709,7 +940,7 @@ func islandPrefill(field adminField) string {
 }
 
 func islandColumn(field adminField) string {
-	base := fmt.Sprintf("{ accessorKey: %q, header: %q", field.JSON, field.DisplayName)
+	base := fmt.Sprintf("{ accessorKey: %q, header: %q, enableSorting: false", field.JSON, field.DisplayName)
 	switch field.Kind {
 	case adminKindBoolean:
 		return base + fmt.Sprintf(", cell: ({ row }) => (row.original.%s ? \"✓\" : \"—\") },", field.JSON)
