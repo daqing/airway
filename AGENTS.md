@@ -133,7 +133,8 @@ airway generate model post                            # new model in app/models/
 airway generate service post title:string             # CRUD service in app/services/
 airway generate scaffold post title:string             # full CRUD: model, migration, JSON API, templ page, island
 airway admin:generate [--force[=tables]] [path]      # full admin backend (auth, roles, audit, CSV, server-side lists) from a TOML table spec
-airway admin:user <email> <password> [role]           # create an admin account (bcrypt; role: admin|editor|viewer)
+airway admin:root <username> <password>              # create an administrator account (role admin; bcrypt)
+airway admin:member <username> <password> [--role=r] # create a non-admin account (editor|viewer)
 airway templates:compile                              # regenerate the templ views (shorthand for `go generate ./...`)
 airway generate migration create_posts                # new .up.sql/.down.sql pair in db/migrate/
 airway db:create | db:drop

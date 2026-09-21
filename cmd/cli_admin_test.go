@@ -387,7 +387,7 @@ func TestGenerateAdminEndToEnd(t *testing.T) {
 
 	for _, want := range []string{
 		"CREATE TABLE admin_users",
-		"CREATE UNIQUE INDEX idx_admin_users_email",
+		"CREATE UNIQUE INDEX idx_admin_users_username",
 		"CREATE TABLE admin_sessions",
 		"CREATE TABLE categories",
 		"CREATE TABLE posts",
@@ -532,30 +532,38 @@ func TestRunAdminUser(t *testing.T) {
 		}
 	}
 
-	if err := runAdminUser([]string{"admin@example.com", "s3cret"}); err != nil {
+	if err := runAdminRoot([]string{"admin", "s3cret"}); err != nil {
 		t.Fatalf("runAdminUser: %v", err)
 	}
 
-	if err := runAdminUser([]string{"admin@example.com", "s3cret"}); err == nil {
-		t.Fatalf("expected duplicate email error")
+	if err := runAdminRoot([]string{"admin", "s3cret"}); err == nil {
+		t.Fatalf("expected duplicate username error")
 	}
 
-	if err := runAdminUser([]string{"not-an-email", "s3cret"}); err == nil {
-		t.Fatalf("expected invalid email error")
+	if err := runAdminRoot([]string{"bad name", "s3cret"}); err == nil {
+		t.Fatalf("expected invalid username error")
 	}
 
-	token, err := repo.Count(db, sql.SelectColumns("count(*)").From("admin_users").Where(sql.Eq("email", "admin@example.com")))
+	// admin:root always creates the admin role, even with a --role override.
+	if err := runAdminRoot([]string{"admin2", "s3cret", "--role=viewer"}); err == nil {
+		t.Fatalf("expected admin:root to reject --role overrides")
+	}
+
+	token, err := repo.Count(db, sql.SelectColumns("count(*)").From("admin_users").Where(sql.Eq("username", "admin")))
 	if err != nil || token != 1 {
 		t.Fatalf("expected exactly one admin user, got %d (err: %v)", token, err)
 	}
 
-	row, err := repo.FindOneMap(db, sql.Select("*").From("admin_users").Where(sql.Eq("email", "admin@example.com")))
+	row, err := repo.FindOneMap(db, sql.Select("*").From("admin_users").Where(sql.Eq("username", "admin")))
 	if err != nil {
 		t.Fatalf("find admin user: %v", err)
 	}
 	digest, _ := row["password_digest"].(string)
 	if !utils.ComparePassword(utils.PasswordDigest(digest), "s3cret") {
 		t.Fatalf("stored digest does not verify against the given password")
+	}
+	if role, _ := row["role"].(string); role != "admin" {
+		t.Fatalf("expected admin:root to store role admin, got %v", row["role"])
 	}
 }
 
@@ -716,18 +724,32 @@ func TestRunAdminUserRole(t *testing.T) {
 		}
 	}
 
-	if err := runAdminUser([]string{"viewer@example.com", "pw", "viewer"}); err != nil {
-		t.Fatalf("runAdminUser viewer: %v", err)
+	if err := runAdminMember([]string{"viewer", "pw", "--role=viewer"}); err != nil {
+		t.Fatalf("runAdminMember viewer: %v", err)
 	}
-	if err := runAdminUser([]string{"bad@example.com", "pw", "root"}); err == nil {
+	if err := runAdminMember([]string{"editor", "pw"}); err != nil {
+		t.Fatalf("runAdminMember default editor: %v", err)
+	}
+	if err := runAdminMember([]string{"baduser", "pw", "--role=root"}); err == nil {
 		t.Fatalf("expected unknown role error")
 	}
+	if err := runAdminMember([]string{"superuser", "pw", "--role=admin"}); err == nil {
+		t.Fatalf("expected admin:member to reject the admin role")
+	}
 
-	row, err := repo.FindOneMap(db, sql.Select("*").From("admin_users").Where(sql.Eq("email", "viewer@example.com")))
+	row, err := repo.FindOneMap(db, sql.Select("*").From("admin_users").Where(sql.Eq("username", "viewer")))
 	if err != nil {
 		t.Fatalf("find admin user: %v", err)
 	}
 	if role, _ := row["role"].(string); role != "viewer" {
 		t.Fatalf("expected stored role viewer, got %v", row["role"])
+	}
+
+	row, err = repo.FindOneMap(db, sql.Select("*").From("admin_users").Where(sql.Eq("username", "editor")))
+	if err != nil {
+		t.Fatalf("find editor account: %v", err)
+	}
+	if role, _ := row["role"].(string); role != "editor" {
+		t.Fatalf("expected default role editor, got %v", row["role"])
 	}
 }

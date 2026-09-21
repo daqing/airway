@@ -61,8 +61,10 @@ func runCLI(args []string) error {
 		return runUpload(xargs)
 	case "admin:generate":
 		return generateAdmin(xargs)
-	case "admin:user":
-		return runAdminUser(xargs)
+	case "admin:root":
+		return runAdminRoot(xargs)
+	case "admin:member":
+		return runAdminMember(xargs)
 	case "templates:compile":
 		return runTemplatesCompile(xargs)
 	case "help", "-h", "--help":
@@ -99,7 +101,9 @@ func printUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "  airway schema:show")
 	_, _ = fmt.Fprintln(w, "  airway openapi:generate [--out path]     write the OpenAPI 3.2 document (default ./openapi.json)")
 	_, _ = fmt.Fprintln(w, "  airway admin:generate [config/admin.toml]  generate the admin backend from a TOML table spec")
-	_, _ = fmt.Fprintln(w, "  airway admin:user <email> <password>     create an admin account for the generated admin panel")
+	_, _ = fmt.Fprintln(w, "  airway admin:root <username> <password>   create the administrator account (role admin)")
+	_, _ = fmt.Fprintln(w, "  airway admin:member <username> <password> [--role=editor|viewer]")
+	_, _ = fmt.Fprintln(w, "                                           create a non-admin panel account")
 	_, _ = fmt.Fprintln(w, "  airway templates:compile                 regenerate the templ views (shorthand for `go generate ./...`)")
 	_, _ = fmt.Fprintln(w, "  airway plugin:new <module-path>")
 	_, _ = fmt.Fprintln(w, "  airway plugin:list")

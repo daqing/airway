@@ -37,7 +37,8 @@ airway schema:dump
 airway schema:show
 airway openapi:generate [--out path]                     # 生成 OpenAPI 3.2 文档（默认 ./openapi.json）
 airway admin:generate [config/admin.toml]              # 从 TOML 表配置生成完整 Admin 后台
-airway admin:user <email> <password> [role]              # 创建管理员账号（admin|editor|viewer；默认 editor）
+airway admin:root <username> <password>               # 创建管理员账号（role admin）
+airway admin:member <username> <password> [--role=r]  # 创建普通账号（editor|viewer）
 airway templates:compile                                 # 重新编译 templ 视图（等价于 `go generate ./...`）
 airway upload /path/to/file
 airway repl
@@ -469,7 +470,7 @@ airway admin:generate
 airway templates:compile                  # 编译 .templ 视图
 airway js:build                           # 打包 CRUD island
 airway db:migrate                         # 建表
-airway admin:user admin@example.com ...   # 创建第一个管理员账号
+airway admin:root admin      # 创建第一个管理员账号
 airway server                             # 访问 /admin
 ```
 
@@ -487,8 +488,9 @@ airway server                             # 访问 /admin
 
 路由挂载在 `/admin`（页面）和 `/api/v1/admin`（JSON API）下，都受
 `AdminAuth` 中间件保护：没有有效会话时页面重定向到 `/admin/login`，
-API 调用返回 401。管理员账号用 `airway admin:user <email> <password> [role]`
-创建——密码经 bcrypt 哈希，会话保存在服务端的 `admin_sessions` 表中。
+API 调用返回 401。管理员账号用 `airway admin:root <username> <password>`
+创建，普通账号（editor/viewer）用 `airway admin:member` 创建——密码经
+bcrypt 哈希，会话保存在服务端的 `admin_sessions` 表中。
 
 角色与安全加固开箱即用：
 
@@ -497,7 +499,7 @@ API 调用返回 401。管理员账号用 `airway admin:user <email> <password> 
   中间件之后。
 - **CSRF**——登录表单携带 double-submit token，必须与
   `airway_admin_csrf` cookie 匹配。
-- **限速**——同一 IP 和邮箱组合五次登录失败将被锁定十五分钟
+- **限速**——同一 IP 和用户名组合五次登录失败将被锁定十五分钟
   （`lib/ratelimit`）。
 - **审计日志**——每次增删改都会记录操作账号；admin 可在
   `/admin/audit-log` 查看。

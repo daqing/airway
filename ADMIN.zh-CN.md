@@ -12,7 +12,7 @@ airway admin:generate                     # 或: admin:generate --force=table1,t
 airway templates:compile                  # 编译 .templ 视图（等价于 `go generate ./...`）
 airway js:build                           # 打包 CRUD island
 airway db:migrate                         # 建表
-airway admin:user admin@example.com 's3cret' admin   # 创建第一个账号
+airway admin:root admin 's3cret'             # 创建管理员账号
 airway server                             # 访问 /admin
 ```
 
@@ -138,13 +138,15 @@ deleted_at = "datetime"              # 让该表启用软删除
 
 ## 认证与账号
 
-账号存放在 `admin_users` 表中，密码经 bcrypt 哈希。创建账号：
+账号存放在 `admin_users` 表中，密码经 bcrypt 哈希。有两个账号命令：
 
 ```bash
-airway admin:user <email> <password> [admin|editor|viewer]
+airway admin:root <username> <password>                    # 管理员（role admin）
+airway admin:member <username> <password> [--role=editor|viewer]   # 普通账号
 ```
 
-默认角色为 `editor`。会话保存在服务端的 `admin_sessions` 表中：登录成功
+`admin:member` 的默认角色为 `editor`；创建管理员只能通过 `admin:root`。
+会话保存在服务端的 `admin_sessions` 表中：登录成功
 后签发一个 64 位随机十六进制 token，通过 `airway_admin_session` cookie
 下发（HttpOnly、`SameSite=Lax`、7 天有效期、非 `AIRWAY_ENV=local` 环境下
 启用 `Secure`）。没有"首次访问创建管理员"页面——账号只在你创建时才存在，
@@ -166,7 +168,7 @@ airway admin:user <email> <password> [admin|editor|viewer]
 - **CSRF** —— 登录表单携带随机 double-submit token；只有隐藏字段与
   `airway_admin_csrf` cookie（HttpOnly、`SameSite=Lax`、12 小时有效期）
   一致时，POST 才会被接受。
-- **限速** —— 同一 IP 和邮箱组合五次登录失败即锁定十五分钟（进程内
+- **限速** —— 同一 IP 和用户名组合五次登录失败即锁定十五分钟（进程内
   固定窗口限速器，`lib/ratelimit`）。
 - **审计日志** —— 每次创建、更新、删除都会在 `admin_audit_logs` 中记录
   操作账号、资源和记录 id。审计写入失败只记录日志，绝不阻断业务动作。
@@ -249,7 +251,7 @@ airway templates:compile && airway js:build
 
 ## 当前限制
 
-- 面板内没有用户管理：角色只能通过 `admin:user` 分配。
+- 面板内没有用户管理：角色只能通过 `admin:root` 和 `admin:member` 分配。
 - 没有软删除恢复 UI（只能通过 SQL/REPL）。
 - 限速器是进程内的；多副本部署应在入口处加共享限速。
 - 审计日志没有保留策略，也不支持导出。

@@ -48,7 +48,7 @@ import (
 // Role is one of admin, editor (default — read/write) or viewer (read-only).
 type AdminUser struct {
 	ID             airwaysql.IdType ` + "`db:\"id\" json:\"id\"`" + `
-	Email          string           ` + "`db:\"email\" json:\"email\"`" + `
+	Username       string           ` + "`db:\"username\" json:\"username\"`" + `
 	PasswordDigest string           ` + "`db:\"password_digest\" json:\"-\"`" + `
 	Role           string           ` + "`db:\"role\" json:\"role\"`" + `
 	CreatedAt      time.Time        ` + "`db:\"created_at\" json:\"created_at\"`" + `
@@ -361,20 +361,20 @@ func adminQueryBool(v string) (any, bool) {
 // write is logged, never fatal: it must not block the business action.
 func adminAudit(c *gin.Context, action string, resource string, resourceID int64) {
 	var userID int64
-	email := ""
+	username := ""
 	if v, ok := c.Get("admin_user"); ok {
 		if user, ok := v.(*models.AdminUser); ok {
 			userID = int64(user.ID)
-			email = user.Email
+			username = user.Username
 		}
 	}
 
 	if _, err := repo.InsertMap(repo.CurrentDB(), sql.Insert(sql.H{
-		"admin_user_id": userID,
-		"admin_email":   email,
-		"action":        action,
-		"resource":      resource,
-		"resource_id":   resourceID,
+		"admin_user_id":   userID,
+		"admin_username":  username,
+		"action":          action,
+		"resource":        resource,
+		"resource_id":     resourceID,
 	}).Into("admin_audit_logs")); err != nil {
 		fmt.Println("admin audit write failed:", err)
 	}
@@ -453,8 +453,8 @@ func AuditLogPageAction(c *gin.Context) {
 		if t, ok := row["created_at"].(time.Time); ok {
 			entry.Time = t
 		}
-		if email, ok := row["admin_email"].(string); ok {
-			entry.Email = email
+		if username, ok := row["admin_username"].(string); ok {
+			entry.Username = username
 		}
 		if action, ok := row["action"].(string); ok {
 			entry.Action = action
@@ -495,7 +495,7 @@ import (
 )
 
 // loginLimiter blunts credential stuffing: five failed attempts for the same
-// IP and email pair lock it out for fifteen minutes.
+// IP and username pair lock it out for fifteen minutes.
 var loginLimiter = ratelimit.New(5, 15*time.Minute)
 
 const adminCSRFCookie = "airway_admin_csrf"
@@ -522,17 +522,17 @@ func LoginPageAction(c *gin.Context) {
 }
 
 type loginForm struct {
-	Email     string ` + "`form:\"email\"`" + `
+	Username  string ` + "`form:\"username\"`" + `
 	Password  string ` + "`form:\"password\"`" + `
 	CSRFToken string ` + "`form:\"csrf_token\"`" + `
 }
 
 // LoginAction verifies the CSRF token, rate-limits attempts per IP and
-// email, and starts a cookie session on success.
+// username, and starts a cookie session on success.
 func LoginAction(c *gin.Context) {
 	var form loginForm
 	if err := c.ShouldBind(&form); err != nil {
-		render.HTML(c, admin.Login("Invalid email or password", issueCSRFToken(c)))
+		render.HTML(c, admin.Login("Invalid username or password", issueCSRFToken(c)))
 		return
 	}
 
@@ -541,17 +541,17 @@ func LoginAction(c *gin.Context) {
 		return
 	}
 
-	email := strings.TrimSpace(form.Email)
-	limitKey := c.ClientIP() + "|" + email
+	username := strings.TrimSpace(form.Username)
+	limitKey := c.ClientIP() + "|" + username
 	if !loginLimiter.Allowed(limitKey) {
 		render.HTML(c, admin.Login("Too many attempts — try again in a few minutes", issueCSRFToken(c)))
 		return
 	}
 
-	user, err := repo.FindOneBy[models.AdminUser](sql.H{"email": email})
+	user, err := repo.FindOneBy[models.AdminUser](sql.H{"username": username})
 	if err != nil || user == nil || !utils.ComparePassword(utils.PasswordDigest(user.PasswordDigest), form.Password) {
 		loginLimiter.Fail(limitKey)
-		render.HTML(c, admin.Login("Invalid email or password", issueCSRFToken(c)))
+		render.HTML(c, admin.Login("Invalid username or password", issueCSRFToken(c)))
 		return
 	}
 	loginLimiter.Reset(limitKey)
@@ -687,7 +687,7 @@ func init() {
 	openapi.Post("/admin/login", func(o *openapi.Operation) {
 		o.Summary("Admin sign-in").Tag("admin").
 			Form(map[string]*openapi.Schema{
-				"email":    openapi.Str(),
+				"username": openapi.Str(),
 				"password": openapi.Str(),
 			}).
 			OK()
@@ -998,8 +998,8 @@ type ResourceCard struct {
 // AuditLogEntry is one recorded mutating action, shown on the audit page.
 type AuditLogEntry struct {
 	Time       time.Time
-	Email      string
-	Action     string
+	Username    string
+	Action      string
 	Resource   string
 	ResourceID int64
 }
@@ -1105,8 +1105,8 @@ templ Login(errorMessage string, csrfToken string) {
 					}
 					<input type="hidden" name="csrf_token" value={ csrfToken }/>
 					<div class="aw-field">
-						<label class="aw-field-label" for="email">Email</label>
-						<input id="email" name="email" type="email" class="aw-input" required autocomplete="username"/>
+						<label class="aw-field-label" for="username">Username</label>
+						<input id="username" name="username" type="text" class="aw-input" required autocomplete="username" autofocus/>
 					</div>
 					<div class="aw-field">
 						<label class="aw-field-label" for="password">Password</label>
@@ -1144,7 +1144,7 @@ templ AuditLogPage(entries []AuditLogEntry, page, pageCount int, prefix string) 
 					for _, entry := range entries {
 						<tr>
 							<td>{ entry.Time.Format("2006-01-02 15:04:05") }</td>
-							<td>{ entry.Email }</td>
+							<td>{ entry.Username }</td>
 							<td>{ entry.Action }</td>
 							<td>{ entry.Resource }</td>
 							<td>{ fmt.Sprintf("%d", entry.ResourceID) }</td>
@@ -1405,13 +1405,13 @@ export default function {{.NamePlural}}Crud() {
 const adminMigrationUpTemplate = `{{if .Auth}}-- Admin authentication tables.
 CREATE TABLE admin_users (
 	{{.IDColumn}},
-	email VARCHAR(255) NOT NULL,
+	username VARCHAR(255) NOT NULL,
 	password_digest VARCHAR(255) NOT NULL,
 	role VARCHAR(20) NOT NULL DEFAULT 'editor',
 	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-CREATE UNIQUE INDEX idx_admin_users_email ON admin_users (email);
+CREATE UNIQUE INDEX idx_admin_users_username ON admin_users (username);
 
 CREATE TABLE admin_sessions (
 	{{.IDColumn}},
@@ -1423,12 +1423,10 @@ CREATE TABLE admin_sessions (
 );
 CREATE INDEX idx_admin_sessions_token ON admin_sessions (token);
 
-{{if .AuthUpgrade}}ALTER TABLE admin_users ADD COLUMN role VARCHAR(20) NOT NULL DEFAULT 'editor';
-
-{{end}}CREATE TABLE admin_audit_logs (
+CREATE TABLE admin_audit_logs (
 	{{.IDColumn}},
 	admin_user_id BIGINT NOT NULL DEFAULT 0,
-	admin_email VARCHAR(255) NOT NULL DEFAULT '',
+	admin_username VARCHAR(255) NOT NULL DEFAULT '',
 	action VARCHAR(20) NOT NULL,
 	resource VARCHAR(100) NOT NULL DEFAULT '',
 	resource_id BIGINT NOT NULL DEFAULT 0,
@@ -1436,13 +1434,15 @@ CREATE INDEX idx_admin_sessions_token ON admin_sessions (token);
 );
 CREATE INDEX idx_admin_audit_logs_created_at ON admin_audit_logs (created_at);
 
-{{else if .AuthUpgrade}}-- Upgrade a pre-roles/audit admin install.
+{{else if .AuthUpgrade}}-- Upgrade a pre-roles/audit admin install. The legacy email
+-- column is kept as-is; sign-in now uses username.
+ALTER TABLE admin_users ADD COLUMN username VARCHAR(255) NOT NULL DEFAULT '';
 ALTER TABLE admin_users ADD COLUMN role VARCHAR(20) NOT NULL DEFAULT 'editor';
 
 CREATE TABLE admin_audit_logs (
 	{{.IDColumn}},
 	admin_user_id BIGINT NOT NULL DEFAULT 0,
-	admin_email VARCHAR(255) NOT NULL DEFAULT '',
+	admin_username VARCHAR(255) NOT NULL DEFAULT '',
 	action VARCHAR(20) NOT NULL,
 	resource VARCHAR(100) NOT NULL DEFAULT '',
 	resource_id BIGINT NOT NULL DEFAULT 0,

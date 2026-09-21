@@ -671,7 +671,7 @@ func generateAdmin(args []string) error {
 	fmt.Println("  airway templates:compile   # compile the .templ views")
 	fmt.Println("  airway js:build            # bundle the admin islands")
 	fmt.Println("  airway db:migrate          # create the admin tables")
-	fmt.Println("  airway admin:user <email> <password>   # create the first admin")
+	fmt.Println("  airway admin:root <username> <password>   # create the first admin")
 	fmt.Println("  airway server              # visit /admin")
 	return nil
 }

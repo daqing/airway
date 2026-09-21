@@ -18,7 +18,7 @@ airway admin:generate                     # or: admin:generate --force=table1,ta
 airway templates:compile                  # compile the .templ views (shorthand for `go generate ./...`)
 airway js:build                           # bundle the CRUD islands
 airway db:migrate                         # create the tables
-airway admin:user admin@example.com 's3cret' admin   # create the first account
+airway admin:root admin 's3cret'             # create the administrator account
 airway server                             # visit /admin
 ```
 
@@ -156,14 +156,16 @@ redirects/links honor it automatically.
 
 ## Authentication and accounts
 
-Accounts live in `admin_users` with bcrypt-hashed passwords. Create them
-with:
+Accounts live in `admin_users` with bcrypt-hashed passwords. There are two
+account commands:
 
 ```bash
-airway admin:user <email> <password> [admin|editor|viewer]
+airway admin:root <username> <password>                    # administrator (role admin)
+airway admin:member <username> <password> [--role=editor|viewer]   # non-admin account
 ```
 
-`editor` is the default role. Sessions are stored server-side in
+`editor` is the default role for `admin:member`; creating administrators
+goes through `admin:root` only. Sessions are stored server-side in
 `admin_sessions`: signing in issues a random 64-hex token delivered as the
 `airway_admin_session` cookie (HttpOnly, `SameSite=Lax`, 7-day expiry,
 `Secure` outside `AIRWAY_ENV=local`). There is no first-visit bootstrap
@@ -187,7 +189,7 @@ the least-privileged one.
 - **CSRF** — the sign-in form carries a random double-submit token; the
   POST is accepted only when the hidden field matches the
   `airway_admin_csrf` cookie (HttpOnly, `SameSite=Lax`, 12-hour expiry).
-- **Rate limiting** — five failed sign-ins for the same IP and email pair
+- **Rate limiting** — five failed sign-ins for the same IP and username pair
   lock that pair out for fifteen minutes (in-process fixed-window limiter,
   `lib/ratelimit`).
 - **Audit log** — every create, update and delete records the acting
@@ -281,7 +283,7 @@ airway templates:compile && airway js:build
 
 ## Current limitations
 
-- No in-panel user management: roles are assigned via `admin:user`.
+- No in-panel user management: roles are assigned via `admin:root`.
 - No soft-delete restore UI (SQL/REPL only).
 - The rate limiter is per-process; multi-replica deployments should put a
   shared limiter in front.

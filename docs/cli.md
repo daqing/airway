@@ -45,7 +45,8 @@ airway schema:show
 airway openapi:generate [--out path]                     # write the OpenAPI 3.2 document (default ./openapi.json)
 airway templates:compile                                 # regenerate the templ views (shorthand for `go generate ./...`)
 airway admin:generate [config/admin.toml]              # generate the admin backend from a TOML table spec
-airway admin:user <email> <password> [role]              # create an admin account (admin|editor|viewer; default editor)
+airway admin:root <username> <password>               # create an administrator (role admin)
+airway admin:member <username> <password> [--role=r]  # create a non-admin account (editor|viewer)
 airway upload /path/to/file
 airway repl
 airway version                                           # or -v / --version; prints the VERSION file contents
@@ -565,7 +566,7 @@ airway admin:generate
 airway templates:compile                  # compile the .templ views
 airway js:build                           # bundle the CRUD islands
 airway db:migrate                         # create the tables
-airway admin:user admin@example.com ...   # create the first admin account
+airway admin:root admin      # create the first administrator account
 airway server                             # visit /admin
 ```
 
@@ -583,8 +584,9 @@ What gets generated:
 
 Routes mount under `/admin` (pages) and `/api/v1/admin` (JSON API). Both
 sit behind the `AdminAuth` middleware: pages redirect to `/admin/login`
-when there is no valid session, API calls get a 401. Accounts are created
-with `airway admin:user <email> <password> [role]` — passwords are
+when there is no valid session, API calls get a 401. Administrators are
+created with `airway admin:root <username> <password>`, non-admin accounts
+(editor/viewer) with `airway admin:member` — passwords are
 bcrypt-hashed and sessions are stored server-side in `admin_sessions`.
 
 Roles and hardening are built in:
@@ -594,7 +596,7 @@ Roles and hardening are built in:
   Mutating routes sit behind `AdminRequireWrite`.
 - **CSRF** — the login form carries a double-submit token that must match
   the `airway_admin_csrf` cookie.
-- **Rate limiting** — five failed sign-ins for the same IP and email lock
+- **Rate limiting** — five failed sign-ins for the same IP and username lock
   the pair out for fifteen minutes (`lib/ratelimit`).
 - **Audit log** — every create, update and delete is recorded with the
   acting account; admins can review it at `/admin/audit-log`.
