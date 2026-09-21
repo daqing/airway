@@ -59,6 +59,12 @@ func runCLI(args []string) error {
 		return runCLIJsBuild(xargs)
 	case "upload":
 		return runUpload(xargs)
+	case "admin:generate":
+		return generateAdmin(xargs)
+	case "admin:user":
+		return runAdminUser(xargs)
+	case "templates:compile":
+		return runTemplatesCompile(xargs)
 	case "help", "-h", "--help":
 		printUsage(os.Stdout)
 		return nil
@@ -92,6 +98,9 @@ func printUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "  airway schema:dump")
 	_, _ = fmt.Fprintln(w, "  airway schema:show")
 	_, _ = fmt.Fprintln(w, "  airway openapi:generate [--out path]     write the OpenAPI 3.2 document (default ./openapi.json)")
+	_, _ = fmt.Fprintln(w, "  airway admin:generate [config/admin.toml]  generate the admin backend from a TOML table spec")
+	_, _ = fmt.Fprintln(w, "  airway admin:user <email> <password>     create an admin account for the generated admin panel")
+	_, _ = fmt.Fprintln(w, "  airway templates:compile                 regenerate the templ views (shorthand for `go generate ./...`)")
 	_, _ = fmt.Fprintln(w, "  airway plugin:new <module-path>")
 	_, _ = fmt.Fprintln(w, "  airway plugin:list")
 	_, _ = fmt.Fprintln(w, "  airway plugin:install <module>")
@@ -107,7 +116,7 @@ func printUsage(w io.Writer) {
 
 func printCLIGenerateUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "usage:")
-	_, _ = fmt.Fprintln(w, "  airway generate [action|api|model|migration|service|cmd] [params]")
+	_, _ = fmt.Fprintln(w, "  airway generate [action|api|model|migration|service|cmd|island|scaffold] [params]")
 }
 
 func printCLIGenerateMigrationUsage(w io.Writer) {

@@ -43,6 +43,9 @@ airway generate [action|api|model|migration|service|island|scaffold|cmd] [params
 airway schema:dump
 airway schema:show
 airway openapi:generate [--out path]                     # write the OpenAPI 3.2 document (default ./openapi.json)
+airway templates:compile                                 # regenerate the templ views (shorthand for `go generate ./...`)
+airway admin:generate [config/admin.toml]              # generate the admin backend from a TOML table spec
+airway admin:user <email> <password>                     # create an admin account for the generated admin panel
 airway upload /path/to/file
 airway repl
 airway version                                           # or -v / --version; prints the VERSION file contents
@@ -513,11 +516,79 @@ under `/api/v1/posts`, a templ page at `/posts`, and a CRUD island
 registers the routes in `config/routes.go`. Afterwards run:
 
 ```bash
-go generate ./...     # compile the .templ view
-airway js:build       # bundle the new island
-airway db:migrate     # create the table
-airway server         # visit /posts
+airway templates:compile   # compile the .templ view
+airway js:build            # bundle the new island
+airway db:migrate          # create the table
+airway server              # visit /posts
 ```
 
 `airway generate island chart` scaffolds a single interactive island under
 `app/assets/js/islands/`; embed it with `@assets.Island("chart", props)`.
+
+## Generate an admin panel
+
+`airway admin:generate` turns a single TOML file into a complete admin
+backend: sign-in with cookie sessions, a dashboard with one card per
+resource, sidebar navigation, and full CRUD (JSON API + type-aware CRUD
+island) for every table. Config lives in `config/admin.toml` by default
+(an alternate path can be passed as the only argument). Each top-level
+table is one resource, keyed by its **singular** name; each field maps a
+column name to a type:
+
+```toml
+[category]
+name = "string"
+sort_order = "integer"
+parent_id = "references:category"   # self-reference (explicit target)
+
+[post]
+title = "string"
+body = "text"
+views = "integer"
+score = "float"
+published = "boolean"
+published_at = "datetime"
+status = "enum:draft,published,archived"
+cover = "attachment"
+category_id = "references"          # target inferred from the _id suffix
+```
+
+Supported field types: `string`, `text`, `integer`, `float`, `boolean`,
+`datetime`, `enum:a,b,c`, `references[:table]` and `attachment`. `id`,
+`created_at` and `updated_at` are added to every table automatically and
+must not be declared.
+
+Run the generator, then the standard follow-ups:
+
+```bash
+airway admin:generate
+airway templates:compile                  # compile the .templ views
+airway js:build                           # bundle the CRUD islands
+airway db:migrate                         # create the tables
+airway admin:user admin@example.com ...   # create the first admin account
+airway server                             # visit /admin
+```
+
+What gets generated:
+
+- One model per table in `app/models/` (tables with references also get
+  `Relations()`), plus `admin_user.go` / `admin_session.go` for auth.
+- `app/api/admin_api/`: a self-registering resource file per table with
+  CRUD actions and OpenAPI declarations, plus shared files (registry,
+  routes, login/logout, attachment uploads through `storage.Current()`).
+- `app/views/admin/`: the admin layout with sidebar, dashboard, login
+  page, and one page per table hosting its CRUD island.
+- One migration pair per run (auth tables on the first run, then new
+  tables in foreign-key dependency order).
+
+Routes mount under `/admin` (pages) and `/api/v1/admin` (JSON API). Both
+sit behind the `AdminAuth` middleware: pages redirect to `/admin/login`
+when there is no valid session, API calls get a 401. Accounts are created
+with `airway admin:user <email> <password>` — passwords are bcrypt-hashed
+and sessions are stored server-side in `admin_sessions`.
+
+Re-running `admin:generate` after adding tables to the TOML is additive:
+existing files are never rewritten, and the registry picks up new
+resources automatically (sidebar and dashboard included). Removing a table
+from the TOML does not delete generated code; changing a field type does
+not alter existing files or migrations — write a migration by hand.

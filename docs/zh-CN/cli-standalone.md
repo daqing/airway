@@ -84,6 +84,13 @@ airway generate migration create_posts          # db/migrate/ 下的 SQL up/down
 执行 `generate api` 之后，记得把生成的 `Routes(...)` 注册到
 `config/routes.go` 中。
 
+编辑 `app/views/` 下的 `.templ` 视图后，重新编译生成的 Go 代码（等价于
+`go generate ./...`，它会执行 `generate.go` 里声明的 templ 指令）：
+
+```bash
+airway templates:compile       # 等价于 `go generate ./...`
+```
+
 ### 数据库与迁移
 
 迁移文件是 `db/migrate/` 下的纯 SQL 文件对：
@@ -171,6 +178,7 @@ REPL 只能看到编译进当前二进制的模型——项目模型通过 `app/
 | `plugin:new` | 可用 | 可用 |
 | `db:create` / `db:drop` / `db:migrate` / `db:rollback` / `db:status` | 可用（SQL 迁移） | 可用 |
 | `schema:dump` / `schema:show`、`upload`、`version` | 可用 | 可用 |
+| `templates:compile` | **本地直接执行**——必须在项目尚不能编译时可用（刚生成 `.templ` 文件之后） | 可用 |
 | `repl` | 仅框架内置模型 | **推荐**——能看到你的项目模型 |
 | `plugin:list` / `plugin:install` | 仅编译进 `airway` 自身的 Plugin | **推荐**——能看到你项目的 Plugin |
 
@@ -180,3 +188,16 @@ REPL 只能看到编译进当前二进制的模型——项目模型通过 `app/
 使用。
 
 另请参阅：[../cli.md](../cli.md) 获取完整的脚手架指南和逐步特性示例。
+
+### Admin 后台
+
+为已经用 `airway admin:generate` 生成 Admin 后台的项目创建管理员账号
+（参见 [cli.md](cli.md)）：
+
+```bash
+go run . admin:user admin@example.com 's3cret'
+```
+
+账号会插入 `admin_users` 表（密码经 bcrypt 哈希），请先执行
+`db:migrate`。该命令请通过项目二进制运行；全局安装的 `airway` 会自动
+代理。
