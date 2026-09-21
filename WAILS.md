@@ -163,16 +163,14 @@ desktop/
   build/             # 图标、Info.plist、Windows 安装器配置、Linux 打包配置
 ```
 
-### 5.1 框架前置重构（一次性，web 行为不变）
+### 5.1 框架前置重构（✅ 已实现：R1 `lib/app`、R2 `lib/migrate`、R3 `lib/boot.New`、R4 StrictCORS/SameOriginWS）
 
-| # | 重构 | 动机 |
+| # | 重构 | 状态 |
 |---|---|---|
-| R1 | 把 `App`/`CORS`/`prefixHandler` 从根 `package main` 抽到可导入包（建议 `lib/app`） | 桌面包无法导入根包（事实 #6） |
-| R2 | 把 `migrationManager` 抽到 `lib/migrate`，导出 `Run(ctx, Options{DSN, Dir, DumpSnapshot})`；CLI 变薄壳；`Dir` 支持 `fs.FS` | 事实 #5：编程式调用 + 内嵌迁移 |
-| R3 | 新增统一启动入口（建议 `lib/boot`）：`boot.Desktop(Options{AppName, DSN, StorageRoot, Migrations, Plugins})` → `http.Handler`，内部显式传参 | 见 5.2 的环境变量陷阱 |
-| R4 | `boot` 支持注入严格 CORS / 关闭 schema dump 等桌面开关 | §8 加固 |
-
-R1–R3 都是搬移 + 导出，`go test ./...` 全绿即可交付；不改变 `airway server` 行为。
+| R1 | `App`/`CORS`/`prefixHandler` 抽到 `lib/app`（`NewApp(name, port, opts...)` + `WithCORS` + `StrictOrigin`） | ✅ |
+| R2 | 迁移引擎导出为 `lib/migrate`（`Run/RunTo/Rollback/Status` over `Options{DSN, Migrations fs.FS, SnapshotPath, Out}`），CLI 变薄壳 | ✅ |
+| R3 | `lib/boot.New(Options)` 统一启动入口，**显式传参**（Env/DSN/Migrations/StorageRoot/RedisURL），不复用环境变量注入 | ✅ |
+| R4 | 桌面开关：`StrictCORS`（仅同源）、`SameOriginWS`（`websocket.CheckSameOrigin()`）、关闭 schema snapshot | ✅ |
 
 ### 5.2 关键陷阱：环境变量快照优先级
 
@@ -182,7 +180,10 @@ R1–R3 都是搬移 + 导出，`go test ./...` 全绿即可交付；不改变 `
 必须**显式传参**（DSN、StorageRoot 等直接作为函数参数进入 `repo.SetupDB`/`storage.Setup`），
 或者在注入前对相关键做 `os.Unsetenv`。这是"导出器"最容易踩的隐性坑。
 
-### 5.3 生成的 `desktop/main.go`（骨架）
+### 5.3 生成的 `desktop/main.go`（已实现，节选）
+
+实际生成器为 `airway desktop:init`（模板在 `cmd/clitemplate/desktop/`，
+文档见 `docs/desktop.md` / `docs/zh-CN/desktop.md`）：
 
 ```go
 package main
@@ -203,11 +204,14 @@ func main() {
     root, _ := os.UserConfigDir()
     dataDir := filepath.Join(root, "MyApp")
 
-    handler, err := boot.Desktop(boot.Options{
+    handler, err := boot.New(boot.Options{ // R3：显式传参，不注入环境变量
         AppName:    "MyApp",
-        DataDir:    dataDir,
+        Env:        "production",
+        DSN:        "sqlite://" + filepath.ToSlash(filepath.Join(dataDir, "data.db")),
         Migrations: migrations.FS,
+        StorageRoot: filepath.Join(dataDir, "storage"),
         StrictCORS: true, // R4
+        SameOriginWS: true,
     })
     if err != nil {
         application.Fatal(err) // 弹窗 + 退出
@@ -320,12 +324,15 @@ POC 过程中的额外发现（已修正正文相应章节）：
   与 Wails 本体无关）。**`desktop:init` 必须重写 Taskfile 的前端任务**：改为
   `go run . js:build`（Airway 的 Node-free 管道）或直接用已提交的 dist。
 
-**第 1 步：框架重构**（R1–R4，`go test ./...` 全绿，`airway server` 行为不变）。
+**第 1 步：框架重构**（✅ R1–R4 已完成，`go test ./...` 全绿，`airway server` 行为不变）。
 
-**第 2 步：`airway desktop:init` 生成器** + clitemplate 模板镜像 +
-`docs/desktop.md`（英文 + zh-CN），命令归入 `desktop:` 冒号族（沿用 `admin:` 命名惯例）。
+**第 2 步：`airway desktop:init` 生成器**（✅ 已完成：`cmd/cli_desktop.go` +
+`cmd/clitemplate/desktop/` 模板镜像 + `docs/desktop.md`（英文 + zh-CN）；
+`desktop/migrations.go` 同时镜像宿主 `plugins.go` 的 blank import，重跑保护
+`main.go`、只刷新迁移与插件镜像）。
 
-**第 3 步：CI 矩阵 + 签名/公证 + 安装器**；justfile 增加 `just desktop`。
+**第 3 步：CI 矩阵 + 签名/公证 + 安装器**（justfile 已加 `just desktop` /
+`just desktop-package`；CI workflow 待建）。
 
 **第 4 步：跟进 v3 RC/GA**，转正 experimental 标记。
 
