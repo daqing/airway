@@ -14,6 +14,7 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 
 	"github.com/daqing/airway/lib/boot"
+	"{{module}}/config"
 )
 
 func main() {
@@ -27,14 +28,19 @@ func main() {
 	}
 
 	a, err := boot.New(boot.Options{
-		AppName:      "{{app_name}}",
-		Env:          "production",
-		DSN:          "sqlite://" + filepath.ToSlash(filepath.Join(dataDir, "data.db")),
-		Migrations:   migrationsFS,
-		StorageRoot:  filepath.Join(dataDir, "storage"),
-		StrictCORS:   true,
-		SameOriginWS: true,
-		BootPlugins:  pluginsEnabled,
+		AppName:        "{{app_name}}",
+		Env:            "production",
+		DSN:            "sqlite://" + filepath.ToSlash(filepath.Join(dataDir, "data.db")),
+		Migrations:     migrationsFS,
+		StorageRoot:    filepath.Join(dataDir, "storage"),
+		StrictCORS:     true,
+		SameOriginWS:   true,
+		HideScrollbars: true,
+		BootPlugins:    pluginsEnabled,
+		// The project's own routes — without these the binary would serve
+		// the framework's built-in demo pages instead of this project.
+		Routes:       config.Routes,
+		HealthRoutes: config.HealthRoutes,
 	})
 	if err != nil {
 		fatal(err)

@@ -6,8 +6,13 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/daqing/airway/config"
 	"github.com/gin-gonic/gin"
 )
+
+func newTestApp() *App {
+	return NewApp("Airway", "0", WithRoutes(config.Routes, config.HealthRoutes))
+}
 
 // When URL_PREFIX is configured, the public routes (home page, WebSocket, API)
 // answer only under the prefix; the unprefixed root answers only the internal
@@ -18,7 +23,7 @@ func TestNewAppServesPublicRoutesUnderURLPrefix(t *testing.T) {
 	t.Setenv("AIRWAY_URL_PREFIX", "")
 	t.Setenv("URL_PREFIX", "/airway")
 
-	app := NewApp("Airway", "0")
+	app := newTestApp()
 	r := app.Handler()
 
 	okCases := []struct {
@@ -78,7 +83,7 @@ func TestNewAppWithoutPrefixServesEverythingAtRoot(t *testing.T) {
 	t.Setenv("AIRWAY_URL_PREFIX", "")
 	t.Setenv("URL_PREFIX", "")
 
-	app := NewApp("Airway", "0")
+	app := newTestApp()
 	r := app.Handler()
 
 	for _, tc := range []struct {
@@ -105,7 +110,7 @@ func TestNewAppRegistersRoutesUnderPrefix(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	t.Setenv("URL_PREFIX", "/airway")
 
-	app := NewApp("Airway", "0")
+	app := newTestApp()
 	r := app.Handler()
 
 	// POST /ws/publish with no payload reaches the handler (a 4xx proves the

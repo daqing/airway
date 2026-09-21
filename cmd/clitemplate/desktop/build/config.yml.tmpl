@@ -13,27 +13,6 @@ info:
   comments: "{{app_name}} desktop"
   version: "0.1.0"
 
-# Dev mode configuration: no frontend watcher — the bundle is embedded by
-# the host project.
-dev_mode:
-  root_path: .
-  log_level: warn
-  debounce: 1000
-  ignore:
-    dir:
-      - .git
-      - node_modules
-      - bin
-    file:
-      - .DS_Store
-      - .gitignore
-      - .gitkeep
-      - "*_test.go"
-    watched_extension:
-      - "*.go"
-    git_ignore: true
-  executes:
-    - cmd: wails3 build DEV=true
-      type: blocking
-    - cmd: wails3 task run
-      type: primary
+# No development-mode block here on purpose: the wails3 dev-mode command
+# requires a frontend dev server, which this project does not have —
+# `wails3 task dev` builds and runs the app directly.

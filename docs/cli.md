@@ -47,6 +47,7 @@ airway templates:compile                                 # regenerate the templ 
 airway admin:generate [config/admin.toml]              # generate the admin backend from a TOML table spec
 airway admin:root <username> <password>               # create an administrator (role admin)
 airway admin:member <username> <password> [--role=r]  # create a non-admin account (editor|viewer)
+airway desktop:init [--force]                           # generate the Wails v3 desktop target in ./desktop (see docs/desktop.md)
 airway upload /path/to/file
 airway repl
 airway version                                           # or -v / --version; prints the VERSION file contents

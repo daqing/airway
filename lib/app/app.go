@@ -1,6 +1,8 @@
 // Package app wires the Airway HTTP stack: engine construction, middleware,
 // routes and the public http.Handler. It is a library package so the web
-// binary and desktop wrappers share one implementation.
+// binary and desktop wrappers share one implementation, and it deliberately
+// imports no application package: the route source is always supplied by the
+// caller, so each binary compiles exactly one set of API modules.
 package app
 
 import (
@@ -9,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/daqing/airway/config"
 	"github.com/daqing/airway/lib/utils"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -20,13 +21,17 @@ type App struct {
 	internal *gin.Engine // Internal-only router (health) for unprefixed requests
 	name     string      // Application name
 	port     string
-	prefix   string // Public sub-path prefix ("" = serve at root)
+	prefix   string                            // Public sub-path prefix ("" = serve at root)
+	outer    []func(http.Handler) http.Handler // Wrappers around the outermost handler
 }
 
 type Option func(*options)
 
 type options struct {
-	cors gin.HandlerFunc
+	cors         gin.HandlerFunc
+	routes       func(*gin.Engine)
+	healthRoutes func(*gin.Engine)
+	outer        []func(http.Handler) http.Handler
 }
 
 // WithCORS replaces the default permissive CORS middleware. Desktop wrappers
@@ -35,17 +40,43 @@ func WithCORS(h gin.HandlerFunc) Option {
 	return func(o *options) { o.cors = h }
 }
 
+// WithRoutes sets the route source. It is REQUIRED: the framework repo's web
+// binary passes its own config.Routes, and desktop wrappers pass the host
+// project's config.Routes, so every binary mounts exactly one set of API
+// modules (their init()s also register OpenAPI declarations — mounting two
+// sets would double-declare the same routes). healthRoutes may be nil when
+// no internal health check is wanted.
+func WithRoutes(routes, healthRoutes func(*gin.Engine)) Option {
+	return func(o *options) {
+		o.routes = routes
+		o.healthRoutes = healthRoutes
+	}
+}
+
+// WithHandlerWrapper appends a wrapper applied around the app's outermost
+// http.Handler (prefix handling included). Desktop wrappers use it for
+// response post-processing such as CSS injection.
+func WithHandlerWrapper(wrap func(http.Handler) http.Handler) Option {
+	return func(o *options) { o.outer = append(o.outer, wrap) }
+}
+
 func NewApp(name, port string, opts ...Option) *App {
 	cfg := options{}
 	for _, opt := range opts {
 		opt(&cfg)
 	}
 
+	if cfg.routes == nil {
+		panic("app: no routes configured — pass app.WithRoutes(config.Routes, config.HealthRoutes)")
+	}
+
 	router := newEngine(cfg.cors)
-	config.Routes(router)
+	cfg.routes(router)
 
 	internal := newEngine(cfg.cors)
-	config.HealthRoutes(internal)
+	if cfg.healthRoutes != nil {
+		cfg.healthRoutes(internal)
+	}
 
 	return &App{
 		r:        router,
@@ -53,6 +84,7 @@ func NewApp(name, port string, opts ...Option) *App {
 		name:     name,
 		port:     port,
 		prefix:   utils.URLPrefix(),
+		outer:    cfg.outer,
 	}
 }
 
@@ -76,11 +108,18 @@ func newEngine(corsMiddleware gin.HandlerFunc) *gin.Engine {
 // serves the public home page when the app lives under a prefix. With no prefix
 // configured, every route answers at the root.
 func (a *App) Handler() http.Handler {
+	var h http.Handler
 	if a.prefix == "" {
-		return a.r
+		h = a.r
+	} else {
+		h = prefixHandler{prefix: a.prefix, next: a.r, internal: a.internal}
 	}
 
-	return prefixHandler{prefix: a.prefix, next: a.r, internal: a.internal}
+	for i := len(a.outer) - 1; i >= 0; i-- {
+		h = a.outer[i](h)
+	}
+
+	return h
 }
 
 func (a *App) Router() *gin.Engine {

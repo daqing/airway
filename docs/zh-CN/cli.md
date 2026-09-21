@@ -39,6 +39,7 @@ airway openapi:generate [--out path]                     # 生成 OpenAPI 3.2 �
 airway admin:generate [config/admin.toml]              # 从 TOML 表配置生成完整 Admin 后台
 airway admin:root <username> <password>               # 创建管理员账号（role admin）
 airway admin:member <username> <password> [--role=r]  # 创建普通账号（editor|viewer）
+airway desktop:init [--force]                           # 在 ./desktop 生成 Wails v3 桌面目标（见 docs/zh-CN/desktop.md）
 airway templates:compile                                 # 重新编译 templ 视图（等价于 `go generate ./...`）
 airway upload /path/to/file
 airway repl

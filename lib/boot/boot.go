@@ -43,6 +43,17 @@ type Options struct {
 	StrictCORS bool
 	// SameOriginWS restricts WebSocket upgrades to same-origin requests.
 	SameOriginWS bool
+	// HideScrollbars injects a stylesheet into HTML responses so the
+	// desktop WebView draws no scroll bars (scrolling still works).
+	HideScrollbars bool
+	// Routes mounts the application's public routes; it defaults to the
+	// framework's built-in config.Routes. Desktop wrappers MUST pass the
+	// host project's config.Routes here, otherwise the binary serves the
+	// framework's demo landing page instead of the project's own views.
+	Routes func(*gin.Engine)
+	// HealthRoutes mounts the internal health check; defaults to the
+	// framework's config.HealthRoutes.
+	HealthRoutes func(*gin.Engine)
 	// BootPlugins runs plugin.BootAll for the plugins compiled into the
 	// binary.
 	BootPlugins bool
@@ -110,6 +121,12 @@ func New(opts Options) (*app.App, error) {
 	var appOpts []app.Option
 	if opts.StrictCORS {
 		appOpts = append(appOpts, app.WithCORS(app.StrictOrigin()))
+	}
+	if opts.HideScrollbars {
+		appOpts = append(appOpts, app.WithHandlerWrapper(hideScrollbars))
+	}
+	if opts.Routes != nil || opts.HealthRoutes != nil {
+		appOpts = append(appOpts, app.WithRoutes(opts.Routes, opts.HealthRoutes))
 	}
 
 	return app.NewApp(opts.AppName, "0", appOpts...), nil

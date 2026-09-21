@@ -30,9 +30,15 @@ tasks:
       - task: "{{.GOOS}}:run"
 
   dev:
-    summary: Runs the desktop application in development mode
+    summary: Build a dev binary and run the desktop app
+    # Deliberately NOT the wails3 dev-mode command: it unconditionally waits
+    # for a frontend dev server (Vite & co.) which this project does not
+    # have — the frontend is embedded and served by the app itself.
     cmds:
-      - wails3 dev -config ./build/config.yml
+      - task: build
+        vars:
+          DEV: "true"
+      - task: run
 
   sync:
     summary: Re-syncs migrations and plugins from the host project

@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 	"testing/fstest"
+
+	"github.com/gin-gonic/gin"
 )
 
 func desktopTestOptions(t *testing.T, out io.Writer) Options {
@@ -27,8 +29,17 @@ func desktopTestOptions(t *testing.T, out io.Writer) Options {
 			"0001_create_notes.up.sql":   {Data: []byte("CREATE TABLE notes (id INTEGER PRIMARY KEY, title VARCHAR(255) NOT NULL);")},
 			"0001_create_notes.down.sql": {Data: []byte("DROP TABLE notes;")},
 		},
-		StorageRoot: filepath.Join(root, "storage"),
-		Out:         out,
+		StorageRoot:  filepath.Join(root, "storage"),
+		Out:          out,
+		Routes: func(r *gin.Engine) {
+			r.GET("/boot-ok", func(c *gin.Context) { c.String(http.StatusOK, "boot-ok") })
+			r.GET("/boot-html", func(c *gin.Context) {
+				c.Header("Content-Type", "text/html; charset=utf-8")
+				c.String(http.StatusOK, "<html><head></head><body>hi</body></html>")
+			})
+			r.GET("/health", func(c *gin.Context) { c.String(http.StatusOK, "UP") })
+		},
+		HealthRoutes: func(r *gin.Engine) { r.GET("/health", func(c *gin.Context) { c.String(http.StatusOK, "UP") }) },
 	}
 }
 
@@ -46,11 +57,11 @@ func TestNewBootsDesktopStack(t *testing.T) {
 		t.Fatalf("GET /health: expected 200 UP, got %d: %s", w.Code, w.Body.String())
 	}
 
-	// The embedded frontend bundle answers (production mode, no dev server).
+	// The project's own routes are mounted.
 	w = httptest.NewRecorder()
-	r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/", nil))
+	r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/boot-ok", nil))
 	if w.Code != http.StatusOK {
-		t.Fatalf("GET /: expected 200, got %d: %s", w.Code, w.Body.String())
+		t.Fatalf("GET /boot-ok: expected 200, got %d: %s", w.Code, w.Body.String())
 	}
 }
 
@@ -102,6 +113,59 @@ func TestNewFailsOnBrokenMigrations(t *testing.T) {
 
 	if _, err := New(opts); err == nil || !strings.Contains(err.Error(), "migrate") {
 		t.Fatalf("expected migration error, got: %v", err)
+	}
+}
+
+func TestNewHideScrollbarsInjectsCSSIntoHTMLOnly(t *testing.T) {
+	opts := desktopTestOptions(t, io.Discard)
+	opts.HideScrollbars = true
+
+	a, err := New(opts)
+	if err != nil {
+		t.Fatalf("boot: %v", err)
+	}
+
+	w := httptest.NewRecorder()
+	a.Handler().ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/boot-html", nil))
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /boot-html: expected 200, got %d", w.Code)
+	}
+	if !strings.Contains(w.Body.String(), "::-webkit-scrollbar") {
+		t.Fatalf("expected scrollbar CSS injected into the HTML page, got:\n%s", w.Body.String())
+	}
+
+	// Non-HTML responses pass through untouched.
+	w = httptest.NewRecorder()
+	a.Handler().ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/boot-ok", nil))
+	if strings.Contains(w.Body.String(), "::-webkit-scrollbar") {
+		t.Fatalf("expected plain-text responses to be untouched, got:\n%s", w.Body.String())
+	}
+}
+
+// The desktop binary must mount the host project's routes, not the
+// framework's built-in demo pages.
+func TestNewMountsProjectRoutes(t *testing.T) {
+	opts := desktopTestOptions(t, io.Discard)
+	opts.Routes = func(r *gin.Engine) {
+		r.GET("/project-home", func(c *gin.Context) { c.String(http.StatusOK, "project marker") })
+	}
+
+	a, err := New(opts)
+	if err != nil {
+		t.Fatalf("boot: %v", err)
+	}
+
+	w := httptest.NewRecorder()
+	a.Handler().ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/project-home", nil))
+	if w.Code != http.StatusOK || !strings.Contains(w.Body.String(), "project marker") {
+		t.Fatalf("GET /project-home: expected the project route to be mounted, got %d: %s", w.Code, w.Body.String())
+	}
+
+	// The framework's demo landing page must NOT be mounted.
+	w = httptest.NewRecorder()
+	a.Handler().ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/", nil))
+	if strings.Contains(w.Body.String(), "Less setup.") {
+		t.Fatalf("expected the framework demo page to be absent, got:\n%s", w.Body.String())
 	}
 }
 

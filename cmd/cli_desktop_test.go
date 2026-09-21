@@ -67,6 +67,9 @@ func TestDesktopInitGeneratesWrapper(t *testing.T) {
 	if !strings.Contains(main, `"github.com/daqing/airway/lib/boot"`) {
 		t.Fatalf("expected boot import in desktop main, got:\n%s", main)
 	}
+	if !strings.Contains(main, "config.Routes") {
+		t.Fatalf("expected desktop main to mount the project's own routes, got:\n%s", main)
+	}
 	if !strings.Contains(main, `"demo"`) {
 		t.Fatalf("expected app name in desktop main, got:\n%s", main)
 	}
@@ -90,6 +93,16 @@ func TestDesktopInitGeneratesWrapper(t *testing.T) {
 	config := readFile(t, filepath.Join(wd, "desktop", "build", "config.yml"))
 	if !strings.Contains(config, "productName: \"demo\"") {
 		t.Fatalf("expected app name in desktop config, got:\n%s", config)
+	}
+
+	// `wails3 dev` requires a frontend dev server this project does not
+	// have; the dev task must build and run the app directly instead.
+	taskfile := readFile(t, filepath.Join(wd, "desktop", "Taskfile.yml"))
+	if strings.Contains(taskfile, "wails3 dev -") {
+		t.Fatalf("desktop dev task must not invoke the wails3 dev command, got:\n%s", taskfile)
+	}
+	if strings.Contains(config, "dev_mode:") {
+		t.Fatalf("desktop config.yml must not declare dev_mode, got:\n%s", config)
 	}
 }
 

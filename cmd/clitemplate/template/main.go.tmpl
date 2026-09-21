@@ -16,6 +16,8 @@ import (
 	"github.com/daqing/airway/lib/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+
+	"{{module}}/config"
 )
 
 // The project binary starts the HTTP server by default (or via `server`).
@@ -111,6 +113,7 @@ func loadCLIEnv() {
 }
 
 func runApp() {
-	a := app.NewApp("Airway", utils.GetEnvOr("AIRWAY_PORT", "PORT"))
+	a := app.NewApp("Airway", utils.GetEnvOr("AIRWAY_PORT", "PORT"),
+		app.WithRoutes(config.Routes, config.HealthRoutes))
 	a.Run()
 }
