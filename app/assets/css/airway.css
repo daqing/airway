@@ -4,6 +4,14 @@
  * esbuild into dist/app.css. Class names use the `aw-` prefix.
  */
 
+/* Every box includes its padding and border, so `width: 100%` controls
+   never overflow their containers (inputs, cards, the modal, …). */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 :root {
   --aw-bg: #ffffff;
   --aw-surface: #f7f8fa;
@@ -77,7 +85,7 @@
   padding: 8px 11px;
   border: 1px solid var(--aw-border);
   border-radius: var(--aw-radius-sm);
-  background: var(--aw-bg);
+  background-color: var(--aw-bg);
   color: var(--aw-fg);
   font: 14px/1.45 var(--aw-font);
 }
@@ -86,9 +94,22 @@
   border-color: var(--aw-primary);
   box-shadow: var(--aw-focus);
 }
-.aw-input:disabled, .aw-textarea:disabled, .aw-select:disabled { opacity: .55; background: var(--aw-surface); }
+.aw-input:disabled, .aw-textarea:disabled, .aw-select:disabled { opacity: .55; background-color: var(--aw-surface); }
 .aw-input-invalid, .aw-textarea-invalid, .aw-select-invalid { border-color: var(--aw-danger); }
 .aw-textarea { resize: vertical; min-height: 72px; }
+/* Replace the native select arrow (drawn flush against the border) with a
+   chevron placed 12px inside the right edge — symmetric with the padding. */
+.aw-select {
+  appearance: none;
+  padding-right: 34px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px 16px;
+}
+[data-theme="dark"] .aw-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239aa1ad' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
 .aw-check { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
 .aw-check input { width: 16px; height: 16px; accent-color: var(--aw-primary); cursor: pointer; }
 
