@@ -65,6 +65,8 @@ func runCLI(args []string) error {
 		return runAdminRoot(xargs)
 	case "admin:member":
 		return runAdminMember(xargs)
+	case "desktop:init":
+		return runCLIDesktopInit(xargs)
 	case "templates:compile":
 		return runTemplatesCompile(xargs)
 	case "help", "-h", "--help":
@@ -104,6 +106,7 @@ func printUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "  airway admin:root <username> <password>   create the administrator account (role admin)")
 	_, _ = fmt.Fprintln(w, "  airway admin:member <username> <password> [--role=editor|viewer]")
 	_, _ = fmt.Fprintln(w, "                                           create a non-admin panel account")
+	_, _ = fmt.Fprintln(w, "  airway desktop:init [--force]            generate the Wails v3 desktop target in ./desktop")
 	_, _ = fmt.Fprintln(w, "  airway templates:compile                 regenerate the templ views (shorthand for `go generate ./...`)")
 	_, _ = fmt.Fprintln(w, "  airway plugin:new <module-path>")
 	_, _ = fmt.Fprintln(w, "  airway plugin:list")

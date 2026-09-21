@@ -1,0 +1,51 @@
+version: '3'
+
+tasks:
+  go:mod:tidy:
+    summary: Runs `go mod tidy`
+    internal: true
+    # Universal/multi-arch builds invoke this concurrently from parallel deps;
+    # two `go mod tidy` processes racing on go.mod can corrupt it (#4637).
+    run: once
+    cmds:
+      - go mod tidy
+
+  build:frontend:
+    label: build:frontend
+    summary: >
+      No-op: the Airway frontend bundle is committed under app/assets/dist
+      and embedded by the host project; the desktop shell serves it through
+      the running app.
+    run: once
+    cmds:
+      - echo "frontend bundle is embedded by the host project; nothing to build"
+
+  generate:icons:
+    summary: Generates Windows `.ico` and Mac `.icns` from build/appicon.png
+    run: once
+    dir: build
+    sources:
+      - "appicon.png"
+      - "appicon.icon"
+    generates:
+      - "darwin/icons.icns"
+      - "windows/icon.ico"
+    cmds:
+      - wails3 generate icons -input appicon.png -macfilename darwin/icons.icns -windowsfilename windows/icon.ico
+
+  update:build-assets:
+    summary: Updates the build assets from build/config.yml metadata
+    dir: build
+    cmds:
+      - wails3 update build-assets -name "{{.APP_NAME}}" -binaryname "{{.APP_NAME}}" -config config.yml -dir .
+
+  setup:docker:
+    summary: Builds Docker image for cross-compilation (~800MB download)
+    desc: |
+      Builds the Docker image needed for cross-compiling to any platform.
+      Run this once to enable cross-platform builds from any OS.
+    cmds:
+      - docker build -t wails-cross -f build/docker/Dockerfile.cross build/docker/
+    preconditions:
+      - sh: docker info > /dev/null 2>&1
+        msg: "Docker is required. Please install Docker first."

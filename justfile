@@ -27,6 +27,15 @@ build:
   go run . js:build
   go build -o bin/airway .
 
+# Build the desktop target (./desktop) for the current OS via Wails v3.
+# Requires `airway desktop:init` + the wails3 CLI; see docs/desktop.md.
+desktop:
+  cd desktop && wails3 task build
+
+# Package the desktop target (.app / NSIS / deb+rpm) via Wails v3.
+desktop-package:
+  cd desktop && wails3 task package
+
 build-on-mac:
   GOOS=linux GOARCH=amd64 go build .
   podman build -t airway -f Dockerfile.mac

@@ -1,0 +1,39 @@
+# This file contains the configuration for this project.
+# When you update `info`, run `wails3 task common:update:build-assets` to
+# regenerate Info.plist / windows assets from it.
+version: '3'
+
+# This information is used to generate the build assets.
+info:
+  companyName: "My Company"
+  productName: "{{app_name}}"
+  productIdentifier: "{{bundle_id}}"
+  description: "{{app_name}} desktop application"
+  copyright: "(c) 2026, My Company"
+  comments: "{{app_name}} desktop"
+  version: "0.1.0"
+
+# Dev mode configuration: no frontend watcher — the bundle is embedded by
+# the host project.
+dev_mode:
+  root_path: .
+  log_level: warn
+  debounce: 1000
+  ignore:
+    dir:
+      - .git
+      - node_modules
+      - bin
+    file:
+      - .DS_Store
+      - .gitignore
+      - .gitkeep
+      - "*_test.go"
+    watched_extension:
+      - "*.go"
+    git_ignore: true
+  executes:
+    - cmd: wails3 build DEV=true
+      type: blocking
+    - cmd: wails3 task run
+      type: primary

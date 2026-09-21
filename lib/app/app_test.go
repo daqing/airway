@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"net/http"
@@ -116,5 +116,31 @@ func TestNewAppRegistersRoutesUnderPrefix(t *testing.T) {
 
 	if w.Code == http.StatusNotFound {
 		t.Fatalf("POST /airway/ws/publish: expected the route to be matched, got 404")
+	}
+}
+
+func TestStrictOrigin(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	// The middleware aborts cross-origin requests and passes same-origin ones.
+	router := gin.New()
+	router.Use(StrictOrigin())
+	router.POST("/", func(c *gin.Context) { c.Status(http.StatusOK) })
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/", nil)
+	req.Header.Set("Origin", "http://evil.example")
+	router.ServeHTTP(w, req)
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("cross-origin POST: expected 403, got %d", w.Code)
+	}
+
+	w = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodPost, "/", nil)
+	req.Host = "127.0.0.1:5100"
+	req.Header.Set("Origin", "http://127.0.0.1:5100")
+	router.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("same-origin POST: expected 200, got %d", w.Code)
 	}
 }

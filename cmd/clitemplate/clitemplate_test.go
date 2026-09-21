@@ -17,7 +17,6 @@ func TestScaffoldWritesTemplateWithModuleReplaced(t *testing.T) {
 	for _, rel := range []string{
 		"go.mod",
 		"main.go",
-		"app.go",
 		"VERSION",
 		"version.go",
 		".env.example",

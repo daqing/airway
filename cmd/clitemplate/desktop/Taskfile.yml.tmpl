@@ -1,0 +1,45 @@
+version: '3'
+
+vars:
+  APP_NAME: "{{app_name}}"
+  BIN_DIR: "bin"
+  # Target OS for build/package/run. Defaults to the host OS, and is
+  # overridden by `wails3 build GOOS=...` (or the GOOS env var).
+  GOOS: '{{.GOOS | default OS}}'
+
+includes:
+  common: ./build/Taskfile.yml
+  windows: ./build/windows/Taskfile.yml
+  darwin: ./build/darwin/Taskfile.yml
+  linux: ./build/linux/Taskfile.yml
+
+tasks:
+  build:
+    summary: Builds the desktop application for the target OS
+    cmds:
+      - task: "{{.GOOS}}:build"
+
+  package:
+    summary: Packages a production build (.app / NSIS installer / deb+rpm)
+    cmds:
+      - task: "{{.GOOS}}:package"
+
+  run:
+    summary: Runs the desktop application
+    cmds:
+      - task: "{{.GOOS}}:run"
+
+  dev:
+    summary: Runs the desktop application in development mode
+    cmds:
+      - wails3 dev -config ./build/config.yml
+
+  sync:
+    summary: Re-syncs migrations and plugins from the host project
+    cmds:
+      - go run . desktop:init
+
+  setup:docker:
+    summary: Builds the Docker image for cross-compilation (~800MB download)
+    cmds:
+      - task: common:setup:docker

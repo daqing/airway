@@ -1,4 +1,7 @@
-package main
+// Package app wires the Airway HTTP stack: engine construction, middleware,
+// routes and the public http.Handler. It is a library package so the web
+// binary and desktop wrappers share one implementation.
+package app
 
 import (
 	"fmt"
@@ -20,11 +23,28 @@ type App struct {
 	prefix   string // Public sub-path prefix ("" = serve at root)
 }
 
-func NewApp(name, port string) *App {
-	router := newEngine()
+type Option func(*options)
+
+type options struct {
+	cors gin.HandlerFunc
+}
+
+// WithCORS replaces the default permissive CORS middleware. Desktop wrappers
+// pass StrictOrigin; anything unconfigured keeps the web default.
+func WithCORS(h gin.HandlerFunc) Option {
+	return func(o *options) { o.cors = h }
+}
+
+func NewApp(name, port string, opts ...Option) *App {
+	cfg := options{}
+	for _, opt := range opts {
+		opt(&cfg)
+	}
+
+	router := newEngine(cfg.cors)
 	config.Routes(router)
 
-	internal := newEngine()
+	internal := newEngine(cfg.cors)
 	config.HealthRoutes(internal)
 
 	return &App{
@@ -36,11 +56,15 @@ func NewApp(name, port string) *App {
 	}
 }
 
-func newEngine() *gin.Engine {
+func newEngine(corsMiddleware gin.HandlerFunc) *gin.Engine {
+	if corsMiddleware == nil {
+		corsMiddleware = CORS()
+	}
+
 	router := gin.New()
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
-	router.Use(CORS())
+	router.Use(corsMiddleware)
 	return router
 }
 
@@ -110,4 +134,19 @@ func CORS() gin.HandlerFunc {
 		MaxAge:           12 * time.Hour,
 		AllowCredentials: true,
 	})
+}
+
+// StrictOrigin rejects requests whose Origin does not match the request Host.
+// Desktop windows load the app from its own 127.0.0.1 origin, so everything
+// they send is same-origin; cross-origin calls can only come from other local
+// pages and have no business reaching the embedded server.
+func StrictOrigin() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if utils.SameOriginRequest(c.Request) {
+			c.Next()
+			return
+		}
+
+		c.AbortWithStatus(http.StatusForbidden)
+	}
 }
