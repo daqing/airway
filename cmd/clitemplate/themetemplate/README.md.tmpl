@@ -1,0 +1,34 @@
+# {{module}}
+
+An [Airway](https://github.com/daqing/airway) site theme, scaffolded with
+`airway theme:new`. Implements `github.com/daqing/airway/lib/ssg.Theme`:
+templ components for the layout plus embedded static assets, consumed by
+Airway static showcase sites as a Go module dependency.
+
+## Page data types
+
+| Type | Renders |
+|---|---|
+| `{{package}}.Home` | landing page: hero heading + tagline |
+| `{{package}}.Content` | text page: title, lead, paragraphs |
+| `templ.Component` | custom body inside the shared layout |
+| anything else | header and footer only |
+
+Edit `theme.go` (data types and dispatch) and `theme.templ` (components),
+then regenerate and test:
+
+```bash
+go generate ./...   # regenerate the templ views (generated files are committed)
+go test ./...
+```
+
+## Using the theme in a site
+
+From a site project (see
+[docs/ssg.md](https://github.com/daqing/airway/blob/main/docs/ssg.md)):
+
+```bash
+airway theme:install {{module}}
+```
+
+Then select it in the site's `ssg.go` with `s.Use({{package}}.Theme)`.

@@ -1,0 +1,33 @@
+# {{module}}
+
+一个由 `airway theme:new` 生成的 [Airway](https://github.com/daqing/airway)
+站点主题。实现自 `github.com/daqing/airway/lib/ssg.Theme`:templ 组件构成
+布局,静态资源内嵌,由 Airway 静态展示站点以 Go module 依赖的方式消费。
+
+## 页面数据类型
+
+| 类型 | 渲染内容 |
+|---|---|
+| `{{package}}.Home` | 落地页:主标题 + 副标题 |
+| `{{package}}.Content` | 文本页:标题、导语、段落 |
+| `templ.Component` | 共享布局内的自定义内容 |
+| 其他 | 仅头部和页脚 |
+
+编辑 `theme.go`(数据类型与分发)和 `theme.templ`(组件),然后重新生成
+并测试:
+
+```bash
+go generate ./...   # 重新生成 templ 视图(生成文件已提交)
+go test ./...
+```
+
+## 在站点中使用该主题
+
+在站点项目中执行(见
+[docs/ssg.md](https://github.com/daqing/airway/blob/main/docs/ssg.md)):
+
+```bash
+airway theme:install {{module}}
+```
+
+然后在站点的 `ssg.go` 中用 `s.Use({{package}}.Theme)` 启用。

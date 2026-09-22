@@ -4,6 +4,7 @@
 
 - **[English README](../README.md)**
 - **[CLI 脚手架指南](cli.md)** / **[文件存储指南](storage.md)**
+- **[静态展示站点（SSG）](../../SSG.zh-CN.md)** / **[Static showcase sites](../../SSG.md)**
 - **[视图模板指南（templ）](template.md)**
 - **[SQL Builder DSL 指南](sql-builder.md)**
 

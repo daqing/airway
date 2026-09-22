@@ -1,6 +1,7 @@
 // Package clitemplate embeds the Airway project template used by
-// `airway new` to scaffold a new application, and the desktop wrapper
-// template used by `airway desktop:init`.
+// `airway new` to scaffold a new application, the desktop wrapper template
+// used by `airway desktop:init`, the static showcase site template used by
+// `airway ssg:new`, and the site theme template used by `airway theme:new`.
 package clitemplate
 
 import (
@@ -20,6 +21,12 @@ var pluginTemplateFS embed.FS
 //go:embed all:desktop
 var desktopTemplateFS embed.FS
 
+//go:embed all:ssgtemplate
+var ssgTemplateFS embed.FS
+
+//go:embed all:themetemplate
+var themeTemplateFS embed.FS
+
 // ModulePlaceholder is replaced with the new project's module path in every
 // template file.
 const ModulePlaceholder = "{{module}}"
@@ -31,6 +38,10 @@ const PluginPlaceholder = "{{plugin}}"
 // AppNamePlaceholder is replaced with the desktop app name (derived from the
 // module path) in every desktop template file.
 const AppNamePlaceholder = "{{app_name}}"
+
+// PackagePlaceholder is replaced with the theme's Go package name in every
+// theme template file.
+const PackagePlaceholder = "{{package}}"
 
 // BundleIDPlaceholder is replaced with the derived bundle identifier in every
 // desktop template file.
@@ -174,6 +185,26 @@ func scaffoldTree(fsys embed.FS, root, destDir string, transform func(string) st
 		}
 
 		return os.WriteFile(target, []byte(transform(string(data))), 0o644)
+	})
+}
+
+// ScaffoldSSG writes the embedded static-site project template into
+// destDir, replacing ModulePlaceholder with module. Template files carry a
+// .tmpl suffix which is stripped on write.
+func ScaffoldSSG(destDir string, module string) error {
+	return scaffoldTree(ssgTemplateFS, "ssgtemplate", destDir, func(content string) string {
+		return strings.ReplaceAll(content, ModulePlaceholder, module)
+	})
+}
+
+// ScaffoldTheme writes the embedded site-theme module template into
+// destDir, replacing ModulePlaceholder with module and PackagePlaceholder
+// with the theme's Go package name. Template files carry a .tmpl suffix
+// which is stripped on write.
+func ScaffoldTheme(destDir string, module string, pkg string) error {
+	return scaffoldTree(themeTemplateFS, "themetemplate", destDir, func(content string) string {
+		content = strings.ReplaceAll(content, ModulePlaceholder, module)
+		return strings.ReplaceAll(content, PackagePlaceholder, pkg)
 	})
 }
 

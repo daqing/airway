@@ -1,0 +1,24 @@
+package main
+
+import (
+	"os"
+
+	"github.com/daqing/airway/cmd"
+)
+
+// The site binary is a thin host for the Airway CLI compiled into it:
+// `go run . ssg:build` and `go run . ssg:serve` work on the site defined
+// in ssg.go. A globally installed `airway` re-execs through this binary
+// automatically when run inside the project.
+func main() {
+	args := os.Args[1:]
+
+	// `--version` / `-v` print the VERSION file contents directly.
+	if len(args) > 0 && (args[0] == "--version" || args[0] == "-v") {
+		printVersion()
+		return
+	}
+
+	cmd.Version = versionString()
+	cmd.Run(args)
+}

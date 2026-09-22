@@ -1,0 +1,44 @@
+# {{module}}
+
+A static showcase site built with [Airway](https://github.com/daqing/airway)
+and its corporate theme — pure HTML and CSS output, deployable to any static
+host (GitHub Pages, Netlify, object storage + CDN, ...).
+
+## How it works
+
+`ssg.go` in the project root defines the site: site metadata, the theme,
+and every page. It registers a builder with `cmd.SetSSGBuilder`, which the
+`airway ssg:build` and `airway ssg:serve` commands run — no database, no
+Node toolchain, no running server required.
+
+## Common commands
+
+```bash
+airway ssg:build             # export the static site into dist/
+airway ssg:serve             # preview on http://127.0.0.1:3000
+airway ssg:serve --addr :8080
+```
+
+Both commands run on whatever the project's `ssg.go` defines. Inside this
+project, a globally installed `airway` proxies to `go run .` automatically,
+so both forms are equivalent.
+
+## Editing pages
+
+Each `s.Page(slug, title, data)` call in `ssg.go` is one output page; the
+slug decides the export path (`/about` becomes `dist/about/index.html`). The
+corporate theme understands these data types:
+
+- `corporate.Home` — the landing page: hero heading, tagline, feature grid
+- `corporate.Content` — a plain text page: lead plus paragraphs
+- a `templ.Component` — a custom body rendered inside the shared layout
+
+The full guide, including how to build your own theme, lives in
+[docs/ssg.md](https://github.com/daqing/airway/blob/main/docs/ssg.md).
+
+## Deployment
+
+`airway ssg:build` writes a self-contained static directory into `dist/`:
+one `index.html` per page plus the theme's `assets/`. Upload the directory
+to any static host. The site is rebuildable from the repository alone:
+`go run . ssg:build` needs only Go and the module cache.
