@@ -86,7 +86,7 @@ just dev
 
 | 变量 | 说明 |
 | --- | --- |
-| `DSN` / `AIRWAY_DSN` | 数据库 URL，驱动由 scheme 推断（见下）。`AIRWAY_DB_DSN` 与 `AIRWAY_PG` 作为历史别名继续支持。 |
+| `DSN` / `AIRWAY_DSN` | 数据库 URL，驱动由 scheme 推断（见下）。 |
 | `PORT` / `AIRWAY_PORT` | HTTP 监听端口（默认 `1900`）。 |
 | `REDIS` / `AIRWAY_REDIS` | 可选的 Redis URL，用于缓存/队列。 |
 | `URL_PREFIX` / `AIRWAY_URL_PREFIX` | 可选的公开子路径前缀，如 `/airway`；留空则在根路径服务。 |
@@ -323,8 +323,7 @@ airway plugin:lint                          # 检查当前插件项目的旧版�
 airway upload [key] /path/to/file           # 经配置的存储上传
 ```
 
-旧形式 `airway cli <command>` 仍作为兼容别名可用。数据库命令读取
-`DSN`/`AIRWAY_DSN`；历史别名 `AIRWAY_DB_DSN` 与 `AIRWAY_PG` 继续兼容。完整内容见
+数据库命令读取 `DSN`/`AIRWAY_DSN`。完整内容见
 [CLI 指南](cli.md)。
 
 ## Repository API（`lib/repo`）

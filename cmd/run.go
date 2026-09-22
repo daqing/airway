@@ -27,9 +27,6 @@ func run(args []string) error {
 	case "version", "-v", "--version":
 		showVersion(args[1:])
 		return nil
-	case "cli":
-		// Backward-compatible alias for the pre-0.5 `airway cli ...` form.
-		return runCLI(args[1:])
 	case "help", "-h", "--help":
 		printUsage(os.Stdout)
 		return nil

@@ -119,7 +119,7 @@ short name or its `AIRWAY_` alias, with the alias taking precedence.
 
 | Variable | Description |
 | --- | --- |
-| `DSN` / `AIRWAY_DSN` | Database URL. Driver is inferred from the scheme (see below). `AIRWAY_DB_DSN` and `AIRWAY_PG` remain supported as legacy aliases. |
+| `DSN` / `AIRWAY_DSN` | Database URL. Driver is inferred from the scheme (see below). |
 | `PORT` / `AIRWAY_PORT` | HTTP listen port (default `1900`). |
 | `REDIS` / `AIRWAY_REDIS` | Optional Redis URL for cache/queue. |
 | `URL_PREFIX` / `AIRWAY_URL_PREFIX` | Optional public sub-path prefix, e.g. `/airway`. Empty serves at the root. |
@@ -430,9 +430,7 @@ airway plugin:lint                          # check the current plugin project f
 airway upload [key] /path/to/file           # upload via the configured storage
 ```
 
-The legacy form `airway cli <command>` still works as a compatibility alias.
-Database commands read `DSN`/`AIRWAY_DSN`; the legacy `AIRWAY_DB_DSN` and
-`AIRWAY_PG` are still honored for backward compatibility. See the full
+Database commands read `DSN`/`AIRWAY_DSN`. See the full
 [CLI guide](docs/cli.md).
 
 ## Repository API (`lib/repo`)

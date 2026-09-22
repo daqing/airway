@@ -22,7 +22,7 @@ func TestUploadStoresFileAtSourcePathKey(t *testing.T) {
 	t.Setenv("STORAGE_DRIVER", "local")
 	t.Setenv("STORAGE_ROOT", storageRoot)
 
-	if err := run([]string{"cli", "upload", sourcePath}); err != nil {
+	if err := run([]string{"upload", sourcePath}); err != nil {
 		t.Fatalf("run upload: %v", err)
 	}
 
@@ -56,7 +56,7 @@ func TestUploadStoresFileAtExplicitKey(t *testing.T) {
 	t.Setenv("STORAGE_DRIVER", "local")
 	t.Setenv("STORAGE_ROOT", storageRoot)
 
-	if err := run([]string{"cli", "upload", "assets/foo.txt", sourcePath}); err != nil {
+	if err := run([]string{"upload", "assets/foo.txt", sourcePath}); err != nil {
 		t.Fatalf("run upload: %v", err)
 	}
 

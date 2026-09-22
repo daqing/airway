@@ -88,9 +88,7 @@ func runCLI(args []string) error {
 }
 
 func cliDSN() (string, error) {
-	// Prefer the same scheme as the server: AIRWAY_DSN, then the short DSN.
-	// AIRWAY_DB_DSN and AIRWAY_PG remain supported for backward compatibility.
-	for _, key := range []string{"AIRWAY_DSN", "DSN", "AIRWAY_DB_DSN", "AIRWAY_PG"} {
+	for _, key := range []string{"AIRWAY_DSN", "DSN"} {
 		if dsn, err := utils.GetEnv(key); err == nil {
 			return dsn, nil
 		}
@@ -133,8 +131,6 @@ func printUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "  airway upload [key] /path/to/file")
 	_, _ = fmt.Fprintln(w, "  airway repl                              interactive repo REPL (runs through go run . inside a project)")
 	_, _ = fmt.Fprintln(w, "  airway version                             print version (also -v, --version)")
-	_, _ = fmt.Fprintln(w, "")
-	_, _ = fmt.Fprintln(w, "`airway cli <command>` remains accepted as an alias for `airway <command>`.")
 }
 
 func printCLIGenerateUsage(w io.Writer) {

@@ -63,7 +63,7 @@ func TestTemplatesCompileDispatch(t *testing.T) {
 	useTempWorkingDir(t)
 
 	output := captureStdout(t, func() {
-		if err := run([]string{"cli", "templates:compile", "-h"}); err != nil {
+		if err := run([]string{"templates:compile", "-h"}); err != nil {
 			t.Fatalf("run templates:compile help: %v", err)
 		}
 	})
