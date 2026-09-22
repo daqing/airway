@@ -17,7 +17,6 @@ func TestScaffoldWritesTemplateWithModuleReplaced(t *testing.T) {
 	for _, rel := range []string{
 		"go.mod",
 		"main.go",
-		"app.go",
 		"VERSION",
 		"version.go",
 		".env.example",
@@ -49,6 +48,12 @@ func TestScaffoldWritesTemplateWithModuleReplaced(t *testing.T) {
 	}
 	if !strings.Contains(routes, `"github.com/daqing/airway/lib/plugin"`) {
 		t.Fatalf("expected framework imports untouched, got:\n%s", routes)
+	}
+
+	// The web entry must mount the project's own routes (lib/app requires it).
+	mainGo := readFile(t, filepath.Join(destDir, "main.go"))
+	if !strings.Contains(mainGo, "app.WithRoutes(config.Routes, config.HealthRoutes)") {
+		t.Fatalf("expected main.go to mount project routes, got:\n%s", mainGo)
 	}
 }
 

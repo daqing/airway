@@ -1,0 +1,18 @@
+# This file contains the configuration for this project.
+# When you update `info`, run `wails3 task common:update:build-assets` to
+# regenerate Info.plist / windows assets from it.
+version: '3'
+
+# This information is used to generate the build assets.
+info:
+  companyName: "My Company"
+  productName: "{{app_name}}"
+  productIdentifier: "{{bundle_id}}"
+  description: "{{app_name}} desktop application"
+  copyright: "(c) 2026, My Company"
+  comments: "{{app_name}} desktop"
+  version: "0.1.0"
+
+# No development-mode block here on purpose: the wails3 dev-mode command
+# requires a frontend dev server, which this project does not have —
+# `wails3 task dev` builds and runs the app directly.

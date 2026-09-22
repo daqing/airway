@@ -1,0 +1,94 @@
+package corporate
+
+import (
+	"github.com/daqing/airway/lib/ssg"
+)
+
+// layout renders the full HTML document shared by every page: header
+// navigation, the page body, and the footer.
+templ layout(siteCtx *ssg.Context, body templ.Component) {
+	<!DOCTYPE html>
+	<html lang={ siteCtx.Meta.Lang() }>
+		<head>
+			<meta charset="utf-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<title>{ pageTitle(siteCtx) }</title>
+			<meta name="description" content={ siteCtx.Meta.Description }/>
+			<link rel="stylesheet" href="/assets/corporate.css"/>
+		</head>
+		<body>
+			@headerNav(siteCtx)
+			<main>
+				if body != nil {
+					@body
+				}
+			</main>
+			@footer(siteCtx)
+		</body>
+	</html>
+}
+
+templ headerNav(siteCtx *ssg.Context) {
+	<header class="site-header">
+		<div class="container header-inner">
+			<a class="brand" href="/">{ siteCtx.Meta.Title }</a>
+			<nav class="site-nav" aria-label="Main navigation">
+				for _, p := range siteCtx.Pages {
+					<a href={ p.Slug } class={ templ.KV("active", p.Slug == siteCtx.Page.Slug) }>{ navLabel(p) }</a>
+				}
+			</nav>
+		</div>
+	</header>
+}
+
+templ footer(siteCtx *ssg.Context) {
+	<footer class="site-footer">
+		<div class="container footer-inner">
+			<span class="footer-brand">{ siteCtx.Meta.Title }</span>
+			<nav class="footer-nav" aria-label="Footer navigation">
+				for _, p := range siteCtx.Pages {
+					<a href={ p.Slug }>{ navLabel(p) }</a>
+				}
+			</nav>
+		</div>
+	</footer>
+}
+
+// homeBody renders the landing page: a hero with heading and tagline, then
+// one card per feature.
+templ homeBody(data Home) {
+	<section class="hero">
+		<div class="container">
+			<h1>{ data.Heading }</h1>
+			if data.Tagline != "" {
+				<p class="tagline">{ data.Tagline }</p>
+			}
+		</div>
+	</section>
+	if len(data.Features) > 0 {
+		<section class="features">
+			<div class="container feature-grid">
+				for _, feature := range data.Features {
+					<article class="feature">
+						<h3>{ feature.Title }</h3>
+						<p>{ feature.Body }</p>
+					</article>
+				}
+			</div>
+		</section>
+	}
+}
+
+// contentBody renders a plain text page.
+templ contentBody(data Content) {
+	<section class="page">
+		<div class="container narrow">
+			if data.Lead != "" {
+				<p class="lead">{ data.Lead }</p>
+			}
+			for _, paragraph := range data.Paragraphs {
+				<p>{ paragraph }</p>
+			}
+		</div>
+	</section>
+}

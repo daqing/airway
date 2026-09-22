@@ -7,6 +7,8 @@ import (
 
 	"github.com/daqing/airway/app/websocket"
 	"github.com/daqing/airway/cmd"
+	"github.com/daqing/airway/config"
+	"github.com/daqing/airway/lib/app"
 	"github.com/daqing/airway/lib/jsbuild"
 	"github.com/daqing/airway/lib/plugin"
 	"github.com/daqing/airway/lib/redis_client"
@@ -123,6 +125,7 @@ func loadCLIEnv() {
 }
 
 func runApp() {
-	app := NewApp("Airway", utils.GetEnvOr("AIRWAY_PORT", "PORT"))
-	app.Run()
+	a := app.NewApp("Airway", utils.GetEnvOr("AIRWAY_PORT", "PORT"),
+		app.WithRoutes(config.Routes, config.HealthRoutes))
+	a.Run()
 }

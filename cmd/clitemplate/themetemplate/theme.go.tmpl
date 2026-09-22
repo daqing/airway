@@ -1,0 +1,75 @@
+// Package {{package}} is an Airway site theme scaffolded by
+// `airway theme:new`. Make it yours: edit the templ components in theme.templ
+// and the styles in assets/theme.css, wire page data types in Render, and
+// install the finished theme into a site with `airway theme:install`.
+package {{package}}
+
+import (
+	"io/fs"
+	"strings"
+
+	"github.com/a-h/templ"
+
+	"github.com/daqing/airway/lib/ssg"
+)
+
+// Theme is the {{package}} site theme. A site selects it with Site.Use.
+var Theme ssg.Theme = starterTheme{}
+
+type starterTheme struct{}
+
+func (starterTheme) Name() string { return "{{package}}" }
+
+// Render dispatches on the page data type: Home renders the landing page,
+// Content a text page, a templ.Component passes through the shared layout,
+// and anything else renders the bare header and footer.
+func (starterTheme) Render(ctx *ssg.Context) templ.Component {
+	switch data := ctx.Page.Data.(type) {
+	case Home:
+		return layout(ctx, homeBody(data))
+	case Content:
+		return layout(ctx, contentBody(ctx, data))
+	case templ.Component:
+		return layout(ctx, data)
+	default:
+		return layout(ctx, nil)
+	}
+}
+
+func (starterTheme) Assets() fs.FS { return assetsFS }
+
+// Home is the landing page data.
+type Home struct {
+	Heading string
+	Tagline string
+}
+
+// Content is a plain text page (about, services, contact, ...).
+type Content struct {
+	Lead       string
+	Paragraphs []string
+}
+
+// pageTitle composes the document title: the home page carries the site
+// name alone, every other page appends it after the page title.
+func pageTitle(ctx *ssg.Context) string {
+	if ctx.Page.Slug == "/" {
+		return ctx.Meta.Title
+	}
+	if ctx.Page.Title == "" {
+		return ctx.Meta.Title
+	}
+	return strings.Join([]string{ctx.Page.Title, ctx.Meta.Title}, " · ")
+}
+
+// navLabel is the navigation text for a page: its title, or a word derived
+// from the slug when the title is empty.
+func navLabel(p ssg.Page) string {
+	if p.Title != "" {
+		return p.Title
+	}
+	if p.Slug == "/" {
+		return "Home"
+	}
+	return strings.ReplaceAll(strings.Trim(p.Slug, "/"), "-", " ")
+}

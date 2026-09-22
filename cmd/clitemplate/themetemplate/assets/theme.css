@@ -1,0 +1,148 @@
+:root {
+	--ink: #22272e;
+	--ink-soft: #57606a;
+	--paper: #ffffff;
+	--paper-soft: #f6f8fa;
+	--accent: #0969da;
+	--line: #d0d7de;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+body {
+	margin: 0;
+	font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+	color: var(--ink);
+	background: var(--paper);
+	line-height: 1.65;
+}
+
+.container {
+	width: min(960px, 100% - 48px);
+	margin-inline: auto;
+}
+
+.narrow {
+	width: min(680px, 100% - 48px);
+}
+
+.site-header {
+	border-bottom: 1px solid var(--line);
+	background: var(--paper-soft);
+}
+
+.header-inner {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	min-height: 60px;
+}
+
+.brand {
+	font-weight: 700;
+	font-size: 1.1rem;
+	color: var(--ink);
+	text-decoration: none;
+}
+
+.site-nav {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+}
+
+.site-nav a {
+	padding: 6px 12px;
+	border-radius: 6px;
+	color: var(--ink-soft);
+	text-decoration: none;
+	font-size: 0.95rem;
+}
+
+.site-nav a:hover {
+	color: var(--ink);
+	background: var(--paper);
+}
+
+.site-nav a.active {
+	color: var(--accent);
+	font-weight: 600;
+}
+
+.hero {
+	padding: 88px 0;
+	text-align: center;
+	background: linear-gradient(160deg, var(--paper-soft), var(--paper));
+	border-bottom: 1px solid var(--line);
+}
+
+.hero h1 {
+	margin: 0 0 12px;
+	font-size: clamp(1.9rem, 4.5vw, 2.8rem);
+	letter-spacing: -0.02em;
+}
+
+.hero .tagline {
+	margin: 0 auto;
+	max-width: 560px;
+	color: var(--ink-soft);
+	font-size: 1.1rem;
+}
+
+.page {
+	padding: 56px 0;
+}
+
+.page h1 {
+	font-size: 1.7rem;
+	margin: 0 0 16px;
+}
+
+.page .lead {
+	font-size: 1.2rem;
+	font-weight: 500;
+	color: var(--ink);
+}
+
+.page p {
+	color: var(--ink-soft);
+}
+
+.site-footer {
+	border-top: 1px solid var(--line);
+	padding: 28px 0;
+	color: var(--ink-soft);
+	font-size: 0.92rem;
+}
+
+.footer-inner {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+}
+
+.footer-brand {
+	font-weight: 700;
+	color: var(--ink);
+}
+
+.footer-nav {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 16px;
+}
+
+.footer-nav a {
+	color: var(--ink-soft);
+	text-decoration: none;
+}
+
+.footer-nav a:hover {
+	color: var(--accent);
+}

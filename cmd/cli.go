@@ -59,6 +59,26 @@ func runCLI(args []string) error {
 		return runCLIJsBuild(xargs)
 	case "upload":
 		return runUpload(xargs)
+	case "admin:generate":
+		return generateAdmin(xargs)
+	case "admin:root":
+		return runAdminRoot(xargs)
+	case "admin:member":
+		return runAdminMember(xargs)
+	case "desktop:init":
+		return runCLIDesktopInit(xargs)
+	case "ssg:new":
+		return runCLISSGNew(xargs)
+	case "ssg:build":
+		return runCLISSGBuild(xargs)
+	case "ssg:serve":
+		return runCLISSGServe(xargs)
+	case "theme:install":
+		return runCLIThemeInstall(xargs)
+	case "theme:new":
+		return runCLIThemeNew(xargs)
+	case "templates:compile":
+		return runTemplatesCompile(xargs)
 	case "help", "-h", "--help":
 		printUsage(os.Stdout)
 		return nil
@@ -83,7 +103,7 @@ func printUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "usage:")
 	_, _ = fmt.Fprintln(w, "  airway new <module-path>                 create a new Airway project")
 	_, _ = fmt.Fprintln(w, "  airway server                            start the HTTP server")
-	_, _ = fmt.Fprintln(w, "  airway generate [action|api|model|migration|service|cmd] [params]")
+	_, _ = fmt.Fprintln(w, "  airway generate [action|api|model|migration|service|island|scaffold|cmd] [params]")
 	_, _ = fmt.Fprintln(w, "  airway db:create")
 	_, _ = fmt.Fprintln(w, "  airway db:drop")
 	_, _ = fmt.Fprintln(w, "  airway db:migrate [version]")
@@ -92,22 +112,34 @@ func printUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "  airway schema:dump")
 	_, _ = fmt.Fprintln(w, "  airway schema:show")
 	_, _ = fmt.Fprintln(w, "  airway openapi:generate [--out path]     write the OpenAPI 3.2 document (default ./openapi.json)")
+	_, _ = fmt.Fprintln(w, "  airway admin:generate [config/admin.toml]  generate the admin backend from a TOML table spec")
+	_, _ = fmt.Fprintln(w, "  airway admin:root <username> <password>   create the administrator account (role admin)")
+	_, _ = fmt.Fprintln(w, "  airway admin:member <username> <password> [--role=editor|viewer]")
+	_, _ = fmt.Fprintln(w, "                                           create a non-admin panel account")
+	_, _ = fmt.Fprintln(w, "  airway desktop:init [--force]            generate the Wails v3 desktop target in ./desktop")
+	_, _ = fmt.Fprintln(w, "  airway ssg:new [--local[=path]] <name>   scaffold a static showcase site project")
+	_, _ = fmt.Fprintln(w, "  airway ssg:build [--out dist]           export the site as static HTML (ssg.go)")
+	_, _ = fmt.Fprintln(w, "  airway ssg:serve [--addr 127.0.0.1:3000]  preview the site with a local server")
+	_, _ = fmt.Fprintln(w, "  airway theme:install <module | /path>    install a site theme into the host project")
+	_, _ = fmt.Fprintln(w, "  airway theme:new [--local[=path]] <name> scaffold a new site theme module")
+	_, _ = fmt.Fprintln(w, "  airway templates:compile                 regenerate the templ views (shorthand for `go generate ./...`)")
 	_, _ = fmt.Fprintln(w, "  airway plugin:new <module-path>")
 	_, _ = fmt.Fprintln(w, "  airway plugin:list")
 	_, _ = fmt.Fprintln(w, "  airway plugin:install <module>")
 	_, _ = fmt.Fprintln(w, "  airway plugin:lint")
 	_, _ = fmt.Fprintln(w, "  airway js:add <pkg>[@version]       add a frontend dependency (no Node required)")
 	_, _ = fmt.Fprintln(w, "  airway js:install                   install frontend dependencies from js.pkg.json")
+	_, _ = fmt.Fprintln(w, "  airway js:build                     bundle app/assets/js into app/assets/dist (esbuild)")
 	_, _ = fmt.Fprintln(w, "  airway upload [key] /path/to/file")
 	_, _ = fmt.Fprintln(w, "  airway repl                              interactive repo REPL (runs through go run . inside a project)")
 	_, _ = fmt.Fprintln(w, "  airway version                             print version (also -v, --version)")
 	_, _ = fmt.Fprintln(w, "")
-	_, _ = fmt.Fprintln(w, "`airway <command>` remains accepted as an alias for `airway <command>`.")
+	_, _ = fmt.Fprintln(w, "`airway cli <command>` remains accepted as an alias for `airway <command>`.")
 }
 
 func printCLIGenerateUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "usage:")
-	_, _ = fmt.Fprintln(w, "  airway generate [action|api|model|migration|service|cmd] [params]")
+	_, _ = fmt.Fprintln(w, "  airway generate [action|api|model|migration|service|cmd|island|scaffold] [params]")
 }
 
 func printCLIGenerateMigrationUsage(w io.Writer) {

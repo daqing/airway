@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"net/http"
@@ -6,8 +6,13 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/daqing/airway/config"
 	"github.com/gin-gonic/gin"
 )
+
+func newTestApp() *App {
+	return NewApp("Airway", "0", WithRoutes(config.Routes, config.HealthRoutes))
+}
 
 // When URL_PREFIX is configured, the public routes (home page, WebSocket, API)
 // answer only under the prefix; the unprefixed root answers only the internal
@@ -18,7 +23,7 @@ func TestNewAppServesPublicRoutesUnderURLPrefix(t *testing.T) {
 	t.Setenv("AIRWAY_URL_PREFIX", "")
 	t.Setenv("URL_PREFIX", "/airway")
 
-	app := NewApp("Airway", "0")
+	app := newTestApp()
 	r := app.Handler()
 
 	okCases := []struct {
@@ -78,7 +83,7 @@ func TestNewAppWithoutPrefixServesEverythingAtRoot(t *testing.T) {
 	t.Setenv("AIRWAY_URL_PREFIX", "")
 	t.Setenv("URL_PREFIX", "")
 
-	app := NewApp("Airway", "0")
+	app := newTestApp()
 	r := app.Handler()
 
 	for _, tc := range []struct {
@@ -105,7 +110,7 @@ func TestNewAppRegistersRoutesUnderPrefix(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	t.Setenv("URL_PREFIX", "/airway")
 
-	app := NewApp("Airway", "0")
+	app := newTestApp()
 	r := app.Handler()
 
 	// POST /ws/publish with no payload reaches the handler (a 4xx proves the
@@ -116,5 +121,31 @@ func TestNewAppRegistersRoutesUnderPrefix(t *testing.T) {
 
 	if w.Code == http.StatusNotFound {
 		t.Fatalf("POST /airway/ws/publish: expected the route to be matched, got 404")
+	}
+}
+
+func TestStrictOrigin(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	// The middleware aborts cross-origin requests and passes same-origin ones.
+	router := gin.New()
+	router.Use(StrictOrigin())
+	router.POST("/", func(c *gin.Context) { c.Status(http.StatusOK) })
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/", nil)
+	req.Header.Set("Origin", "http://evil.example")
+	router.ServeHTTP(w, req)
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("cross-origin POST: expected 403, got %d", w.Code)
+	}
+
+	w = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodPost, "/", nil)
+	req.Host = "127.0.0.1:5100"
+	req.Header.Set("Origin", "http://127.0.0.1:5100")
+	router.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("same-origin POST: expected 200, got %d", w.Code)
 	}
 }

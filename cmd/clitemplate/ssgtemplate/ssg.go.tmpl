@@ -1,0 +1,41 @@
+package main
+
+import (
+	"github.com/daqing/airway/cmd"
+	"github.com/daqing/airway/lib/ssg"
+	"github.com/daqing/airway/themes/corporate"
+)
+
+// The builder registered here is what `airway ssg:build` and
+// `airway ssg:serve` run on. Edit the pages below to make the site yours:
+// each Page call takes a slug, a title, and theme-specific data (see the
+// corporate package documentation, or docs/ssg.md for the full guide).
+func init() {
+	cmd.SetSSGBuilder(func() (*ssg.Site, error) {
+		s := ssg.New(ssg.Meta{
+			Title:       "{{module}}",
+			Description: "A showcase site built with Airway and the corporate theme.",
+		})
+
+		s.Use(corporate.Theme)
+
+		s.Page("/", "Home", corporate.Home{
+			Heading: "Welcome to {{module}}",
+			Tagline: "Replace this hero with your own story.",
+			Features: []corporate.Feature{
+				{Title: "Craft", Body: "Describe what you do best."},
+				{Title: "People", Body: "Introduce the team behind the work."},
+				{Title: "Contact", Body: "Tell visitors how to reach you."},
+			},
+		})
+
+		s.Page("/about", "About", corporate.Content{
+			Lead: "About {{module}}",
+			Paragraphs: []string{
+				"Write a short introduction to your company here.",
+			},
+		})
+
+		return s, nil
+	})
+}

@@ -43,6 +43,11 @@ airway generate [action|api|model|migration|service|island|scaffold|cmd] [params
 airway schema:dump
 airway schema:show
 airway openapi:generate [--out path]                     # write the OpenAPI 3.2 document (default ./openapi.json)
+airway templates:compile                                 # regenerate the templ views (shorthand for `go generate ./...`)
+airway admin:generate [config/admin.toml]              # generate the admin backend from a TOML table spec
+airway admin:root <username> <password>               # create an administrator (role admin)
+airway admin:member <username> <password> [--role=r]  # create a non-admin account (editor|viewer)
+airway desktop:init [--force]                           # generate the Wails v3 desktop target in ./desktop (see docs/desktop.md)
 airway upload /path/to/file
 airway repl
 airway version                                           # or -v / --version; prints the VERSION file contents
@@ -513,11 +518,104 @@ under `/api/v1/posts`, a templ page at `/posts`, and a CRUD island
 registers the routes in `config/routes.go`. Afterwards run:
 
 ```bash
-go generate ./...     # compile the .templ view
-airway js:build       # bundle the new island
-airway db:migrate     # create the table
-airway server         # visit /posts
+airway templates:compile   # compile the .templ view
+airway js:build            # bundle the new island
+airway db:migrate          # create the table
+airway server              # visit /posts
 ```
 
 `airway generate island chart` scaffolds a single interactive island under
 `app/assets/js/islands/`; embed it with `@assets.Island("chart", props)`.
+
+## Generate an admin panel
+
+`airway admin:generate` turns a single TOML file into a complete admin
+backend: sign-in with cookie sessions, a dashboard with one card per
+resource, sidebar navigation, and full CRUD (JSON API + type-aware CRUD
+island) for every table. Config lives in `config/admin.toml` by default
+(an alternate path can be passed as the only argument). Each top-level
+table is one resource, keyed by its **singular** name; each field maps a
+column name to a type:
+
+```toml
+[category]
+name = "string"
+sort_order = "integer"
+parent_id = "references:category"   # self-reference (explicit target)
+
+[post]
+title = "string"
+body = "text"
+views = "integer"
+score = "float"
+published = "boolean"
+published_at = "datetime"
+status = "enum:draft,published,archived"
+cover = "attachment"
+category_id = "references"          # target inferred from the _id suffix
+```
+
+Supported field types: `string`, `text`, `integer`, `float`, `boolean`,
+`datetime`, `enum:a,b,c`, `references[:table]` and `attachment`. `id`,
+`created_at` and `updated_at` are added to every table automatically and
+must not be declared.
+
+Run the generator, then the standard follow-ups:
+
+```bash
+airway admin:generate
+airway templates:compile                  # compile the .templ views
+airway js:build                           # bundle the CRUD islands
+airway db:migrate                         # create the tables
+airway admin:root admin      # create the first administrator account
+airway server                             # visit /admin
+```
+
+What gets generated:
+
+- One model per table in `app/models/` (tables with references also get
+  `Relations()`), plus `admin_user.go` / `admin_session.go` for auth.
+- `app/api/admin_api/`: a self-registering resource file per table with
+  CRUD actions and OpenAPI declarations, plus shared files (registry,
+  routes, login/logout, attachment uploads through `storage.Current()`).
+- `app/views/admin/`: the admin layout with sidebar, dashboard, login
+  page, and one page per table hosting its CRUD island.
+- One migration pair per run (auth tables on the first run, then new
+  tables in foreign-key dependency order).
+
+Routes mount under `/admin` (pages) and `/api/v1/admin` (JSON API). Both
+sit behind the `AdminAuth` middleware: pages redirect to `/admin/login`
+when there is no valid session, API calls get a 401. Administrators are
+created with `airway admin:root <username> <password>`, non-admin accounts
+(editor/viewer) with `airway admin:member` — passwords are
+bcrypt-hashed and sessions are stored server-side in `admin_sessions`.
+
+Roles and hardening are built in:
+
+- **Roles** — `admin` (full access, sees the audit log), `editor` (default;
+  read/write) and `viewer` (read-only: writes and uploads get a 403).
+  Mutating routes sit behind `AdminRequireWrite`.
+- **CSRF** — the login form carries a double-submit token that must match
+  the `airway_admin_csrf` cookie.
+- **Rate limiting** — five failed sign-ins for the same IP and username lock
+  the pair out for fifteen minutes (`lib/ratelimit`).
+- **Audit log** — every create, update and delete is recorded with the
+  acting account; admins can review it at `/admin/audit-log`.
+- **Server-side lists** — the list API supports `page`, `page_size`,
+  `q` (text search), `sort`/`order` (whitelisted columns) and exact-match
+  filters on any declared field (`?status=published`). The CRUD island
+  ships a search box, pagination and an Export CSV button.
+- **Soft delete** — declaring `deleted_at = "datetime"` on a table makes
+  destroy stamp the column instead of deleting; reads filter it out.
+- **Display labels** — an optional `[table.meta]` section overrides the
+  sidebar label (`label`) and per-field labels (`labels`), so the panel can
+  speak any language the TOML does.
+
+Re-running `admin:generate` after adding tables to the TOML is additive:
+existing files are never rewritten, and the registry picks up new
+resources automatically (sidebar and dashboard included). To regenerate an
+existing table's code — after editing it in the TOML, or to pick up new
+generator features — pass `--force` (or `--force=table1,table2`): it
+rewrites that table's generated files and discards hand edits, but never
+touches migrations, so schema changes still need a hand-written migration.
+Removing a table from the TOML does not delete generated code.
