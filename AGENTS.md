@@ -4,7 +4,9 @@ Guidance for AI coding agents working in this repository.
 
 ## Project Overview
 
-Airway is a full-stack API framework written in Go, inspired by Ruby on Rails. It is both:
+Airway is a full-stack Go framework, inspired by Ruby on Rails, building
+server-rendered web apps, JSON APIs, static showcase sites, and native desktop
+apps from the same application code. It is both:
 
 1. A **framework/library** — reusable layers under `lib/` (SQL builder, repository/ORM, migrations, storage, validation, rendering).
 2. A **runnable application skeleton** — `main.go` + `app/` + `config/` form a Gin-based HTTP server with WebSocket support, scaffolding CLI, and a REPL.

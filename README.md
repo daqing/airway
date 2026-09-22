@@ -1,9 +1,10 @@
 # Airway
 
-A full-stack API framework written in Go, inspired by Ruby on Rails. It runs the
-same application code against **PostgreSQL**, **MySQL 8** and **SQLite** — the
-database driver is inferred from the DSN at runtime. It also exports the same
-web stack as a native desktop app, and generates static showcase sites.
+Airway is a full-stack Go framework inspired by Ruby on Rails. It builds
+server-rendered web apps, JSON APIs, static showcase sites, and native desktop
+apps from the same application code. It runs against **PostgreSQL**,
+**MySQL 8** and **SQLite** — the database driver is inferred from the DSN at
+runtime.
 
 - **[中文文档](docs/zh-CN/README.md)**
 - **[Admin panel guide](ADMIN.md)** / **[Admin 后台指南（中文）](ADMIN.zh-CN.md)**
@@ -16,16 +17,6 @@ web stack as a native desktop app, and generates static showcase sites.
 - **[Storage guide](docs/storage.md)** / **[文件存储指南](docs/zh-CN/storage.md)**
 - **[templ views guide](docs/template.md)** / **[视图模板指南](docs/zh-CN/template.md)**
 - **[SQL Builder DSL 指南（中文）](docs/zh-CN/sql-builder.md)**
-
-## What Airway is
-
-Airway is both a **framework/library** and a **runnable application skeleton**:
-
-- Reusable layers under `lib/` — SQL builder, repository/ORM, migrations,
-  storage, rendering, validation, OpenAPI generation, and a static site
-  engine.
-- A Gin-based HTTP server (`main.go` + `app/` + `config/`) with a scaffolding
-  CLI, WebSocket support and a REPL, ready to `go run . server`.
 
 ## Features
 
@@ -269,16 +260,16 @@ Rejected alternatives:
 - **htmx + Alpine.js (HTML over the wire)** — fine for progressive
   enhancement, but it offers no component-based reactive programming model;
   interactivity caps out well short of a real component library.
-- **Vite + Vue 3 sub-project embedded via `go:embed`** — drags a full Node
-  toolchain into the repository; at that point a real frontend/backend split
-  with Vue is the more honest architecture.
+- **A Node frontend sub-project (Vue, React/Next.js, Svelte, ...) embedded
+  via `go:embed`** — drags a full Node toolchain into the repository; at
+  that point a real frontend/backend split is the more honest architecture.
 - **LiveView-style server-driven UI** — little practical value for a Go
   framework; when an application genuinely needs heavy frontend engineering,
-  splitting the frontend out with Vue is the right answer.
+  splitting the frontend out is the right answer.
 
 Escape hatch: applications that outgrow islands (complex SPAs, rich editors)
-should split the frontend into its own Vue project and consume Airway purely
-as a JSON API.
+should split the frontend into its own project (Vue, React, Svelte, ...) and
+consume Airway purely as a JSON API.
 
 ## API documentation (OpenAPI)
 

@@ -1,6 +1,8 @@
 # Airway
 
-一个受 Ruby on Rails 启发的全栈 API 框架，使用 Go 编写。它可以用**同一套应用代码**运行在 **PostgreSQL**、**MySQL 8** 和 **SQLite** 上——数据库驱动会在运行时根据 DSN 自动推断。它还能把同一套 Web 技术栈导出为原生桌面应用，以及生成静态展示站点。
+Airway 是一个受 Rails 启发的 Go 全栈框架。它用同一套应用代码构建服务端渲染的
+Web 应用、JSON API、静态展示站点和原生桌面应用，支持 **PostgreSQL**、
+**MySQL 8** 和 **SQLite**——数据库驱动在运行时根据 DSN 自动推断。
 
 - **[English README](../../README.md)**
 - **[Admin 后台指南](../../ADMIN.zh-CN.md)** / **[Admin panel guide](../../ADMIN.md)**
@@ -13,13 +15,6 @@
 - **[文件存储指南](storage.md)** / **[Storage guide](../storage.md)**
 - **[视图模板指南（templ）](template.md)** / **[templ views guide](../template.md)**
 - **[SQL Builder DSL 指南](sql-builder.md)**
-
-## Airway 是什么
-
-Airway 既是**框架/库**，也是一个**可直接运行的应用程序骨架**：
-
-- `lib/` 下可复用的分层——SQL Builder、Repository/ORM、迁移、存储、渲染、校验、OpenAPI 生成、静态站点引擎。
-- 一个基于 Gin 的 HTTP 服务（`main.go` + `app/` + `config/`），内置脚手架 CLI、WebSocket 与 REPL，可直接 `go run . server` 启动。
 
 ## 特性
 
@@ -197,10 +192,10 @@ go generate ./...   # 或：just generate，或：airway templates:compile
 已否决的备选方案：
 
 - **htmx + Alpine.js（HTML over the wire）**——做渐进增强没问题，但没有基于组件的响应式编程模型；交互能力上限远不及真正的组件库。
-- **Vite + Vue 3 子项目经 `go:embed` 内嵌**——把完整的 Node 工具链拖进仓库；真到那一步，前后端分离、前端独立用 Vue 是更诚实的选择。
-- **LiveView 式服务端驱动 UI**——对 Go 框架实际价值有限；当应用确实需要重度前端工程时，把前端拆出去独立用 Vue 才是正解。
+- **Node 前端子项目（Vue、React/Next.js、Svelte 等）经 `go:embed` 内嵌**——把完整的 Node 工具链拖进仓库；真到那一步，前后端分离才是更诚实的选择。
+- **LiveView 式服务端驱动 UI**——对 Go 框架实际价值有限；当应用确实需要重度前端工程时，把前端拆出去独立开发才是正解。
 
-逃生舱：当应用超出 islands 的能力范围（复杂 SPA、富文本编辑器），应把前端拆成独立的 Vue 项目，Airway 退化为纯 JSON API。
+逃生舱：当应用超出 islands 的能力范围（复杂 SPA、富文本编辑器），应把前端拆成独立项目（Vue、React、Svelte 等），Airway 退化为纯 JSON API。
 
 ## API 文档（OpenAPI）
 
