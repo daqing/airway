@@ -1,0 +1,42 @@
+# {{module}}
+
+一个基于 [Airway](https://github.com/daqing/airway) 及其 corporate 主题构建的
+静态展示型网站——纯 HTML + CSS 产物,可部署到任何静态托管(GitHub Pages、
+Netlify、对象存储 + CDN 等)。
+
+## 工作方式
+
+项目根目录的 `ssg.go` 定义了整个站点:站点元信息、主题和每个页面。它通过
+`cmd.SetSSGBuilder` 注册一个构建函数,`airway ssg:build` 和
+`airway ssg:serve` 都基于它运行——不需要数据库、Node 工具链,也不需要常驻
+服务器。
+
+## 常用命令
+
+```bash
+airway ssg:build             # 导出静态站点到 dist/
+airway ssg:serve             # 在 http://127.0.0.1:3000 预览
+airway ssg:serve --addr :8080
+```
+
+两个命令都基于项目 `ssg.go` 里的定义运行。在项目内全局安装的 `airway`
+会自动代理到 `go run .`,两种写法等价。
+
+## 编辑页面
+
+`ssg.go` 中每个 `s.Page(slug, title, data)` 调用就是一个输出页面;slug
+决定导出路径(`/about` 会生成 `dist/about/index.html`)。corporate 主题支持
+这些数据类型:
+
+- `corporate.Home` —— 落地页:主标题、副标题、特性卡片栅格
+- `corporate.Content` —— 纯文本页:导语加正文段落
+- `templ.Component` —— 自定义内容,渲染在共享布局之内
+
+完整指南(包括如何开发自己的主题)见
+[docs/ssg.md](https://github.com/daqing/airway/blob/main/docs/ssg.md)。
+
+## 部署
+
+`airway ssg:build` 会把静态站点写入自包含的 `dist/` 目录:每页一个
+`index.html`,外加主题的 `assets/`。把整个目录上传到任意静态托管即可。站点
+可以只凭仓库重建:`go run . ssg:build` 只需要 Go 和模块缓存。

@@ -7,6 +7,7 @@ database driver is inferred from the DSN at runtime.
 - **[中文文档](docs/zh-CN/README.md)**
 - **[CLI 脚手架指南](docs/cli.md)** / **[文件存储指南](docs/storage.md)**
 - **[Admin panel guide](ADMIN.md)** / **[Admin 后台指南（中文）](ADMIN.zh-CN.md)**
+- **[Static showcase sites](SSG.md)** / **[静态展示站点（中文）](SSG.zh-CN.md)**
 - **[Frontend guide](docs/frontend.md)** / **[前端指南（中文）](docs/zh-CN/frontend.md)**
 - **[Plugin 扩展机制](docs/plugin.md)** / **[Plugin 扩展机制（中文）](docs/zh-CN/plugin.md)**
 - **[SQL Builder DSL 指南（中文）](docs/zh-CN/sql-builder.md)**
@@ -281,6 +282,9 @@ airway js:add <pkg>[@version]              # add a frontend npm dependency (no N
 airway js:install                          # install js.pkg.json deps into app/assets/js/vendor/
 airway js:build                            # bundle app/assets/js into app/assets/dist (esbuild)
 airway desktop:init [--force]              # generate the Wails v3 desktop target in ./desktop (see docs/desktop.md)
+airway ssg:new [--local[=path]] <name>      # scaffold a static showcase site (see docs/ssg.md)
+airway ssg:build [--out dist]             # export the site defined in ssg.go as static HTML
+airway ssg:serve [--addr 127.0.0.1:3000]  # preview the site with a local server
 airway version
 ```
 

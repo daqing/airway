@@ -67,6 +67,16 @@ func runCLI(args []string) error {
 		return runAdminMember(xargs)
 	case "desktop:init":
 		return runCLIDesktopInit(xargs)
+	case "ssg:new":
+		return runCLISSGNew(xargs)
+	case "ssg:build":
+		return runCLISSGBuild(xargs)
+	case "ssg:serve":
+		return runCLISSGServe(xargs)
+	case "theme:install":
+		return runCLIThemeInstall(xargs)
+	case "theme:new":
+		return runCLIThemeNew(xargs)
 	case "templates:compile":
 		return runTemplatesCompile(xargs)
 	case "help", "-h", "--help":
@@ -107,6 +117,11 @@ func printUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "  airway admin:member <username> <password> [--role=editor|viewer]")
 	_, _ = fmt.Fprintln(w, "                                           create a non-admin panel account")
 	_, _ = fmt.Fprintln(w, "  airway desktop:init [--force]            generate the Wails v3 desktop target in ./desktop")
+	_, _ = fmt.Fprintln(w, "  airway ssg:new [--local[=path]] <name>   scaffold a static showcase site project")
+	_, _ = fmt.Fprintln(w, "  airway ssg:build [--out dist]           export the site as static HTML (ssg.go)")
+	_, _ = fmt.Fprintln(w, "  airway ssg:serve [--addr 127.0.0.1:3000]  preview the site with a local server")
+	_, _ = fmt.Fprintln(w, "  airway theme:install <module | /path>    install a site theme into the host project")
+	_, _ = fmt.Fprintln(w, "  airway theme:new [--local[=path]] <name> scaffold a new site theme module")
 	_, _ = fmt.Fprintln(w, "  airway templates:compile                 regenerate the templ views (shorthand for `go generate ./...`)")
 	_, _ = fmt.Fprintln(w, "  airway plugin:new <module-path>")
 	_, _ = fmt.Fprintln(w, "  airway plugin:list")

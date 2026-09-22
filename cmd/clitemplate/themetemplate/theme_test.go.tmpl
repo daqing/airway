@@ -1,0 +1,89 @@
+package {{package}}
+
+import (
+	"bytes"
+	"context"
+	"io"
+	"io/fs"
+	"strings"
+	"testing"
+
+	"github.com/a-h/templ"
+
+	"github.com/daqing/airway/lib/ssg"
+)
+
+func render(t *testing.T, comp templ.Component) string {
+	t.Helper()
+
+	var buf bytes.Buffer
+	if err := comp.Render(context.Background(), &buf); err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	return buf.String()
+}
+
+func testContext(slug string, title string, data any) *ssg.Context {
+	return &ssg.Context{
+		Meta: ssg.Meta{Title: "Test Site", Description: "A test site."},
+		Page: ssg.Page{Slug: slug, Title: title, Data: data},
+		Pages: []ssg.Page{
+			{Slug: "/", Title: "Home"},
+			{Slug: "/about", Title: "About"},
+		},
+	}
+}
+
+func TestThemeImplementsSiteTheme(t *testing.T) {
+	if Theme.Name() != "{{package}}" {
+		t.Fatalf("theme name = %q, want %q", Theme.Name(), "{{package}}")
+	}
+}
+
+func TestRenderHome(t *testing.T) {
+	html := render(t, Theme.Render(testContext("/", "Home", Home{
+		Heading: "Big headline",
+		Tagline: "One-line pitch.",
+	})))
+
+	for _, want := range []string{"<title>Test Site</title>", "Big headline", "One-line pitch."} {
+		if !strings.Contains(html, want) {
+			t.Fatalf("rendered home missing %q:\n%s", want, html)
+		}
+	}
+}
+
+func TestRenderContent(t *testing.T) {
+	html := render(t, Theme.Render(testContext("/about", "About", Content{
+		Lead:       "About us.",
+		Paragraphs: []string{"We test themes."},
+	})))
+
+	for _, want := range []string{"<title>About · Test Site</title>", "About us.", "We test themes."} {
+		if !strings.Contains(html, want) {
+			t.Fatalf("rendered content page missing %q:\n%s", want, html)
+		}
+	}
+}
+
+func TestRenderCustomComponent(t *testing.T) {
+	custom := templ.ComponentFunc(func(_ context.Context, w io.Writer) error {
+		_, err := io.WriteString(w, "<p>custom body</p>")
+		return err
+	})
+
+	html := render(t, Theme.Render(testContext("/custom", "Custom", custom)))
+	if !strings.Contains(html, "<p>custom body</p>") {
+		t.Fatalf("custom body missing:\n%s", html)
+	}
+}
+
+func TestAssetsShipStylesheet(t *testing.T) {
+	data, err := fs.ReadFile(Theme.Assets(), "theme.css")
+	if err != nil {
+		t.Fatalf("read theme.css: %v", err)
+	}
+	if !strings.Contains(string(data), "site-header") {
+		t.Fatalf("theme.css missing expected rules")
+	}
+}

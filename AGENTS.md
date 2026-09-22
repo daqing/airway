@@ -50,9 +50,12 @@ cmd/             CLI commands: scaffolding generators, `new` (project
                  dump/show, plugin:new/list/install, js:add/install/build,
                  upload, REPL, version.
   clitemplate/   Embedded templates used by `airway new` (template/), `airway
-                 plugin:new` (plugintemplate/), and `airway desktop:init`
-                 (desktop/). Template files end in .tmpl, with `{{module}}` /
-                 `{{plugin}}` / `{{app_name}}` / `{{bundle_id}}` placeholders;
+                 plugin:new` (plugintemplate/), `airway desktop:init`
+                 (desktop/), `airway ssg:new` (ssgtemplate/), and `airway
+                 theme:new` (themetemplate/). Template files end in .tmpl,
+                 with `{{module}}` /
+                 `{{plugin}}` / `{{app_name}}` / `{{bundle_id}}` /
+                 `{{package}}` placeholders;
                  keep the project template in sync when changing skeleton
                  files under app/ etc.
 db/
@@ -88,10 +91,20 @@ lib/
                  JSON-schema inference from Go types, deterministic build
                  behind `airway openapi:generate` and GET /openapi.json
                  (see docs/openapi.md).
+  ssg/           Static showcase site engine behind ssg:build/ssg:serve:
+                 Site/Page/Theme definitions (lib/ssg.Theme supplies templ
+                 components + embedded assets), the Build static exporter,
+                 and the Handler preview server (see docs/ssg.md). Host
+                 projects register their site with cmd.SetSSGBuilder from
+                 an init in a root-package ssg.go.
   utils/         Env/config helpers, password hashing, tokens, dates, markdown.
   validation/    Input validation helpers.
+themes/          Bundled site themes as separate Go modules (themes/corporate
+                 is the corporate showcase example). Each has its own go.mod
+                 with a `replace` to the framework checkout; run its tests
+                 from inside the module directory.
 docs/            Guides: cli.md, plugin.md, storage.md, openapi.md, desktop.md,
-                 docker-compose.yml.example, zh-CN/ (Chinese docs).
+                 site.md, docker-compose.yml.example, zh-CN/ (Chinese docs).
   homegen/       //go:build ignore script run by the docs workflow after the
                  VitePress build; renders the app/views/home templ landing page
                  over dist/index.html as the GitHub Pages homepage.
@@ -144,6 +157,11 @@ airway admin:generate [--force[=tables]] [path]      # full admin backend (auth,
 airway admin:root <username> <password>              # create an administrator account (role admin; bcrypt)
 airway admin:member <username> <password> [--role=r] # create a non-admin account (editor|viewer)
 airway desktop:init [--force]                        # generate the Wails v3 desktop target in ./desktop (see docs/desktop.md)
+airway ssg:new [--local[=path]] <name>               # scaffold a static showcase site project (see docs/ssg.md)
+airway ssg:build [--out dist]                       # export the site defined in ssg.go as static HTML
+airway ssg:serve [--addr 127.0.0.1:3000]            # preview the site with a local server
+airway theme:install <module | /path>                # wire a site theme into the host project's go.mod
+airway theme:new [--local[=path]] <name>             # scaffold a new site theme module (package derived from the name)
 airway templates:compile                              # regenerate the templ views (shorthand for `go generate ./...`)
 airway generate migration create_posts                # new .up.sql/.down.sql pair in db/migrate/
 airway db:create | db:drop
@@ -198,6 +216,15 @@ Migration and schema commands read `AIRWAY_DB_DSN` first and fall back to the le
 - **Storage:** always go through `storage.Current()` — never touch local disk or cloud SDKs directly.
 - **Globals at boot:** `main.go` initializes the DB (`repo.SetupDB`), Redis (`redis_client.Setup`), and storage (`storage.Setup`) from environment variables; packages then use their `Current*()` accessors.
 - **Plugins:** optional feature modules (separate Go modules, e.g. an IM backend) implement `lib/plugin.Plugin` and self-register via `init()`; hosts enable them with blank imports in `plugins.go`. Routes mount through `plugin.MountAll` in `config/routes.go`, boot hooks run from `main.go` after infra setup, and `go run . plugin:install` enables a plugin (blank import + `go get`) and installs its SQL migrations (from the plugin's `install/host/db/migrate`, copied into the host's `db/migrate`), mirrors the rest of its `install/host/` tree into the host project root preserving relative paths, plus its `install/deps/` directory (merged into the host project's `deps/` directory, namespaced under the plugin name, `.templ` suffix stripped — a bare file beside its `.templ` variant is skipped, and a bare `go.mod` out of sync with its `.templ` fails the install — and existing files skipped; everything is read from `install/` only, the plugin's implementation in `install/lib/` is compiled into the plugin binary and never copied, every `ignore/` directory — `install/ignore/` or inside `install/host/` and `install/deps/` — is skipped wholesale, and the plugin's root `.gitignore` rules likewise exclude files when reading from disk, e.g. `node_modules/`) in one step (see docs/plugin.md).
+- **Static showcase sites:** sites are defined in a root-package `ssg.go`
+  that calls `cmd.SetSSGBuilder` in `init()` (same compile-time registration
+  pattern as plugins and REPL models); pages register with `s.Page(slug,
+  title, data)` against a theme implementing `lib/ssg.Theme`. Themes are
+  separate Go modules (see `themes/corporate`); their templ views follow the
+  same committed-`*_templ.go` rule (regenerate from inside the theme module).
+  Naming caveat: in a `.templ` file, do not name a parameter `ctx` (templ's
+  generated code shadows it with the render context) and do not import
+  `github.com/a-h/templ` explicitly (the generator emits its own import).
 - **Naming:** environment variables are prefixed `AIRWAY_`; CLI subcommands follow the Rails-like `db:migrate` / `schema:dump` style.
 - Format code with `gofmt`/`go fmt`; keep changes minimal and match the surrounding style.
 - **Git commit messages:** a concise one-line summary plus a short paragraph describing what the change accomplishes; leave implementation details (files, functions, internal mechanics) out of the message. Do not add AI attribution/signatures (such as `Co-Authored-By` or any other AI-related lines) to commit messages.
@@ -210,6 +237,9 @@ Migration and schema commands read `AIRWAY_DB_DSN` first and fall back to the le
   - `AIRWAY_PG_TEST_DSN` — PostgreSQL integration tests in `lib/repo`.
   - `AIRWAY_MYSQL_TEST_DSN` — MySQL integration tests in `lib/repo`.
 - When adding features, add tests in the same package following the existing table-driven style.
+- `themes/` holds separate Go modules, so the root `go test ./...` does not
+  cover them — run their tests from inside the module directory
+  (`cd themes/corporate && go test ./...`).
 
 ## Configuration
 
