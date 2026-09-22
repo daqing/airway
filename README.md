@@ -2,14 +2,19 @@
 
 A full-stack API framework written in Go, inspired by Ruby on Rails. It runs the
 same application code against **PostgreSQL**, **MySQL 8** and **SQLite** — the
-database driver is inferred from the DSN at runtime.
+database driver is inferred from the DSN at runtime. It also exports the same
+web stack as a native desktop app, and generates static showcase sites.
 
 - **[中文文档](docs/zh-CN/README.md)**
-- **[CLI 脚手架指南](docs/cli.md)** / **[文件存储指南](docs/storage.md)**
 - **[Admin panel guide](ADMIN.md)** / **[Admin 后台指南（中文）](ADMIN.zh-CN.md)**
 - **[Static showcase sites](SSG.md)** / **[静态展示站点（中文）](SSG.zh-CN.md)**
+- **[CLI scaffolding guide](docs/cli.md)** / **[CLI 脚手架指南](docs/zh-CN/cli.md)**
 - **[Frontend guide](docs/frontend.md)** / **[前端指南（中文）](docs/zh-CN/frontend.md)**
-- **[Plugin 扩展机制](docs/plugin.md)** / **[Plugin 扩展机制（中文）](docs/zh-CN/plugin.md)**
+- **[OpenAPI guide](docs/openapi.md)** / **[OpenAPI 指南（中文）](docs/zh-CN/openapi.md)**
+- **[Desktop guide](docs/desktop.md)** / **[桌面应用指南（中文）](docs/zh-CN/desktop.md)**
+- **[Plugin guide](docs/plugin.md)** / **[Plugin 扩展机制（中文）](docs/zh-CN/plugin.md)**
+- **[Storage guide](docs/storage.md)** / **[文件存储指南](docs/zh-CN/storage.md)**
+- **[templ views guide](docs/template.md)** / **[视图模板指南](docs/zh-CN/template.md)**
 - **[SQL Builder DSL 指南（中文）](docs/zh-CN/sql-builder.md)**
 
 ## What Airway is
@@ -17,16 +22,19 @@ database driver is inferred from the DSN at runtime.
 Airway is both a **framework/library** and a **runnable application skeleton**:
 
 - Reusable layers under `lib/` — SQL builder, repository/ORM, migrations,
-  storage, rendering, validation.
+  storage, rendering, validation, OpenAPI generation, and a static site
+  engine.
 - A Gin-based HTTP server (`main.go` + `app/` + `config/`) with a scaffolding
   CLI, WebSocket support and a REPL, ready to `go run . server`.
 
 ## Features
 
 - **Generics-based repository** (`lib/repo`): typed `FindBy[User]`,
-  `CreateFrom[User]`, preload/eager-loading, joins, transactions.
+  `CreateFrom[User]`, preload/eager-loading, joins, transaction-bound
+  helpers.
 - **Dialect-aware SQL builder** (`lib/sql` + `pg` / `mysql` / `sqlite`
-  dialects); conditions like `sql.Eq`, `sql.AllOf`, `sql.Gt`.
+  dialects); conditions like `sql.Eq`, `sql.AllOf`, `sql.Gt`; native
+  `FOR UPDATE SKIP LOCKED` support (`sql.ForUpdateSkipLocked`).
 - **Schema-driven migrations**: generate and apply migrations with the CLI;
   SQLite schema changes are handled by table rebuild.
 - **Unified file storage** (`lib/storage`): local directory, Amazon S3,
@@ -40,15 +48,30 @@ Airway is both a **framework/library** and a **runnable application skeleton**:
   esbuild (`js:build`), dev-time in-memory rebuilds with livereload, and
   interactive **Preact islands** built on the bundled airway-ui component
   library — all committed and embedded into the single Go binary.
-- **Scaffolding CLI** (`airway generate ...`, `db:migrate`, ...).
+- **OpenAPI 3.2 documentation** generated from the running router —
+  operationIds derived from handlers, enriched per module in code, served
+  live at `/openapi.json`.
+- **Admin panel generator**: a TOML table spec produces a complete admin
+  backend — authentication, roles, an audit trail, CSV export and
+  server-side lists.
+- **Desktop apps**: `airway desktop:init` exports the project as a Wails v3
+  desktop target; the same web stack runs in a native WebView window on
+  macOS, Windows and Linux.
+- **Static showcase sites**: `airway ssg:new` scaffolds a static site whose
+  pages are Go code and whose looks come from swappable theme modules
+  (`theme:new` / `theme:install`); `airway ssg:build` exports plain HTML for
+  any static host.
 - **Plugins**: WordPress-style feature modules shipped as independent Go
   modules — install with `go get`, enable with one blank import in
   `plugins.go` (see [docs/plugin.md](docs/plugin.md)).
+- **Scaffolding CLI** (`airway generate ...`, `db:migrate`, ...).
 - **Repo REPL** with typed scan and Go-expression evaluation.
 - **Optional sub-path prefix** (`URL_PREFIX`) for deploying behind a reverse
   proxy, e.g. `http://host:1900/airway/...`.
 
 ## Quick start
+
+Requires Go **1.27.1 or later**. No Node.js, no CGO.
 
 ### 1. Install the CLI and scaffold a project
 
@@ -98,12 +121,14 @@ rendered with templ, `GET /health` returns `UP`).
 
 ## Configuration
 
-All configuration is via environment variables (see `.env.example`). Each value
-accepts a short name or its `AIRWAY_` alias, with the alias taking precedence.
+All configuration is via environment variables (see `.env.example`). Values in
+`.env` are fallbacks: **the process environment always wins** (e.g.
+`PORT=1988 airway server` overrides a `PORT` in `.env`). Each value accepts a
+short name or its `AIRWAY_` alias, with the alias taking precedence.
 
 | Variable | Description |
 | --- | --- |
-| `DSN` / `AIRWAY_DSN` | Database URL. Driver is inferred from the scheme (see below). |
+| `DSN` / `AIRWAY_DSN` | Database URL. Driver is inferred from the scheme (see below). `AIRWAY_DB_DSN` and `AIRWAY_PG` remain supported as legacy aliases. |
 | `PORT` / `AIRWAY_PORT` | HTTP listen port (default `1900`). |
 | `REDIS` / `AIRWAY_REDIS` | Optional Redis URL for cache/queue. |
 | `URL_PREFIX` / `AIRWAY_URL_PREFIX` | Optional public sub-path prefix, e.g. `/airway`. Empty serves at the root. |
@@ -146,12 +171,14 @@ Registered in `config/routes.go`:
 | --- | --- | --- |
 | GET | `/` | Home page (HTML, rendered from a templ view). |
 | GET | `/ui` | airway-ui component showcase (interactive island). |
+| GET | `/openapi.json` | The live OpenAPI 3.2 document (see [API documentation](#api-documentation-openapi)). |
 | GET | `/health` | Health check. |
 | GET | `/ws` | WebSocket connection. |
 | POST | `/ws/publish` | Publish a message to connected clients (form field `message`). |
 | POST | `/api/v1/storage` | Upload a file (multipart `file`, optional `dir`). |
 | GET | `/api/v1/storage/*key` | Download a file. |
 | DELETE | `/api/v1/storage/*key` | Delete a file. |
+| GET | `/api/v1/ui-demo/items` | Demo data for the TanStack island on `/ui`. |
 
 When `URL_PREFIX` is set, the public routes — home page, WebSocket, and API —
 are served only under that prefix, not at the root. The health check also stays
@@ -184,7 +211,7 @@ render.HTML(c, home.Index())
 After editing any `.templ` file, regenerate the Go code and keep it committed:
 
 ```bash
-go generate ./...   # or: just generate
+go generate ./...   # or: just generate, or: airway templates:compile
 ```
 
 The generated `*_templ.go` files are committed, so building and testing never
@@ -253,6 +280,73 @@ Escape hatch: applications that outgrow islands (complex SPAs, rich editors)
 should split the frontend into its own Vue project and consume Airway purely
 as a JSON API.
 
+## API documentation (OpenAPI)
+
+Every API route served by the binary is documented as an **OpenAPI 3.2**
+document — no annotations required. `airway openapi:generate` scans the
+router, derives operationIds from the handler names, and writes
+`./openapi.json` (a build artifact, git-ignored — regenerate it whenever
+routes change). The same document is served live at
+[`/openapi.json`](http://127.0.0.1:1900/openapi.json).
+
+Modules enrich their documentation in code with an `openapi.go` file
+declaring operations via `lib/openapi` (`openapi.Get(...)` etc.), including
+request/response schemas inferred from Go types; document-level metadata
+lives in `app/api/openapi_api/doc.go`. See the
+[OpenAPI guide](docs/openapi.md).
+
+## Admin panel
+
+`airway admin:generate` reads a TOML table spec (`config/admin.toml`) and
+generates a complete, production-ready admin backend as real, user-owned Go
+code: cookie-session authentication, roles, an audit trail, CSV export, and
+server-side lists — with type-aware forms and filters for every declared
+field (datetime, enum, references, attachment included).
+
+```bash
+airway admin:generate                    # or: admin:generate --force=table1,table2
+airway admin:root admin 's3cret'         # create the administrator account
+airway admin:member editor 's3cret'      # non-admin panel accounts (--role=editor|viewer)
+airway server                            # sign in at /admin/login
+```
+
+See the [admin panel guide](ADMIN.md) ([中文](ADMIN.zh-CN.md)).
+
+## Desktop apps
+
+`airway desktop:init` exports the project as a **Wails v3** desktop target in
+`./desktop`: the same web stack (templ views, islands, JSON APIs, WebSocket)
+runs on a local loopback port inside the desktop process, and a native
+WebView window loads it — server-rendered pages, cookie sessions, redirects
+and WebSockets behave exactly as on the web, with no application code
+changes. SQL migrations ship embedded and apply automatically on launch;
+packaging covers macOS (.app), Windows (NSIS) and Linux (deb/rpm/AppImage).
+
+```bash
+airway desktop:init       # generate ./desktop; re-run to re-sync migrations/plugins
+```
+
+See the [desktop guide](docs/desktop.md) ([中文](docs/zh-CN/desktop.md)) and
+the research record in [WAILS.md](WAILS.md).
+
+## Static showcase sites (SSG)
+
+Airway doubles as a static site generator for showcase websites — company
+homepages, product landings, portfolios. `airway ssg:new` scaffolds a site
+project whose pages are declared in Go (`ssg.go`) against a swappable
+**theme module**; `airway ssg:build` exports a plain HTML directory for any
+static host, and `airway ssg:serve` previews it locally. Themes are
+ordinary Go modules (templ components + embedded assets): scaffold one with
+`airway theme:new`, and install one into a site with
+`airway theme:install`. The framework bundles a corporate reference theme.
+
+```bash
+airway ssg:new mysite       # then: airway ssg:build / airway ssg:serve
+```
+
+See [SSG.md](SSG.md) ([中文](SSG.zh-CN.md)) for the design record and
+[docs/ssg.md](docs/ssg.md) ([中文](docs/zh-CN/ssg.md)) for the usage guide.
+
 ## CLI
 
 The Airway CLI is a single `airway` binary (install with
@@ -260,40 +354,92 @@ The Airway CLI is a single `airway` binary (install with
 the host application and transparently re-runs every project-scoped command
 through `go run .` (stderr shows a `proxying to project binary` notice), so
 plugins, REPL models and Go-code migrations always come from the project's
-own binary. Commands auto-load `.env` from the project root:
+own binary. Commands auto-load `.env` from the project root.
+
+### Project and server
 
 ```bash
-airway new myapp                           # scaffold a new project skeleton
-airway server                              # start the HTTP server
-airway generate api admin                  # new API namespace under app/api/
-airway generate action admin show          # new action in an existing API module
-airway generate model post                 # new model in app/models/
-airway generate service post title:string  # CRUD service in app/services/
-airway generate island chart               # interactive island component
-airway generate scaffold post title:string # full CRUD: model+migration+API+page+island
-airway generate migration create_posts     # new .up.sql/.down.sql pair in db/migrate/
-airway db:create | db:drop
-airway db:migrate [version]                # apply migrations
-airway db:rollback [step]
-airway db:status
-airway schema:dump | schema:show           # writes / reads db/schema.json
-airway upload [key] /path/to/file          # upload via the configured storage
-airway js:add <pkg>[@version]              # add a frontend npm dependency (no Node required)
-airway js:install                          # install js.pkg.json deps into app/assets/js/vendor/
-airway js:build                            # bundle app/assets/js into app/assets/dist (esbuild)
-airway desktop:init [--force]              # generate the Wails v3 desktop target in ./desktop (see docs/desktop.md)
-airway ssg:new [--local[=path]] <name>      # scaffold a static showcase site (see docs/ssg.md)
-airway ssg:build [--out dist]             # export the site defined in ssg.go as static HTML
-airway ssg:serve [--addr 127.0.0.1:3000]  # preview the site with a local server
-airway version
+airway new <module-path | /path>            # scaffold a new project skeleton
+airway server                               # start the HTTP server
+airway generate api admin                   # new API namespace under app/api/
+airway generate action admin show           # new action in an existing API module
+airway generate model post                  # new model in app/models/
+airway generate service post title:string   # CRUD service in app/services/
+airway generate island chart                # interactive island component
+airway generate scaffold post title:string  # full CRUD: model+migration+API+page+island
+airway generate migration create_posts      # new .up.sql/.down.sql pair in db/migrate/
+airway repl                                 # interactive repo REPL (proxied to go run . in projects)
+airway version                              # print version (also -v, --version)
+```
+
+### Database
+
+```bash
+airway db:create                            # create the database
+airway db:drop                              # drop the database
+airway db:migrate [version]                 # apply migrations
+airway db:rollback [step]                   # roll back migrations
+airway db:status                            # migration status
+airway schema:dump                          # write db/schema.json
+airway schema:show                          # print db/schema.json
+```
+
+### Frontend
+
+```bash
+airway js:add <pkg>[@version]               # add a frontend npm dependency (no Node required)
+airway js:install                           # install js.pkg.json deps into app/assets/js/vendor/
+airway js:build                             # bundle app/assets/js into app/assets/dist (esbuild)
+airway templates:compile                    # regenerate the templ views (shorthand for `go generate ./...`)
+```
+
+### API documentation
+
+```bash
+airway openapi:generate [--out path]        # write the OpenAPI 3.2 document (default ./openapi.json)
+```
+
+### Admin panel
+
+```bash
+airway admin:generate [config/admin.toml]   # generate the admin backend from a TOML table spec
+airway admin:root <username> <password>     # create the administrator account (role admin)
+airway admin:member <username> <password> [--role=editor|viewer]
+                                            # create a non-admin panel account
+```
+
+### Desktop apps
+
+```bash
+airway desktop:init [--force]               # generate the Wails v3 desktop target in ./desktop
+```
+
+### Static sites and themes
+
+```bash
+airway ssg:new [--local[=path]] <name>      # scaffold a static showcase site project
+airway ssg:build [--out dist]               # export the site defined in ssg.go as static HTML
+airway ssg:serve [--addr 127.0.0.1:3000]    # preview the site with a local server
+airway theme:new [--local[=path]] <name>    # scaffold a new site theme module
+airway theme:install <module | /path>       # install a site theme into the host project
+```
+
+### Plugins
+
+```bash
+airway plugin:new <module-path | /path>     # scaffold a new plugin module
+airway plugin:list                          # registered plugins and mount paths
+airway plugin:install <module>              # enable a plugin + install its SQL migrations and deps/
+airway plugin:lint                          # check the current plugin project for legacy layout issues
+```
+
+### Files
+
+```bash
+airway upload [key] /path/to/file           # upload via the configured storage
 ```
 
 The legacy form `airway cli <command>` still works as a compatibility alias.
-Models and plugins register at compile time, which is exactly why the global
-`airway` proxies to `go run .` inside a project — `airway repl` and
-`airway plugin:install <module>` (run from the project root) already behave
-like their `go run .` equivalents.
-
 Database commands read `DSN`/`AIRWAY_DSN`; the legacy `AIRWAY_DB_DSN` and
 `AIRWAY_PG` are still honored for backward compatibility. See the full
 [CLI guide](docs/cli.md).
@@ -560,6 +706,10 @@ just docker        # or: docker build -t airway .
 docker run -p 1900:1900 -e AIRWAY_ENV=production -e DSN="sqlite:///app/tmp/airway.db" airway
 ```
 
+The Dockerfile pulls base images from a daocloud.io mirror and points the Go
+module proxy at goproxy.cn, so builds work on networks where the default
+endpoints are slow or blocked; strip the mirrors if you don't need them.
+
 Run migrations before/after deploy:
 
 ```bash
@@ -569,10 +719,3 @@ Run migrations before/after deploy:
 See [docs/docker-compose.yml.example](docs/docker-compose.yml.example) for a
 compose example. To serve the app under a path prefix behind a reverse proxy,
 set `URL_PREFIX` (e.g. `/airway`) — see [HTTP endpoints](#http-endpoints).
-
-## Guides
-
-- [CLI scaffolding guide](docs/cli.md) · [文件存储指南](docs/storage.md)
-- [templ views guide](docs/template.md)
-- [SQL Builder DSL 指南（中文）](docs/zh-CN/sql-builder.md)
-- [中文文档](docs/zh-CN/README.md)

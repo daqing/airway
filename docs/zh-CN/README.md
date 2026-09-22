@@ -1,32 +1,47 @@
 # Airway
 
-一个受 Ruby on Rails 启发的全栈 API 框架，使用 Go 编写。它可以用**同一套应用代码**运行在 **PostgreSQL**、**MySQL 8** 和 **SQLite** 上——数据库驱动会在运行时根据 DSN 自动推断。
+一个受 Ruby on Rails 启发的全栈 API 框架，使用 Go 编写。它可以用**同一套应用代码**运行在 **PostgreSQL**、**MySQL 8** 和 **SQLite** 上——数据库驱动会在运行时根据 DSN 自动推断。它还能把同一套 Web 技术栈导出为原生桌面应用，以及生成静态展示站点。
 
-- **[English README](../README.md)**
-- **[CLI 脚手架指南](cli.md)** / **[文件存储指南](storage.md)**
+- **[English README](../../README.md)**
+- **[Admin 后台指南](../../ADMIN.zh-CN.md)** / **[Admin panel guide](../../ADMIN.md)**
 - **[静态展示站点（SSG）](../../SSG.zh-CN.md)** / **[Static showcase sites](../../SSG.md)**
-- **[视图模板指南（templ）](template.md)**
+- **[CLI 脚手架指南](cli.md)** / **[CLI scaffolding guide](../cli.md)**
+- **[前端指南](frontend.md)** / **[Frontend guide](../frontend.md)**
+- **[OpenAPI 指南](openapi.md)** / **[OpenAPI guide](../openapi.md)**
+- **[桌面应用指南](desktop.md)** / **[Desktop guide](../desktop.md)**
+- **[Plugin 扩展机制](plugin.md)** / **[Plugin guide](../plugin.md)**
+- **[文件存储指南](storage.md)** / **[Storage guide](../storage.md)**
+- **[视图模板指南（templ）](template.md)** / **[templ views guide](../template.md)**
 - **[SQL Builder DSL 指南](sql-builder.md)**
 
 ## Airway 是什么
 
 Airway 既是**框架/库**，也是一个**可直接运行的应用程序骨架**：
 
-- `lib/` 下可复用的分层——SQL Builder、Repository/ORM、迁移、存储、渲染、校验。
+- `lib/` 下可复用的分层——SQL Builder、Repository/ORM、迁移、存储、渲染、校验、OpenAPI 生成、静态站点引擎。
 - 一个基于 Gin 的 HTTP 服务（`main.go` + `app/` + `config/`），内置脚手架 CLI、WebSocket 与 REPL，可直接 `go run . server` 启动。
 
 ## 特性
 
-- **基于泛型的 Repository**（`lib/repo`）：类型安全的 `FindBy[User]`、`CreateFrom[User]`、预加载（eager loading）、联表查询、事务。
-- **方言感知的 SQL Builder**（`lib/sql` + `pg` / `mysql` / `sqlite` 方言包）；条件写法如 `sql.Eq`、`sql.AllOf`、`sql.Gt`。
+- **基于泛型的 Repository**（`lib/repo`）：类型安全的 `FindBy[User]`、`CreateFrom[User]`、预加载（eager loading）、联表查询、事务绑定助手。
+- **方言感知的 SQL Builder**（`lib/sql` + `pg` / `mysql` / `sqlite` 方言包）；条件写法如 `sql.Eq`、`sql.AllOf`、`sql.Gt`；原生支持 `FOR UPDATE SKIP LOCKED`（`sql.ForUpdateSkipLocked`）。
 - **基于 schema 的迁移**：通过 CLI 生成与应用迁移；SQLite 的表结构变更通过重建表处理。
 - **统一的文件存储**（`lib/storage`）：本地目录、Amazon S3、Cloudflare R2 或腾讯云 COS——完全由配置决定，并提供 HTTP 上传/下载 API。
 - **Gin Web 服务 + WebSocket** 发布/订阅。
+- **基于 [templ](https://templ.guide/) 的 HTML 视图**：页面是 `app/views/` 下的 `.templ` 模板，由 action 经 `lib/render.HTML` 渲染。
+- **无需 Node 的前端**：npm 依赖由 CLI 管理（`js:add` / `js:install`，`js.pkg.json` 锁定），内嵌 esbuild 打包（`js:build`），开发期内存重建 + livereload，以及构建在内置 airway-ui 组件库之上的交互式 **Preact islands**——产物全部提交并内嵌进单个 Go 二进制。
+- **OpenAPI 3.2 文档**：从运行中的路由自动生成——operationId 由 handler 名推导，可在各模块中用代码富化，并实时服务于 `/openapi.json`。
+- **Admin 后台生成器**：一份 TOML 表规格即可生成完整的后台——认证、角色、审计日志、CSV 导出、服务端分页列表。
+- **桌面应用**：`airway desktop:init` 把项目导出为 Wails v3 桌面目标；同一套 Web 技术栈跑在 macOS、Windows、Linux 的原生 WebView 窗口里。
+- **静态展示站点**：`airway ssg:new` 脚手架一个页面即 Go 代码的静态站点，外观来自可替换的主题 module（`theme:new` / `theme:install`）；`airway ssg:build` 导出纯 HTML，可部署到任何静态托管。
+- **插件**：WordPress 风格的功能模块，以独立 Go module 分发——`go get` 安装，`plugins.go` 里一行 blank import 启用（见 [docs/plugin.md](plugin.md)）。
 - **脚手架 CLI**（`airway generate ...`、`db:migrate` 等）。
 - **Repo REPL**：支持类型化扫描与 Go 表达式求值。
 - **可选子路径前缀**（`URL_PREFIX`）：便于在反向代理后部署，例如 `http://host:1900/airway/...`。
 
 ## 快速开始
+
+需要 Go **1.27.1 或更高版本**。无需 Node.js，无需 CGO。
 
 ### 1. 安装 CLI 并生成新项目
 
@@ -59,32 +74,33 @@ PORT="1900"
 ### 2. 启动服务
 
 ```bash
-go run . server   # 或：airway server（需要设置 AIRWAY_ENV，例如 AIRWAY_ENV=local，以及配置好的 DSN）
+go run . server   # 或：airway server（需要 AIRWAY_ENV，如 AIRWAY_ENV=local，以及配置好的 DSN）
 ```
 
-或者使用热重载启动本地开发服务：
+或者启动带热重载的本地开发服务：
 
 ```bash
 just dev
 ```
 
-应用监听 `http://127.0.0.1:1900`（`GET /` 返回 `Hello, Airway!`，`GET /health` 返回 `UP`）。
+应用监听 `http://127.0.0.1:1900`（`GET /` 返回 templ 渲染的 HTML 页面，`GET /health` 返回 `UP`）。
 
 ## 配置
 
-所有配置都通过环境变量完成（参见 `.env.example`）。每个值既可以使用短名，也可以使用其 `AIRWAY_` 别名，两者同时存在时以别名优先。
+所有配置通过环境变量完成（见 `.env.example`）。`.env` 中的值是**回退值：进程环境始终优先**（例如 `PORT=1988 airway server` 会覆盖 `.env` 里的 `PORT`）。每个值都可以用短名或其 `AIRWAY_` 别名，两者都设置时以 `AIRWAY_` 形式为准。
 
 | 变量 | 说明 |
 | --- | --- |
-| `DSN` / `AIRWAY_DSN` | 数据库 URL。驱动由 scheme 推断（见下文）。 |
+| `DSN` / `AIRWAY_DSN` | 数据库 URL，驱动由 scheme 推断（见下）。`AIRWAY_DB_DSN` 与 `AIRWAY_PG` 作为历史别名继续支持。 |
 | `PORT` / `AIRWAY_PORT` | HTTP 监听端口（默认 `1900`）。 |
-| `REDIS` / `AIRWAY_REDIS` | 可选的 Redis URL（缓存/队列）。 |
-| `URL_PREFIX` / `AIRWAY_URL_PREFIX` | 可选的对外子路径前缀，例如 `/airway`。为空则在根路径提供服务。 |
-| `AIRWAY_ENV` | `local` 会加载 `.env` 并使用 Gin 调试模式；其它值则运行 release 模式。 |
+| `REDIS` / `AIRWAY_REDIS` | 可选的 Redis URL，用于缓存/队列。 |
+| `URL_PREFIX` / `AIRWAY_URL_PREFIX` | 可选的公开子路径前缀，如 `/airway`；留空则在根路径服务。 |
+| `AIRWAY_JS_REGISTRY` | `js:add` / `js:install` 使用的 npm registry（默认 `https://registry.npmjs.org`；需要时可设为 `https://registry.npmmirror.com` 等镜像）。 |
+| `AIRWAY_ENV` | `local` 会加载 `.env` 并使用 Gin debug 模式；其他值为 release 模式。 |
 | `STORAGE_DRIVER` | `local`（默认）、`s3`、`r2` 或 `cos`。 |
 | `STORAGE_ROOT` | 本地存储根目录（默认 `./data/storage`）。 |
-| `STORAGE_*` | 云存储设置：`STORAGE_REGION`、`STORAGE_ENDPOINT`、`STORAGE_BUCKET`、`STORAGE_ACCESS_KEY`、`STORAGE_SECRET_KEY`、`STORAGE_PUBLIC_URL`（可选 CDN 基地址）。 |
-| `TZ` | 服务器时区，例如 `Asia/Shanghai`。 |
+| `STORAGE_*` | 云存储配置：`STORAGE_REGION`、`STORAGE_ENDPOINT`、`STORAGE_BUCKET`、`STORAGE_ACCESS_KEY`、`STORAGE_SECRET_KEY`、`STORAGE_PUBLIC_URL`（可选 CDN 基址）。 |
+| `TZ` | 服务器时区，如 `Asia/Shanghai`。 |
 
 ### 数据库 DSN
 
@@ -105,9 +121,9 @@ DSN="root:passwd@tcp(127.0.0.1:3306)/airway?charset=utf8mb4&parseTime=true"
 
 说明：
 
-- 基础的 CRUD 流程可跨 PostgreSQL、MySQL 8 与 SQLite 移植。
-- 部分高级 SQL Builder 辅助函数（ARRAY、JSONB、一些 lateral/window 表达式）仍然偏向 PostgreSQL。
-- SQLite 支持使用纯 Go 的 `modernc.org/sqlite` 驱动。
+- 基础 CRUD 在 PostgreSQL、MySQL 8 与 SQLite 之间可移植。
+- 部分高级 SQL Builder 助手（ARRAY、JSONB、少量 lateral/window 表达式）仍面向 PostgreSQL。
+- SQLite 使用纯 Go 的 `modernc.org/sqlite` 驱动。
 
 ## HTTP 端点
 
@@ -115,60 +131,212 @@ DSN="root:passwd@tcp(127.0.0.1:3306)/airway?charset=utf8mb4&parseTime=true"
 
 | 方法 | 路径 | 说明 |
 | --- | --- | --- |
-| GET | `/` | 首页（纯文本）。 |
+| GET | `/` | 首页（HTML，由 templ 视图渲染）。 |
+| GET | `/ui` | airway-ui 组件展示页（交互式 island）。 |
+| GET | `/openapi.json` | 实时 OpenAPI 3.2 文档（见 [API 文档](#api-文档openapi)）。 |
 | GET | `/health` | 健康检查。 |
 | GET | `/ws` | WebSocket 连接。 |
-| POST | `/ws/publish` | 向已连接的客户端发布消息（表单字段 `message`）。 |
+| POST | `/ws/publish` | 向已连接客户端发布消息（表单字段 `message`）。 |
 | POST | `/api/v1/storage` | 上传文件（multipart `file`，可选 `dir`）。 |
 | GET | `/api/v1/storage/*key` | 下载文件。 |
 | DELETE | `/api/v1/storage/*key` | 删除文件。 |
+| GET | `/api/v1/ui-demo/items` | `/ui` 页面 TanStack island 的演示数据。 |
 
-当设置了 `URL_PREFIX` 时，公开路由（首页、WebSocket、API）只会在该前缀下提供服务，
-而不会在根路径响应；健康检查同时仍会在不带前缀的根路径上响应，方便负载均衡探活。例如设置 `URL_PREFIX="/airway"`：
+设置了 `URL_PREFIX` 后，公开路由——首页、WebSocket 与 API——只会在该前缀下服务，不再出现在根路径。健康检查仍保持在无前缀的根路径可达，便于负载均衡探针直接访问 `/health`。以 `URL_PREFIX="/airway"` 为例：
 
 ```bash
 curl http://127.0.0.1:1900/airway/health
-curl http://127.0.0.1:1900/health          # 仍可响应（探活）
+curl http://127.0.0.1:1900/health          # 仍然可达（探针）
 curl -F "file=@report.pdf" http://127.0.0.1:1900/airway/api/v1/storage
 ```
 
-客户端——包括 WebSocket 连接——都必须带上该前缀
-（`ws://host:1900/airway/ws`）。本地存储接口返回的 URL 会自动加上前缀；云存储/CDN 的 URL 不受影响。
+客户端——包括 WebSocket 连接——必须带上前缀（`ws://host:1900/airway/ws`）。API 返回的本地存储 URL 会带上前缀；云/CDN URL 不受影响。
+
+## HTML 视图（templ）
+
+页面是 `app/views/` 下的 [templ](https://templ.guide/) 模板，每个 API 模块一个目录——目录名去掉 `_api` 后缀，因此 `home_api` 渲染 `app/views/home/index.templ`。每个目录是独立的包；共享的文档外壳位于 `app/views/layouts/base.templ`。action 通过 `lib/render` 的 HTML 助手返回组件：
+
+```go
+// app/api/home_api/index_action.go
+render.HTML(c, home.Index())
+```
+
+修改任何 `.templ` 文件后，重新生成 Go 代码并保持提交：
+
+```bash
+go generate ./...   # 或：just generate，或：airway templates:compile
+```
+
+生成的 `*_templ.go` 文件已提交，因此构建与测试不需要 templ CLI。
+
+### 交互式 islands
+
+页面保持服务端渲染；交互区域是 islands——Preact TSX 组件挂载到带服务端 props 的 `data-island` 节点上：
+
+```go
+// 在 .templ 视图中（见 app/views/home 的实际示例）
+@assets.Island("counter", map[string]any{"start": 3})
+```
+
+组件位于 `app/assets/js/islands/counter.tsx`（默认导出即可；文件路径就是 island 名称），会被自动打包——无需手工注册。本地开发时 bundle 在内存中重建、浏览器自动刷新；生产环境中它内嵌在二进制里，通过防缓存 URL 提供。页面完全不依赖 JavaScript 也能完整渲染：挂载点初始为空。
+
+**airway-ui** 是 islands 所基于的内置组件库：按钮、输入框、表单（react-hook-form）、表格（TanStack Table）、模态框、toast、标签页，以及与 `lib/render` JSON 信封对齐的请求层——视觉层自研，逻辑层来自 preact/compat 生态。启动服务后可在 [`/ui`](http://127.0.0.1:1900/ui) 实时查看全部组件。
+
+## 前端策略
+
+状态：已端到端落地——见[前端指南](frontend.md)。整条管线随 CLI 交付
+（`js:add`/`js:install`/`js:build`、`generate island`/`scaffold`），随项目模板交付，也随本仓库自身交付（首页计数器与 `/ui` 组件展示页都是 islands）。
+
+前端代码与 Go 代码同仓库，获得媲美现代 UI 框架的组件化工作流，并且**不引入 Node.js 工具链**：
+
+- **templ 渲染骨架**——页面结构、SEO、首屏。
+- **交互区域是 islands**——`app/assets/js/` 下的 Preact TSX 组件，挂载到标记 `data-island` 的元素上；初始数据序列化在挂载点旁。
+- **esbuild 作为 Go 库内嵌**——CLI 直接链接 `github.com/evanw/esbuild/pkg/api`：`airway js:build` 编译 TS/TSX，开发服务器从内存提供重建后的 bundle，生产 bundle 经 `go:embed` 内嵌进单个 Go 二进制。
+- **自研 `airway-ui` 组件库**，构建在 `preact/compat` 之上——重逻辑的 React 生态库（TanStack Table/Query/Form、React Hook Form）保持可用，视觉层保持自研。
+
+已否决的备选方案：
+
+- **htmx + Alpine.js（HTML over the wire）**——做渐进增强没问题，但没有基于组件的响应式编程模型；交互能力上限远不及真正的组件库。
+- **Vite + Vue 3 子项目经 `go:embed` 内嵌**——把完整的 Node 工具链拖进仓库；真到那一步，前后端分离、前端独立用 Vue 是更诚实的选择。
+- **LiveView 式服务端驱动 UI**——对 Go 框架实际价值有限；当应用确实需要重度前端工程时，把前端拆出去独立用 Vue 才是正解。
+
+逃生舱：当应用超出 islands 的能力范围（复杂 SPA、富文本编辑器），应把前端拆成独立的 Vue 项目，Airway 退化为纯 JSON API。
+
+## API 文档（OpenAPI）
+
+二进制提供的每个 API 路由都会被记录为 **OpenAPI 3.2** 文档——无需任何注解。`airway openapi:generate` 扫描路由、从 handler 名推导 operationId，写出 `./openapi.json`（构建产物，已 git-ignore——路由变化后重新生成即可）。同一份文档实时服务于 [`/openapi.json`](http://127.0.0.1:1900/openapi.json)。
+
+各模块通过 `openapi.go` 文件用 `lib/openapi`（`openapi.Get(...)` 等）在代码里富化文档，声明操作及其从 Go 类型推导的请求/响应 schema；文档级元数据位于 `app/api/openapi_api/doc.go`。详见 [OpenAPI 指南](openapi.md)。
+
+## Admin 后台
+
+`airway admin:generate` 读取 TOML 表规格（`config/admin.toml`），生成一个完整、可上生产的管理后台——它是真实的、归用户所有的 Go 代码：cookie 会话认证、角色、审计日志、CSV 导出、服务端分页列表，并为每个声明字段（含 datetime、enum、references、attachment）生成类型感知的表单与筛选。
+
+```bash
+airway admin:generate                    # 或：admin:generate --force=table1,table2
+airway admin:root admin 's3cret'         # 创建管理员账号
+airway admin:member editor 's3cret'      # 创建非管理员后台账号（--role=editor|viewer）
+airway server                            # 在 /admin/login 登录
+```
+
+详见 [Admin 后台指南](../../ADMIN.zh-CN.md)（[English](../../ADMIN.md)）。
+
+## 桌面应用
+
+`airway desktop:init` 把项目导出为 **Wails v3** 桌面目标（`./desktop`）：同一套 Web 技术栈（templ 视图、islands、JSON API、WebSocket）在桌面进程内的本地回环端口上运行，原生 WebView 窗口加载该地址——服务端渲染页面、cookie 会话、重定向和 WebSocket 的行为与 Web 上完全一致，应用代码零改动。SQL 迁移内嵌并在启动时自动应用；打包覆盖 macOS（.app）、Windows（NSIS）与 Linux（deb/rpm/AppImage）。
+
+```bash
+airway desktop:init       # 生成 ./desktop；重跑可重新同步迁移/插件
+```
+
+详见[桌面应用指南](desktop.md)（[English](../desktop.md)）与调研记录 [WAILS.md](../../WAILS.md)。
+
+## 静态展示站点（SSG）
+
+Airway 同时也是面向展示型网站的静态站点生成器——公司官网、产品落地页、作品集。`airway ssg:new` 脚手架一个站点项目，页面在 `ssg.go` 中以 Go 代码声明，外观来自可替换的**主题 module**；`airway ssg:build` 导出纯 HTML 目录，可部署到任何静态托管；`airway ssg:serve` 本地预览。主题就是普通的 Go module（templ 组件 + 内嵌资源）：`airway theme:new` 生成新主题，`airway theme:install` 把主题装进站点。框架自带 corporate 参考主题。
+
+```bash
+airway ssg:new mysite       # 然后：airway ssg:build / airway ssg:serve
+```
+
+设计记录见 [SSG.zh-CN.md](../../SSG.zh-CN.md)（[English](../../SSG.md)），使用指南见 [docs/zh-CN/ssg.md](ssg.md)（[English](../ssg.md)）。
 
 ## CLI
 
-Airway CLI 是一个独立的 `airway` 二进制（通过
-`go install github.com/daqing/airway@latest` 安装）；在项目内同样的命令也可以
-用 `go run . <命令>` 执行。命令会自动从项目根目录加载 `.env`：
+Airway CLI 是单个 `airway` 二进制（`go install github.com/daqing/airway@latest` 安装）。在项目内它会检测宿主应用，并把所有项目级命令透明地经 `go run .` 重新执行（stderr 显示 `proxying to project binary` 提示），因此插件、REPL 模型与 Go 代码迁移总是来自项目自己的二进制。命令会自动加载项目根目录的 `.env`。
+
+### 项目与服务
 
 ```bash
-airway new myapp                           # 生成新项目骨架
-airway server                              # 启动 HTTP 服务
-airway generate api admin                  # 在 app/api/ 下新建 API namespace
-airway generate action admin show          # 在已有 API 模块中新增 action
-airway generate model post                 # 在 app/models/ 下新建 model
-airway generate service post title:string  # 在 app/services/ 下新建 CRUD service
-airway generate migration create_posts     # 在 db/migrate/ 下新建 .up.sql/.down.sql 迁移文件对
-airway db:create | db:drop
-airway db:migrate [version]                # 应用迁移
-airway db:rollback [step]
-airway db:status
-airway schema:dump | schema:show           # 写入 / 读取 db/schema.json
-airway upload [key] /path/to/file          # 通过已配置的存储上传文件
-airway version                                           # 或 -v / --version；打印 VERSION 文件内容
+airway new <module-path | /path>            # 生成新项目骨架
+airway server                               # 启动 HTTP 服务
+airway generate api admin                   # 在 app/api/ 下新建 API 命名空间
+airway generate action admin show           # 在已有 API 模块中新建 action
+airway generate model post                  # 在 app/models/ 中新建模型
+airway generate service post title:string   # 在 app/services/ 中生成 CRUD service
+airway generate island chart                # 交互式 island 组件
+airway generate scaffold post title:string  # 全套 CRUD：模型+迁移+API+页面+island
+airway generate migration create_posts      # 在 db/migrate/ 中生成 .up.sql/.down.sql 对
+airway repl                                 # 交互式 repo REPL（项目内自动代理到 go run .）
+airway version                              # 打印版本（亦支持 -v、--version）
 ```
 
-旧形式 `airway cli <命令>` 仍作为兼容别名可用。由于模型和 Plugin 在编译期注册，
-`repl` 与 `plugin:install` 建议通过项目二进制运行（`go run . repl`、
-`go run . plugin:install <module>`）——全局安装的 `airway` 只能看到编译进它自身的内容。
+### 数据库
 
-数据库相关命令读取 `DSN`/`AIRWAY_DSN`；为了向后兼容，仍支持旧的 `AIRWAY_DB_DSN` 与 `AIRWAY_PG`。完整的[CLI 指南](cli.md)。
+```bash
+airway db:create                            # 创建数据库
+airway db:drop                              # 删除数据库
+airway db:migrate [version]                 # 应用迁移
+airway db:rollback [step]                   # 回滚迁移
+airway db:status                            # 迁移状态
+airway schema:dump                          # 写出 db/schema.json
+airway schema:show                          # 打印 db/schema.json
+```
+
+### 前端
+
+```bash
+airway js:add <pkg>[@version]               # 添加前端 npm 依赖（无需 Node）
+airway js:install                           # 将 js.pkg.json 依赖安装到 app/assets/js/vendor/
+airway js:build                             # 将 app/assets/js 打包到 app/assets/dist（esbuild）
+airway templates:compile                    # 重新生成 templ 视图（`go generate ./...` 的简写）
+```
+
+### API 文档
+
+```bash
+airway openapi:generate [--out path]        # 写出 OpenAPI 3.2 文档（默认 ./openapi.json）
+```
+
+### Admin 后台
+
+```bash
+airway admin:generate [config/admin.toml]   # 从 TOML 表规格生成后台
+airway admin:root <username> <password>     # 创建管理员账号（role admin）
+airway admin:member <username> <password> [--role=editor|viewer]
+                                            # 创建非管理员后台账号
+```
+
+### 桌面应用
+
+```bash
+airway desktop:init [--force]               # 在 ./desktop 生成 Wails v3 桌面目标
+```
+
+### 静态站点与主题
+
+```bash
+airway ssg:new [--local[=path]] <name>      # 脚手架静态展示站点项目
+airway ssg:build [--out dist]               # 将 ssg.go 定义的站点导出为静态 HTML
+airway ssg:serve [--addr 127.0.0.1:3000]    # 本地服务预览站点
+airway theme:new [--local[=path]] <name>    # 脚手架新的站点主题 module
+airway theme:install <module | /path>       # 把站点主题接入宿主项目
+```
+
+### 插件
+
+```bash
+airway plugin:new <module-path | /path>     # 脚手架新插件 module
+airway plugin:list                          # 已注册插件及其挂载路径
+airway plugin:install <module>              # 启用插件 + 安装其 SQL 迁移与 deps/
+airway plugin:lint                          # 检查当前插件项目的旧版布局问题
+```
+
+### 文件
+
+```bash
+airway upload [key] /path/to/file           # 经配置的存储上传
+```
+
+旧形式 `airway cli <command>` 仍作为兼容别名可用。数据库命令读取
+`DSN`/`AIRWAY_DSN`；历史别名 `AIRWAY_DB_DSN` 与 `AIRWAY_PG` 继续兼容。完整内容见
+[CLI 指南](cli.md)。
 
 ## Repository API（`lib/repo`）
 
-### Model
+### 模型
 
-Model 是带有 `db` 标签、并实现 `TableName()` 的结构体。关联关系通过 `Relations()` 声明。
+模型是带 `db` tag 和 `TableName()` 方法的结构体。关联通过 `Relations()` 声明。
 
 ```go
 import "github.com/daqing/airway/lib/repo"
@@ -208,7 +376,7 @@ func (Post) Relations() map[string]repo.Relation {
 
 ### CRUD
 
-以下辅助函数都使用启动时配置好的数据库（`repo.SetupDB`），并把 model 类型作为类型参数传入：
+所有助手使用启动时配置的数据库（`repo.SetupDB`），并以模型类型作为类型参数：
 
 ```go
 // 创建
@@ -234,11 +402,9 @@ n, err := repo.CountWhere[User](sql.H{"active": true})
 n, err := repo.CountEvery[User]()
 ```
 
-### Transactions（事务）
+### 事务
 
-`repo.WithTx` 在单条绑定事务的连接上执行回调。回调拿到一个
-`*repo.Tx`，其辅助方法都运行在该事务内；泛型辅助函数则通过 `tx.Executor()`
-配合 `*With` 变体使用：
+`repo.WithTx` 在单条事务绑定连接上运行回调。回调收到一个 `*repo.Tx`，其助手方法都在该事务上执行；泛型助手通过 `*With` 变体传入 `tx.Executor()`：
 
 ```go
 users := sql.TableOf("users")
@@ -253,15 +419,15 @@ err := repo.WithTx(db, func(tx *repo.Tx) error {
 		return err
 	}
 
-	return nil // 提交；返回非 nil 则回滚
+	return nil // 提交；返回非 nil 即回滚
 })
 ```
 
-需要手写 SQL 时，用 `tx.Raw()` 拿到底层的 `*sql.Tx`。`repo.Tx` 不暴露
-`Commit`/`Rollback`——提交或回滚由回调的返回值决定，`repo.WithTxContext`
-可传入 context。`JoinQuery`/`Preloader` 仍只走连接池，无法在事务内使用。
+用 `tx.Raw()` 可以拿到 `*sql.Tx` 执行手写 SQL。没有公开的
+`Commit`/`Rollback`——结果跟随回调的返回值，`repo.WithTxContext` 支持传入
+context。`JoinQuery`/`Preloader` 仅限连接池，不能在事务内运行。
 
-乐观锁写法：`UpdateAffected` 配合 version 检查，并发写入时只有一个成功：
+乐观锁配方：用 `UpdateAffected` 加版本检查，保证并发写只有最新者胜出：
 
 ```go
 affected, err := tx.UpdateAffected(
@@ -277,12 +443,11 @@ if affected == 0 {
 }
 ```
 
-事务以 PostgreSQL 为主要支持目标。MySQL 的 insert 路径会在同一连接上
-额外执行一次查询做回填，事务内属于 best-effort。
+事务以 PostgreSQL 为主要目标。MySQL 的插入路径会在同一连接上补发一次查询，在事务内属于尽力而为。
 
-### Preload（预加载）
+### 预加载（eager loading）
 
-Preload 用少量查询代替 N+1 循环：
+Preload 用几条查询替代 N+1 循环：
 
 ```go
 users, _ := repo.FindBy[User](sql.H{})
@@ -296,7 +461,7 @@ err := repo.PreloadCond("Posts", sql.AllOf(
 )).Exec(&users)
 ```
 
-### Joins（联表查询）
+### 联表
 
 ```go
 results, err := repo.Join(User{}).LeftJoins("Profile").Find()
@@ -331,17 +496,16 @@ err := repo.Join(User{}).LeftJoins("Profile").FindInto(&users)
 
 ## Repo REPL
 
-直接针对已配置的数据库运行 `lib/repo`：
+直接对已配置的数据库操作 `lib/repo`：
 
 ```bash
 go run . repl                              # 使用已配置的 DSN
 go run . repl --driver sqlite --dsn ./tmp/airway.db
 ```
 
-请像上面这样通过项目二进制运行 REPL：它只能看到编译进该二进制、通过 `lib/replreg`
-注册的模型，因此全局安装的 `airway repl` 看不到你项目中的模型。
+REPL 只能看到它所在二进制编译进的模型（经 `lib/replreg` 注册）。在项目内，`airway repl` 会自动代理到 `go run . repl`，因此你项目的模型会出现；项目外只能看到框架内置模型。
 
-命令：`help`、`driver`、`tables`、`exit`。直接输入一条 Go 表达式即可求值——Builder 会打印编译后的 SQL，`repo.*` 调用会真实执行数据库操作：
+命令：`help`、`driver`、`tables`、`exit`。输入 Go 表达式即可求值——builder 会打印编译后的 SQL，`repo.*` 调用直接作用于数据库：
 
 ```text
 repo.FindOne("posts", sql.Eq("id", 1))
@@ -352,44 +516,44 @@ repo.Delete("posts", sql.Eq("id", 1))
 pg.Select("*").From("posts").Where(sql.Eq("id", 1))
 ```
 
-可用的 namespace：`repo`、`sql`、`pg`、`mysql`、`sqlite`、`models`。
-`repo.Find`/`FindOne`/`Count`/`Exists` 既可以接收构建好的语句，也可以接收 `表名 + 条件`；类型化调用支持匿名 struct 与应用 model。整表更新/删除必须以显式 `true` 作为最后一个参数。
+可用命名空间：`repo`、`sql`、`pg`、`mysql`、`sqlite`、`models`。
+`repo.Find`/`FindOne`/`Count`/`Exists` 接受构建好的语句或 `表 + 条件`；类型化调用支持匿名结构体与应用模型。全表更新/删除需要显式传入 `true` 作为最后一个参数。
 
 ## 文件存储
 
-`lib/storage` 是基于本地目录或云后端（S3 / R2 / COS）的统一存储层。通过 `STORAGE_DRIVER` 选择后端：
+`lib/storage` 是本地目录或云后端（S3 / R2 / COS）之上的统一层。通过 `STORAGE_DRIVER` 配置后端：
 
 ```env
 # 本地
 STORAGE_DRIVER="local"
 STORAGE_ROOT="./data/storage"
 
-# 云存储（S3 兼容）：选择 s3 / r2 / cos
+# 云（S3 兼容）：可选 s3 / r2 / cos
 STORAGE_DRIVER="s3"
 STORAGE_REGION="us-east-1"
 STORAGE_BUCKET="my-bucket"
 STORAGE_ACCESS_KEY="..."
 STORAGE_SECRET_KEY="..."
-# STORAGE_PUBLIC_URL="https://cdn.example.com"   # 可选 CDN 基地址
+# STORAGE_PUBLIC_URL="https://cdn.example.com"   # 可选 CDN 基址
 ```
 
-在代码中通过当前后端使用：
+在代码中经当前后端使用：
 
 ```go
-store := storage.Current() // 启动时由 storage.Setup 注入
+store := storage.Current() // 启动时由 storage.Setup 安装
 
 err := store.Put(ctx, "docs/report.pdf", storage.Object{
 	Reader:      file,
 	Size:        size,
 	ContentType: "application/pdf",
 })
-rc, err := store.Get(ctx, "docs/report.pdf") // 使用后需 close
+rc, err := store.Get(ctx, "docs/report.pdf") // 用完关闭
 ok, err := store.Exists(ctx, "docs/report.pdf")
 url, err := store.URL(ctx, "docs/report.pdf", 24*time.Hour)
 err := store.Delete(ctx, "docs/report.pdf")
 ```
 
-`URL()` 在本地后端返回应用自身的下载路径，在云后端返回 CDN 或预签名 URL。应用在同一存储层之上暴露了 REST API：
+`URL()` 对本地后端返回应用自身的下载路径，对云后端返回 CDN 或预签名 URL。应用在同一层之上暴露 REST API：
 
 ```bash
 # 上传（multipart 字段 "file"，可选 "dir"）
@@ -401,16 +565,20 @@ curl -O http://127.0.0.1:1900/api/v1/storage/docs/202609/ab12cd....pdf
 curl -X DELETE http://127.0.0.1:1900/api/v1/storage/docs/202609/ab12cd....pdf
 ```
 
-完整的[存储指南](storage.md)。
+完整内容见[文件存储指南](storage.md)。
 
 ## 部署
 
-该二进制是自包含的。使用以下命令构建纯 Go 镜像（无需 CGO 工具链）：
+二进制是自包含的。构建纯 Go 镜像（无需 CGO 工具链）：
 
 ```bash
 just docker        # 或：docker build -t airway .
 docker run -p 1900:1900 -e AIRWAY_ENV=production -e DSN="sqlite:///app/tmp/airway.db" airway
 ```
+
+Dockerfile 从 daocloud.io 镜像拉取基础镜像，并把 Go module 代理指向
+goproxy.cn，因此在默认源缓慢或不可达的网络环境下也能开箱构建；不需要镜像
+的话移除即可。
 
 部署前后运行迁移：
 
@@ -418,11 +586,4 @@ docker run -p 1900:1900 -e AIRWAY_ENV=production -e DSN="sqlite:///app/tmp/airwa
 ./airway db:migrate
 ```
 
-Compose 示例见 [docs/docker-compose.yml.example](../docker-compose.yml.example)。如需在反向代理后面以子路径前缀提供服务，请设置 `URL_PREFIX`（例如 `/airway`）——参见上文[「HTTP 端点」](#http-端点)。
-
-## 更多指南
-
-- [CLI 脚手架指南](cli.md) · [文件存储指南](storage.md)
-- [视图模板指南（templ）](template.md)
-- [SQL Builder DSL 指南](sql-builder.md)
-- [English README](../README.md)
+compose 示例见 [docs/docker-compose.yml.example](../docker-compose.yml.example)。如需在反向代理后以路径前缀服务，设置 `URL_PREFIX`（如 `/airway`）——见 [HTTP 端点](#http-端点)。

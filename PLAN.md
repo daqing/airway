@@ -1,220 +1,86 @@
-# Plan: Config-driven Admin Backend Generator (`admin:generate`)
+# README 全量更新计划(v0.5.0 → v0.15.0 + 当前分支)
 
-Generate a complete admin panel — authentication, a dashboard with sidebar
-navigation, and full CRUD for every table — from a single TOML file.
+> 目标:让 `README.md`(英文)与 `docs/zh-CN/README.md`(中文)完整反映框架的
+> 当前实现。调研范围:v0.5.0 → v0.15.0 全部 24 个 tag(110 个提交),外加
+> `feat/ssg` 分支上已提交未发版的 SSG/主题功能。
+>
+> 状态:**已执行(2026-09-22)**——README.md 与 docs/zh-CN/README.md 已按本计划重写,
+> 验证清单全过。用户已拍板:§7 采纳推荐方案(短节概述+链接)、CLI 全量分组列出、不放版本历史。
+> 注:原 PLAN.md(admin 面板计划)已被本计划覆盖,原内容见 git 历史
+> (提交 `0dfe08a`)。
 
-## Confirmed decisions
+## 1. 版本变更清单(调研结论)
 
-| Decision | Choice |
-|---|---|
-| Approach | **Static code generation** (Rails-style: generated code is real, user-owned code) |
-| Auth | **Built-in login**: `admin_users` + cookie sessions + middleware |
-| Field types | Base 5 (string/text/integer/float/boolean) **plus** datetime, enum, references, attachment |
+| 版本 | 主要变更 | 对 README 的影响 |
+|---|---|---|
+| v0.6.0–0.6.2 | templ 服务端渲染视图;`URL_PREFIX` 反向代理子路径;框架首页 | 视图章节已有;URL_PREFIX 已有 |
+| v0.7.0–0.7.4 | 插件机制(初名 engine,后改名 plugin);CLI 独立为 go-installable 单二进制;`--version`/VERSION 文件;`airway new` 播种 .env | Features 已有 plugin 一条;CLI 清单**缺** plugin:* 命令 |
+| v0.8.0–0.8.4 | plugin:install 自包含化(deps/ 目录);`airway new` 支持绝对路径、git init、版本 pin | 细节不需进 README;CLI 行为已提 |
+| v0.9.0–0.9.3 | **前端栈**:js:add/js:install(免 Node)、js:build(内嵌 esbuild + livereload)、Preact islands、airway-ui 组件库 + /ui;generate island/scaffold;plugin SQL 迁移安装、host/ 树镜像、全局 CLI 项目代理 | 已有完整章节 ✓ |
+| v0.10.0–0.10.2 | plugin:lint;plugin install/ 布局;**OpenAPI 3.2 文档生成**(`openapi:generate` + GET /openapi.json);进程环境优先于 .env | **完全缺失**:Features、CLI、HTTP endpoints、Configuration 四处都要补 |
+| v0.11.0 | 事务绑定仓储助手(`repo.WithTx`/`*With` 变体) | 已有 Transactions 章节 ✓ |
+| v0.12.0–0.12.1 | Go 1.27.1;plugin 支持文件系统路径 | README **未声明 Go 版本要求** → 补 |
+| v0.13.0–0.13.2 | Docker 镜像国内 mirror(daocloud/goproxy.cn);脚手架后自动装前端依赖;**SKIP LOCKED 原生支持**(`ForUpdateSkipLocked`);全仓测试覆盖 | SKIP LOCKED 与 mirror **未提** → 补 Features/Deployment |
+| v0.14.0 | **Admin 后台生成器**:admin:generate(TOML 驱动)+ admin:root/admin:member、角色、审计日志、服务端分页 | 仅文档列表有链接;**Features、CLI 清单缺失** → 补章节 |
+| v0.15.0 | **Wails v3 桌面导出**:`desktop:init`,lib/boot 程序化启动,三平台打包 | CLI 清单已有;**Features 缺失**,docs/desktop.md 未入文档列表 → 补 |
+| feat/ssg(≥v0.15.0) | **SSG + 主题**:`ssg:new/build/serve`、`theme:new/install`、`lib/ssg`、themes/corporate | CLI 清单已补;**Features 缺失** → 补章节 |
 
-## TOML format
+## 2. 现有 README 的问题清单
 
-Default path: `config/admin.toml` (overridable: `airway admin:generate [path]`).
+1. **Features 列表缺 5 项**:OpenAPI 文档生成、Admin 后台生成、桌面导出、SSG/主题、SKIP LOCKED(SQL builder 条目内补一句)。
+2. **CLI 命令清单不全**:缺 `openapi:generate`、`admin:generate|admin:root|admin:member`、`plugin:new|list|install|lint`、`theme:new|install`、`templates:compile`、`repl`。
+3. **HTTP endpoints 表缺** `GET /openapi.json`(live 文档端点)。
+4. **Configuration 缺**两类信息:进程环境优先于 .env 的显式说明;`AIRWAY_DB_DSN`/`AIRWAY_PG` 兼容别名(CLI 段落有提,配置表没有)。
+5. **文档列表(顶部 + 底部"Guides")重复且不一致**:底部缺 admin/ssg/desktop/openapi;两处应合并为一处。
+6. **未声明 Go 版本要求**(go 1.27.1)。
+7. **Deployment 未提** Dockerfile 的国内镜像(goproxy.cn / daocloud)。
+8. **docs/zh-CN/README.md(428 行)与英文版(578 行)结构已分叉**,不是镜像;需按新版英文全量重写对齐。
 
-```toml
-[category]
-name = "string"
-sort_order = "integer"
+## 3. 新 README.md 结构(英文,约 650 行)
 
-[post]
-title = "string"
-body = "text"
-published = "boolean"
-published_at = "datetime"
-status = "enum:draft,published,archived"
-category_id = "references"                # infers target [category] from the _id suffix
-cover = "attachment"
-author_id = "references:member"           # explicit target (a [member] table)
-```
+| # | 章节 | 处理 | 说明 |
+|---|---|---|---|
+| 1 | 文档索引(顶部列表) | 重写 | 合并现有顶部+底部 Guides;每行成对(en/zh);补 ssg、admin、desktop、openapi |
+| 2 | What Airway is | 微调 | lib/ 清单补 openapi、ssg |
+| 3 | Features | 扩充 | +OpenAPI、+Admin 生成、+桌面导出、+SSG/主题、SQL builder 条目加 SKIP LOCKED |
+| 4 | Quick start | 微调 | 加 Go 1.27.1 要求;其余保留 |
+| 5 | Configuration | 补 | 环境优先级句;DSN 兼容别名移入表格 |
+| 6 | HTTP endpoints | 补一行 | `GET /openapi.json` |
+| 7 | HTML views / islands / Frontend strategy | 保留 | 无实质变化 |
+| 8 | **API documentation (OpenAPI)** | 新增 | 短节:handler 推导 operationId、openapi.go 富化、命令 + live 端点;详见 docs/openapi.md |
+| 9 | **Admin panel** | 新增(短节) | 一段能力概述 + 3 条命令 + 链接 ADMIN.md(细节留专文档) |
+| 10 | **Desktop apps** | 新增(短节) | 一段模式说明 + desktop:init + 链接 docs/desktop.md / WAILS.md |
+| 11 | **Static showcase sites (SSG)** | 新增(短节) | 一段 + 命令 + 链接 SSG.md / docs/ssg.md |
+| 12 | CLI | 重写命令清单 | 补全全部命令(与 `airway help` 输出逐条核对) |
+| 13 | Repository API / REPL / File storage | 保留 | 现状准确 |
+| 14 | Deployment | 补 | mirror 说明一句 |
+| 15 | (删)底部 Guides | 删 | 并入顶部索引 |
 
-Rules:
+原则:**README 保持"总览 + 快速上手"定位**,admin/desktop/ssg 各给一小节(≤10 行)+ 专文档链接,细节不搬进 README。
 
-- Each top-level table is one resource. **Keys are singular resource names**
-  (same convention as `generate scaffold post`); the SQL table name is the
-  pluralized form via the existing `pluralize()`.
-- Field names are `snake_case` (they become column names verbatim).
-- Reserved/generated columns per table: `id`, `created_at`, `updated_at` —
-  error if the TOML declares them.
-- Type grammar:
+## 4. 中文版策略
 
-  | TOML type | Go model field | SQL column | Form control (island) |
-  |---|---|---|---|
-  | `string` | `string` | `VARCHAR(255)` | Input |
-  | `text` | `string` | `TEXT` | Textarea |
-  | `integer` / `int` | `int64` | `BIGINT` | Input (number) |
-  | `float` | `float64` | `DOUBLE PRECISION` | Input (number) |
-  | `boolean` / `bool` | `bool` | `BOOLEAN` | Checkbox |
-  | `datetime` | `*time.Time` | `TIMESTAMP` | Input (datetime-local) |
-  | `enum:a,b,c` | `string` | `VARCHAR(255)` + `CHECK` | Select |
-  | `references` / `references:name` | `int64` | `BIGINT` + `FOREIGN KEY` + index | Select (options loaded from the target's list API) |
-  | `attachment` | `string` (stored URL) | `VARCHAR(255)` | File input → uploads via admin storage endpoint |
+`docs/zh-CN/README.md` 按"英文版的完整镜像"标准**全量重写**(当前 428 行、结构分叉):
+章节一一对应、代码块与命令完全一致、叙述用地道中文;文首保留 English README 互链。
 
-- Unknown types, empty tables, duplicate table/field names, `references`
-  pointing at an unknown table, and circular references are hard errors.
+## 5. 执行步骤
 
-## Generated artifacts
+1. 按 §3 写新版 `README.md`(英文)。
+2. 按 §4 全量重写 `docs/zh-CN/README.md`。
+3. 清理:删除 AGENTS.md 中悬空的 "(see PLAN.md Phase 3)" 引用(前端计划已移除)。
+4. 验证(§6)后交用户 review,不主动 commit。
 
-For `[post]` above (first run, alongside the other tables):
+## 6. 验证清单
 
-```
-app/
-  models/
-    admin_user.go              # auth: email + password_digest (once)
-    admin_session.go           # auth: token + user_id + expires_at (once)
-    category.go                # per TOML table
-    post.go                    #   incl. Relations() for references fields
-  middlewares/
-    admin_auth.go              # cookie → session → c.Set("admin_user") (once)
-  api/admin_api/
-    routes.go                  # static: mounts registry + auth + login routes (once)
-    registry.go                # AdminResource type + registerResource() (once)
-    auth_action.go             # login/logout page actions (once)
-    uploads_action.go          # POST /api/v1/admin/uploads (attachment upload) (once)
-    openapi.go                 # auth + uploads declarations (once)
-    post_resource.go           # init() self-registration + CRUD actions + OpenAPI decls
-  views/admin/                 # single package for the whole admin module
-    admin.templ                # AdminLayout(title, active, nav) — sidebar shell (once)
-    index.templ                # dashboard: one card per registered resource (once)
-    login.templ                # server-rendered login form, no island needed (once)
-    post_index.templ           # per-table page hosting its CRUD island
-  assets/js/islands/
-    admin-post-crud.tsx        # per-table island (DataTable + modal form, type-aware)
-db/migrate/
-  <ts>_create_admin_tables.up.sql/.down.sql   # one pair per generator run
-config/routes.go               # edited once: admin_api.Routes(r) before plugin.MountAll
-```
+- [ ] `airway help` 输出与 README CLI 清单逐条一致(以命令实测为准)
+- [ ] README 中出现的每个相对链接指向存在的文件(脚本校验)
+- [ ] 配置表与 `.env.example` 对照无遗漏
+- [ ] HTTP endpoints 与 `config/routes.go` + openapi 路由对照
+- [ ] 中文版章节结构与英文版一一对应(脚本比对标题树)
+- [ ] `go build ./... && go test ./...` 不受影响(纯文档改动)
 
-### Registry pattern (additive re-runs)
+## 7. 开放问题(review 时请拍板)
 
-Re-running `admin:generate` after adding a table to the TOML must be purely
-additive — no edits to already-generated files. Each per-table file
-self-registers:
-
-```go
-// post_resource.go
-func init() {
-    registerAdminResource(adminResource{
-        SlugPlural: "posts", Name: "Post", NamePlural: "Posts",
-        Label: "Posts", Mount: mountPostRoutes, Page: PostPageAction,
-    })
-}
-```
-
-`routes.go` (generated once) iterates the registry to mount everything under
-`/admin` and `/api/v1/admin`; the sidebar and dashboard also render from the
-registry, so newly added tables appear automatically after a re-run.
-
-### URL map
-
-| Route | Purpose |
-|---|---|
-| `GET /admin` | dashboard |
-| `GET /admin/login` · `POST /admin/login` · `POST /admin/logout` | auth (server-rendered form posts) |
-| `GET /admin/<plural>` | per-table page |
-| `GET/POST /api/v1/admin/<plural>`, `PUT/DELETE /api/v1/admin/<plural>/:id` | CRUD JSON API |
-| `POST /api/v1/admin/uploads` | multipart upload via `storage.Current()`, returns URL |
-
-All of the above except the login routes sit behind the `AdminAuth`
-middleware.
-
-## Authentication design
-
-- `admin_users`: `email VARCHAR(255) UNIQUE`, `password_digest VARCHAR(255)`
-  (hashed with the existing `utils.EncryptPassword`).
-- `admin_sessions`: `token VARCHAR(64)` PK (`utils.RandomHex(32)`),
-  `admin_user_id` FK, `expires_at TIMESTAMP`, `created_at`.
-- Cookie `airway_admin_session`: HttpOnly, SameSite=Lax, Path=/, Secure
-  outside `AIRWAY_ENV=local`, 7-day expiry. Logout deletes the row;
-  the middleware opportunistically deletes expired sessions.
-- **No first-visit bootstrap page** (attacker-on-empty-DB risk). Accounts are
-  created by a new framework CLI command:
-
-  ```bash
-  airway admin:user admin@example.com 's3cret'   # proxied to `go run .` in projects
-  ```
-
-  It opens the DSN like `db:migrate` does and inserts into `admin_users` via
-  the map-based repo API (`repo.InsertMap`), so the framework CLI needs no
-  import of project code.
-- Middleware behavior: API routes get 401 JSON; pages redirect to
-  `/admin/login`.
-
-## Generator mechanics
-
-- Parse TOML with `pelletier/go-toml/v2` (promote from indirect to direct
-  dependency — already in the module graph).
-- **Migration ordering**: one migration pair per generator run
-  (`<ts>_create_admin_tables`), containing auth tables (first run only) and
-  the TOML tables in topological order of `references` dependencies. FKs use
-  portable table-constraint syntax
-  (`FOREIGN KEY (category_id) REFERENCES categories(id)`) plus an index on
-  each FK column; enums get a `CHECK (col IN (...))` constraint.
-- **Idempotency**: every target file is written only if absent
-  (`writeTemplateFile` already refuses to overwrite); existing files are
-  reported as `skipped`. A table whose `app/models/<name>.go` already exists
-  is skipped entirely with a warning (the generator does not parse existing
-  models to retrofit admin pages — v1 limitation). `config/routes.go` is
-  edited only on the first run (same anchor-based edit as
-  `registerScaffoldRoutes`).
-- Tables removed from the TOML are **not** deleted; after generation the code
-  is the source of truth. The run summary makes this explicit.
-- Update semantics: changing a field type in the TOML does not alter existing
-  files or generate ALTERs (scaffold parity — hand-edit or write a migration).
-- Per-table code largely extends the existing scaffold templates
-  (model/actions/openapi/island); the admin generator reuses `pluralize`,
-  `toCamelName`, `idColumnForDSN`, `currentModulePath`, and the route-wiring
-  helper.
-
-## Frontend behavior
-
-- Admin pages use a dedicated `AdminLayout` (sidebar + content), independent
-  of `layouts.Base`.
-- Each island is the scaffold CRUD island extended with type-aware controls:
-  Select for enum, datetime-local input for datetime, remote Select for
-  references (label = first `name`/`title`/`label`/`email` field of the
-  target, else `#id`), file picker + upload for attachment (shows the stored
-  URL), Checkbox for boolean. `datetime` fields serialize as RFC 3339 or
-  `null`; the table view formats them.
-- After generation: `go generate ./...` (templ), `go run . js:build`, commit
-  the refreshed `*_templ.go` and `dist/` per repo convention.
-
-## Implementation phases
-
-1. **Type system + TOML parsing** (`cmd/cli_admin.go`): config structs, type
-   grammar parsing, validation (reserved names, unknown refs, cycles),
-   topological sort, migration SQL rendering. Unit tests for all of it.
-2. **Generator core**: per-table templates (model/resource actions/OpenAPI/
-   views/islands), registry + once-only files, `admin:generate` dispatch,
-   `config/routes.go` wiring, run summary output. Tests over a tmp dir.
-3. **Auth**: models, migrations, `AdminAuth` middleware, login/logout
-   actions + login view, `airway admin:user` command. Tests against SQLite
-   in-memory (follow `lib/repo` integration-test style where a DB is needed).
-4. **Frontend**: AdminLayout/dashboard/login views, type-aware island
-   controls, admin uploads endpoint.
-5. **Docs & verification**: update `docs/cli.md` (+ zh-CN counterpart),
-   `AGENTS.md` CLI section; full e2e pass — scaffold a temp project, run the
-   generator covering every field type, `go build`, `db:migrate`,
-   `admin:user`, login, exercise CRUD incl. an attachment upload (local
-   storage); `gofmt`, `go vet ./...`, `go test ./...` with zero no-test
-   packages.
-
-## Follow-ups (implemented)
-
-All of the v1 follow-ups have shipped:
-
-- Server-side search/filter/pagination/sort — list API takes `page`,
-  `page_size`, `q`, `sort`/`order` (whitelisted) and exact-match field
-  filters; the island ships a search box, pagination and Export CSV.
-- CSRF tokens on the login form (double-submit cookie) and login rate
-  limiting (`lib/ratelimit`, 5 failures / 15 min per IP+email).
-- Roles — `admin_users.role` (admin/editor/viewer) with `AdminRequireWrite`
-  and `AdminRequireAdmin` middleware; `admin:user <email> <password> [role]`.
-- Audit log — `admin_audit_logs` written on every mutation, reviewed at
-  `/admin/audit-log` (admin only). Old installs get an upgrade migration.
-- Soft delete — declaring `deleted_at = "datetime"` opts a table in.
-- Display labels / i18n — optional `[table.meta]` (`label`, `labels`).
-- Re-customizing generated tables — `admin:generate --force[=tables]`.
+1. Admin / Desktop / SSG 三个短节的详略:按"一段概述 + 命令 + 链接"处理是否合适?(替代方案:Admin 展开成完整章节,但会与 ADMIN.md 大量重复)
+2. CLI 清单是否全量列出(约 30 行命令),还是按组归并保持紧凑?
+3. 版本变更历史是否需要在 README 中体现(如 CHANGELOG 链接)?当前建议:不放,保持 README 面向"当前实现"。

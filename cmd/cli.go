@@ -103,7 +103,7 @@ func printUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "usage:")
 	_, _ = fmt.Fprintln(w, "  airway new <module-path>                 create a new Airway project")
 	_, _ = fmt.Fprintln(w, "  airway server                            start the HTTP server")
-	_, _ = fmt.Fprintln(w, "  airway generate [action|api|model|migration|service|cmd] [params]")
+	_, _ = fmt.Fprintln(w, "  airway generate [action|api|model|migration|service|island|scaffold|cmd] [params]")
 	_, _ = fmt.Fprintln(w, "  airway db:create")
 	_, _ = fmt.Fprintln(w, "  airway db:drop")
 	_, _ = fmt.Fprintln(w, "  airway db:migrate [version]")
@@ -129,11 +129,12 @@ func printUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "  airway plugin:lint")
 	_, _ = fmt.Fprintln(w, "  airway js:add <pkg>[@version]       add a frontend dependency (no Node required)")
 	_, _ = fmt.Fprintln(w, "  airway js:install                   install frontend dependencies from js.pkg.json")
+	_, _ = fmt.Fprintln(w, "  airway js:build                     bundle app/assets/js into app/assets/dist (esbuild)")
 	_, _ = fmt.Fprintln(w, "  airway upload [key] /path/to/file")
 	_, _ = fmt.Fprintln(w, "  airway repl                              interactive repo REPL (runs through go run . inside a project)")
 	_, _ = fmt.Fprintln(w, "  airway version                             print version (also -v, --version)")
 	_, _ = fmt.Fprintln(w, "")
-	_, _ = fmt.Fprintln(w, "`airway <command>` remains accepted as an alias for `airway <command>`.")
+	_, _ = fmt.Fprintln(w, "`airway cli <command>` remains accepted as an alias for `airway <command>`.")
 }
 
 func printCLIGenerateUsage(w io.Writer) {
