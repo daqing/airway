@@ -1,0 +1,18 @@
+package main
+
+import (
+	"github.com/daqing/airway/cmd"
+	"github.com/daqing/airway/lib/static"
+
+	"{{module}}/app/views/home"
+)
+
+// Static export demo: `airway static:build` renders the welcome page into
+// dist/ together with the committed frontend bundle (see
+// docs/static-export.md). Register more pages here, or run
+// `generate scaffold` — each resource adds its own export_<name>.go.
+func init() {
+	cmd.SetStaticPages(
+		static.Page{Slug: "/", Component: home.Index()},
+	)
+}

@@ -19,6 +19,7 @@ func TestScaffoldWritesTemplateWithModuleReplaced(t *testing.T) {
 		"main.go",
 		"VERSION",
 		"version.go",
+		"export.go",
 		".env.example",
 		".gitignore",
 		"config/routes.go",
@@ -54,6 +55,14 @@ func TestScaffoldWritesTemplateWithModuleReplaced(t *testing.T) {
 	mainGo := readFile(t, filepath.Join(destDir, "main.go"))
 	if !strings.Contains(mainGo, "app.WithRoutes(config.Routes, config.HealthRoutes)") {
 		t.Fatalf("expected main.go to mount project routes, got:\n%s", mainGo)
+	}
+
+	exportGo := readFile(t, filepath.Join(destDir, "export.go"))
+	if !strings.Contains(exportGo, `"github.com/example/demo/app/views/home"`) {
+		t.Fatalf("expected project import rewritten in export.go, got:\n%s", exportGo)
+	}
+	if !strings.Contains(exportGo, "static.Page{Slug: \"/\", Component: home.Index()}") {
+		t.Fatalf("expected welcome page registered in export.go, got:\n%s", exportGo)
 	}
 }
 

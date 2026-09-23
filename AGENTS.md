@@ -99,7 +99,14 @@ lib/
                  and the Handler preview server (see docs/ssg.md). Host
                  projects register their site with cmd.SetSSGBuilder from
                  an init in a root-package ssg.go.
-  utils/         Env/config helpers, password hashing, tokens, dates, markdown.
+  static/        Static export engine behind static:build/static:serve:
+                 renders app pages (templ components registered via
+                 cmd.SetStaticPages from a root-package export.go) offline
+                 into <slug>/index.html files for CDN deployment; the CLI
+                 copies app/assets/dist next to them (see
+                 docs/static-export.md).
+  utils/         Env/config helpers, password hashing, tokens, dates, markdown,
+                 fs.FS-to-directory copying (CopyFS).
   validation/    Input validation helpers.
 themes/          Bundled site themes as separate Go modules (themes/corporate
                  is the corporate showcase example). Each has its own go.mod
@@ -153,7 +160,7 @@ airway generate api admin                             # new API namespace under 
 airway generate action admin show                     # new action in an existing API module
 airway generate model post                            # new model in app/models/
 airway generate service post title:string             # CRUD service in app/services/
-airway generate scaffold post title:string             # full CRUD: model, migration, JSON API, templ page, island
+airway generate scaffold post title:string             # full CRUD: model, migration, JSON API, templ pages (list + detail), island, static export registration
 airway admin:generate [--force[=tables]] [path]      # full admin backend (auth, roles, audit, CSV, server-side lists) from a TOML table spec
 airway admin:root <username> <password>              # create an administrator account (role admin; bcrypt)
 airway admin:member <username> <password> [--role=r] # create a non-admin account (editor|viewer)
@@ -161,9 +168,11 @@ airway desktop:init [--force]                        # generate the Wails v3 des
 airway ssg:new [--local[=path]] <name>               # scaffold a static showcase site project (see docs/ssg.md)
 airway ssg:build [--out dist]                       # export the site defined in ssg.go as static HTML
 airway ssg:serve [--addr 127.0.0.1:3000]            # preview the site with a local server
+airway static:build [--out dist]                    # export export.go-registered app pages + app/assets/dist as static HTML (see docs/static-export.md)
+airway static:serve [--addr 127.0.0.1:3000]         # preview the static pages with a local server
 airway theme:install <module | /path>                # wire a site theme into the host project's go.mod
 airway theme:new [--local[=path]] <name>             # scaffold a new site theme module (package derived from the name)
-airway templates:compile                              # regenerate the templ views (shorthand for `go generate ./...`)
+airway templates:compile                              # regenerate the templ views (templ first, then `go generate ./...`; works on a fresh scaffold)
 airway generate migration create_posts                # new .up.sql/.down.sql pair in db/migrate/
 airway db:create | db:drop
 airway db:migrate [version]                           # apply migrations
@@ -226,6 +235,17 @@ Migration and schema commands read `AIRWAY_DSN`/`DSN`.
   Naming caveat: in a `.templ` file, do not name a parameter `ctx` (templ's
   generated code shadows it with the render context) and do not import
   `github.com/a-h/templ` explicitly (the generator emits its own import).
+- **Static export:** app pages for CDN deployment are registered in a
+  root-package `export.go` that calls `cmd.SetStaticPages` in `init()`
+  (same compile-time registration pattern); each `static.Page{Slug,
+  Component}` must render without a request — bake build-time data into
+  the component instead of querying the database, since export-time
+  rendering is offline. Row-driven detail pages (e.g. from `generate
+  scaffold`, which writes one `export_<resource>.go` per resource) register
+  a `cmd.SetStaticPagesProvider` instead and are enumerated only while
+  static:build/static:serve collects pages; those commands connect to the
+  database from the DSN when a provider needs one (see
+  docs/static-export.md).
 - **Naming:** environment variables are prefixed `AIRWAY_`; CLI subcommands follow the Rails-like `db:migrate` / `schema:dump` style.
 - Format code with `gofmt`/`go fmt`; keep changes minimal and match the surrounding style.
 - **Git commit messages:** a concise one-line summary plus a short paragraph describing what the change accomplishes; leave implementation details (files, functions, internal mechanics) out of the message. Do not add AI attribution/signatures (such as `Co-Authored-By` or any other AI-related lines) to commit messages.

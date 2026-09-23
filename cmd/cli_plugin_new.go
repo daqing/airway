@@ -29,14 +29,15 @@ func runCLIPluginNew(args []string) error {
 
 // newPlugin scaffolds a plugin module. ref is either a module path — the
 // plugin is created under the working directory at its last segment — or a
-// filesystem path (absolute, ./, ../, or .), in which case the plugin is
-// created at that path and the module path is the path's last segment.
+// filesystem path (absolute, or relative like ., ./x, ../x, some/dir/x), in
+// which case the plugin is created at that path and the module path is the
+// path's last segment.
 func newPlugin(ref string, tidy bool) error {
 	module := ref
 	destDir := ""
 	dirName := ref
 
-	if isDirRef(ref) {
+	if isDirRef(ref) || isRelativeDirPath(ref) {
 		destDir, _ = filepath.Abs(filepath.Clean(ref))
 		dirName = filepath.Base(destDir)
 		module = dirName
@@ -142,4 +143,5 @@ func printCLIPluginNewUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "  airway plugin:new github.com/me/airway-im-plugin  # creates ./airway-im-plugin")
 	_, _ = fmt.Fprintln(w, "  airway plugin:new /tmp/airway-im-plugin           # creates the plugin at /tmp/airway-im-plugin;")
 	_, _ = fmt.Fprintln(w, "                                                    # the module path is its last segment")
+	_, _ = fmt.Fprintln(w, "  airway plugin:new sites/airway-im-plugin          # relative path: same rule")
 }

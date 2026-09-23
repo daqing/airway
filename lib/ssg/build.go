@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/fs"
 	"net/http"
 	"os"
 	"path/filepath"
+
+	"github.com/daqing/airway/lib/utils"
 )
 
 // AssetDir is the output directory, relative to the export root, that
@@ -42,7 +43,7 @@ func Build(s *Site, outDir string) error {
 	}
 
 	if theme.Assets() != nil {
-		if err := copyFS(theme.Assets(), filepath.Join(outDir, AssetDir)); err != nil {
+		if err := utils.CopyFS(theme.Assets(), filepath.Join(outDir, AssetDir)); err != nil {
 			return fmt.Errorf("site: copy theme assets: %w", err)
 		}
 	}
@@ -90,28 +91,4 @@ func renderPage(s *Site, page Page) ([]byte, error) {
 		return nil, err
 	}
 	return buf.Bytes(), nil
-}
-
-// copyFS copies every regular file of fsys into destDir, preserving relative
-// paths.
-func copyFS(fsys fs.FS, destDir string) error {
-	return fs.WalkDir(fsys, ".", func(p string, entry fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if entry.IsDir() {
-			return nil
-		}
-
-		data, err := fs.ReadFile(fsys, p)
-		if err != nil {
-			return err
-		}
-
-		target := filepath.Join(destDir, filepath.FromSlash(p))
-		if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
-			return err
-		}
-		return os.WriteFile(target, data, 0o644)
-	})
 }

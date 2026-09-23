@@ -38,7 +38,7 @@ airway admin:generate [config/admin.toml]              # 从 TOML 表配置生�
 airway admin:root <username> <password>               # 创建管理员账号（role admin）
 airway admin:member <username> <password> [--role=r]  # 创建普通账号（editor|viewer）
 airway desktop:init [--force]                           # 在 ./desktop 生成 Wails v3 桌面目标（见 docs/zh-CN/desktop.md）
-airway templates:compile                                 # 重新编译 templ 视图（等价于 `go generate ./...`）
+airway templates:compile                                 # 重新编译 templ 视图，然后执行 `go generate ./...`
 airway upload /path/to/file
 airway repl
 airway version                                           # 或 -v / --version；打印 VERSION 文件内容
@@ -52,6 +52,7 @@ airway version                                           # 或 -v / --version；
 airway new myapp                    # 目录名：myapp
 airway new github.com/me/myapp      # module 路径；目录取路径最后一段
 airway new /path/to/myapp           # 本地路径；在该位置创建项目，module 为 myapp
+airway new sites/myapp              # 相对路径：同样规则（module 为 myapp）
 ```
 
 `airway new` 会以框架仓库的 `app/` 骨架为模板生成一个新项目，自动从

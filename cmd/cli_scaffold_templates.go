@@ -49,6 +49,7 @@ func Routes(r *gin.Engine) {
 	}
 
 	r.GET("/{{.SlugPlural}}", PageAction)
+	r.GET("/{{.SlugPlural}}/:id", ShowAction)
 }
 `
 
@@ -90,6 +91,13 @@ func init() {
 		o.Respond(200, "text/html", openapi.Str()).
 			Description("Server-rendered page hosting the CRUD island")
 	})
+
+	openapi.Get("/{{.SlugPlural}}/{id}", func(o *openapi.Operation) {
+		o.Summary("{{.Name}} page").Tag("{{.SlugPlural}}")
+		o.Path("id", openapi.Int(), "{{.Name}} id")
+		o.Respond(200, "text/html", openapi.Str()).
+			Description("Server-rendered {{.Slug}} detail page")
+	})
 }
 `
 
@@ -110,6 +118,22 @@ import (
 // PageAction renders the interactive {{.SlugPlural}} page.
 func PageAction(c *gin.Context) {
 	render.HTML(c, {{.SlugPlural}}.Index())
+}
+
+// ShowAction renders one {{.Slug}} as a full server-rendered page.
+func ShowAction(c *gin.Context) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		render.ErrorMessage(c, "invalid id")
+		return
+	}
+
+	item, err := repo.FindByID[models.{{.Name}}](sql.IdType(id))
+	if err != nil {
+		render.Error(c, err)
+		return
+	}
+	render.HTML(c, {{.SlugPlural}}.Show(item))
 }
 
 // IndexAction lists every {{.Slug}} as JSON.
@@ -200,6 +224,79 @@ templ Index() {
 			@assets.Island("{{.SlugPlural}}-crud", map[string]any{})
 		</div>
 	}
+}
+`
+
+const scaffoldShowTemplate = `package {{.SlugPlural}}
+
+import (
+	"fmt"
+
+	"github.com/daqing/airway/app/views/layouts"
+
+	"{{.Module}}/app/models"
+)
+
+// Show renders one {{.Slug}} as a complete server-rendered document: the
+// content is baked into the HTML, so the page works offline and exports
+// to a CDN as-is (see export_{{.SlugPlural}}.go).
+templ Show(item *models.{{.Name}}) {
+	@layouts.Base(fmt.Sprintf("{{.Name}} #%d", item.ID)) {
+		<div class="aw-showcase" style="max-width: 720px; margin: 0 auto; padding: 32px 22px 72px;">
+			<h1 style="font-size: 24px; letter-spacing: -0.5px; margin: 0;">{{.Name}} #{ item.ID }</h1>
+			<dl style="margin-top: 20px; display: grid; grid-template-columns: 140px 1fr; gap: 8px 16px; font-size: 14px;">
+			{{range .Fields}}				<dt style="color: var(--aw-muted, #6b7280);">{{.Name}}</dt>
+				<dd style="margin: 0;">{ item.{{.Name}} }</dd>
+			{{end}}		</dl>
+			<p style="margin-top: 28px;">
+				<a href="/{{.SlugPlural}}" style="color: var(--aw-accent, #2563eb);">← All {{.NamePlural}}</a>
+			</p>
+		</div>
+	}
+}
+`
+
+// scaffoldExportTemplate writes export_<plural>.go in the project root:
+// one file per scaffolded resource, so repeated scaffolds never need to
+// merge into a shared file. The list page is static; detail pages are
+// enumerated from the database at export time through a provider.
+const scaffoldExportTemplate = `package main
+
+import (
+	"fmt"
+
+	"github.com/daqing/airway/cmd"
+	"github.com/daqing/airway/lib/repo"
+	"github.com/daqing/airway/lib/static"
+
+	"{{.Module}}/app/models"
+	"{{.Module}}/app/views/{{.SlugPlural}}"
+)
+
+// Static export for the {{.SlugPlural}} pages (see docs/static-export.md):
+// ` + "`airway static:build`" + ` renders them next to the frontend bundle.
+func init() {
+	cmd.SetStaticPages(
+		static.Page{Slug: "/{{.SlugPlural}}", Component: {{.SlugPlural}}.Index()},
+	)
+
+	// Detail pages are enumerated at export time — one per {{.Slug}}.
+	// AIRWAY_DSN must be configured when running static:build/static:serve.
+	cmd.SetStaticPagesProvider(func() ([]static.Page, error) {
+		items, err := repo.FindAll[models.{{.Name}}]()
+		if err != nil {
+			return nil, fmt.Errorf("enumerate {{.SlugPlural}}: %w", err)
+		}
+
+		pages := make([]static.Page, 0, len(items))
+		for _, item := range items {
+			pages = append(pages, static.Page{
+				Slug:      fmt.Sprintf("/{{.SlugPlural}}/%d", item.ID),
+				Component: {{.SlugPlural}}.Show(item),
+			})
+		}
+		return pages, nil
+	})
 }
 `
 

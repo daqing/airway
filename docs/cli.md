@@ -41,7 +41,7 @@ airway generate [action|api|model|migration|service|island|scaffold|cmd] [params
 airway schema:dump
 airway schema:show
 airway openapi:generate [--out path]                     # write the OpenAPI 3.2 document (default ./openapi.json)
-airway templates:compile                                 # regenerate the templ views (shorthand for `go generate ./...`)
+airway templates:compile                                 # regenerate the templ views, then `go generate ./...`
 airway admin:generate [config/admin.toml]              # generate the admin backend from a TOML table spec
 airway admin:root <username> <password>               # create an administrator (role admin)
 airway admin:member <username> <password> [--role=r]  # create a non-admin account (editor|viewer)
@@ -59,6 +59,7 @@ Running `airway` with no arguments prints usage.
 airway new myapp                    # directory: myapp
 airway new github.com/me/myapp      # module path; directory is the last path segment
 airway new /path/to/myapp           # create at that local path; module: myapp
+airway new sites/myapp              # relative path: same rule (module: myapp)
 airway new --local myapp            # develop against the airway checkout in $PWD
 airway new --local ~/src/airway myapp
 ```
@@ -511,15 +512,19 @@ At that point you have the full skeleton for:
 `airway generate scaffold post title:string` produces the whole vertical
 slice — model with fields, a dialect-aware migration (the auto-increment
 primary key follows your configured DSN), the CRUD service, a JSON API
-under `/api/v1/posts`, a templ page at `/posts`, and a CRUD island
-(DataTable + modal form, wired to the API through `apiFetch`). It also
-registers the routes in `config/routes.go`. Afterwards run:
+under `/api/v1/posts`, a templ page at `/posts`, a server-rendered detail
+page at `/posts/:id`, a CRUD island (DataTable + modal form, wired to the
+API through `apiFetch`), and a static export registration (`export_posts.go`:
+the list page plus one detail page per row; see
+[docs/static-export.md](static-export.md)). It also registers the routes in
+`config/routes.go`. Afterwards run:
 
 ```bash
-airway templates:compile   # compile the .templ view
+airway templates:compile   # compile the .templ views (works even on a fresh scaffold)
 airway js:build            # bundle the new island
 airway db:migrate          # create the table
 airway server              # visit /posts
+airway static:build        # export the pages + detail pages as static HTML (needs DSN)
 ```
 
 `airway generate island chart` scaffolds a single interactive island under
