@@ -12,17 +12,26 @@ English version: [docs/static-export.md](../static-export.md).
 ## 快速上手
 
 ```bash
-airway js:build                # 打包前端（dist/ 产物随仓库提交）
-go run . static:build          # 导出已注册页面 + app/assets/dist 到 ./dist
+go run . static:build          # 自动重建前端产物、渲染已注册页面、拷贝资源到 ./dist
 airway static:serve            # 在 http://127.0.0.1:3000 预览
 ```
 
 项目内全局安装的 `airway` 会自动代理到 `go run .`，所以
 `airway static:build` 与 `go run . static:build` 等价。
 
+导出有两类输入，刷新规则各自不同：
+
+- **前端源码**（`app/assets/js`）在每次导出前自动重建——无需手动
+  `js:build`。没有 vendor 目录（未跑 `js:install`）时回退到提交的产物并
+  警告；真实构建错误会终止导出。
+- **templ 视图**（`app/views/**.templ`）同样自动刷新：视图比生成文件新时，
+  命令会先重新生成再重执行自身，因此单条 `static:build` 就能导出改动后的
+  视图。生成失败会终止导出，而不是静默交付旧页面。
+
 ## 注册页面
 
-页面在项目根包的 init 函数（`export.go` 文件）里通过
+新项目自带一份开箱即用的 `export.go`（在项目根目录，导出欢迎页），所以
+`static:build` 无需任何配置即可运行。页面在项目根包的 init 函数里通过
 `cmd.SetStaticPages` 注册——与 plugin、REPL 模型、ssg 站点构建器相同的
 编译期注册模式：
 
@@ -135,7 +144,7 @@ dist/
 
 - **子路径部署**：构建时设置 `URL_PREFIX`（或 `AIRWAY_URL_PREFIX`）让资源
   URL 带上前缀，并把目录上传到对应路径下。
-- **前端有改动**：资源从提交的 `app/assets/dist` 拷贝，所以改过
-  `app/assets/js` 后先跑 `airway js:build`。
+- **templ 视图有改动**：会自动处理——命令检测到过期视图后会重新生成并
+  重执行自身，导出前无需手动跑 `templates:compile`。
 
-新克隆的仓库用 `go run . js:build && go run . static:build` 即可重建。
+新克隆的仓库用 `go run . static:build` 一条命令即可重建。

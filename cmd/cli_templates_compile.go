@@ -8,6 +8,18 @@ import (
 	"strings"
 )
 
+// generateTemplViews runs the templ generator over app/views — the first
+// half of `airway templates:compile`, shared with static:build/static:serve
+// so a stale view cannot silently reach an export. Projects without the
+// templ tool directive (or without app/views) report the tool error, which
+// callers either tolerate or surface.
+func generateTemplViews() error {
+	gen := exec.Command("go", "tool", "templ", "generate", "-path", filepath.Join("app", "views"))
+	gen.Stdout = os.Stdout
+	gen.Stderr = os.Stderr
+	return gen.Run()
+}
+
 // runTemplatesCompile regenerates the committed Go code for the templ views.
 // It runs `go tool templ generate` first: right after scaffolding, API
 // actions import app/views packages whose only files are .templ, so
@@ -26,13 +38,10 @@ func runTemplatesCompile(args []string) error {
 		packages = []string{"./..."}
 	}
 
-	templGen := exec.Command("go", "tool", "templ", "generate", "-path", filepath.Join("app", "views"))
-	templGen.Stdout = os.Stdout
-	templGen.Stderr = os.Stderr
-	if err := templGen.Run(); err != nil {
+	if err := generateTemplViews(); err != nil {
 		// Projects without the templ tool directive (or without app/views)
-		// fall back to plain `go generate ./...`, the mechanism that worked
-		// before the tool directive existed.
+		// still get the `go generate ./...` pass below, the mechanism that
+		// worked before the tool directive existed.
 		fmt.Fprintf(os.Stderr, "go tool templ generate: %v\n", err)
 	}
 

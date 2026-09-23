@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/a-h/templ"
 
@@ -285,4 +287,144 @@ func mustPanic(t *testing.T, name string, fn func()) {
 	}()
 
 	fn()
+}
+
+func TestStaticBuildRebuildsFrontendBundle(t *testing.T) {
+	useTempWorkingDir(t)
+	stubStaticPages(t)
+	seedDistBundle(t)
+
+	// Frontend sources exist: the export must rebuild the bundle from them
+	// instead of shipping the committed one.
+	if err := os.MkdirAll("app/assets/js", 0o755); err != nil {
+		t.Fatalf("mkdir js dir: %v", err)
+	}
+	writeFile(t, "app/assets/js/app.tsx", `console.log("fresh-marker")`)
+
+	if err := run([]string{"static:build", "--out", "out"}); err != nil {
+		t.Fatalf("static:build: %v", err)
+	}
+
+	bundled := readFile(t, "out/assets/app.js")
+	assertContains(t, bundled, "fresh-marker")
+	if strings.Contains(bundled, "bundle") {
+		t.Fatalf("export shipped the committed bundle instead of the rebuilt one")
+	}
+}
+
+func TestStaticBuildFallsBackWhenVendorMissing(t *testing.T) {
+	useTempWorkingDir(t)
+	stubStaticPages(t)
+	seedDistBundle(t)
+
+	writeFile(t, "js.pkg.json", `{"deps":{"preact":"10.29.8"}}`)
+	if err := os.MkdirAll("app/assets/js", 0o755); err != nil {
+		t.Fatalf("mkdir js dir: %v", err)
+	}
+	writeFile(t, "app/assets/js/app.tsx", `import "react"`)
+
+	if err := run([]string{"static:build", "--out", "out"}); err != nil {
+		t.Fatalf("static:build with missing vendor: %v", err)
+	}
+
+	assertContains(t, readFile(t, "out/assets/app.js"), "bundle")
+}
+
+func TestStaticBuildFailsOnFrontendBuildError(t *testing.T) {
+	useTempWorkingDir(t)
+	stubStaticPages(t)
+	seedDistBundle(t)
+
+	if err := os.MkdirAll("app/assets/js", 0o755); err != nil {
+		t.Fatalf("mkdir js dir: %v", err)
+	}
+	writeFile(t, "app/assets/js/app.tsx", `this is not valid typescript {`)
+
+	err := run([]string{"static:build", "--out", "out"})
+	if err == nil || !strings.Contains(err.Error(), "frontend bundle") {
+		t.Fatalf("static:build with broken frontend = %v, want a frontend bundle error", err)
+	}
+}
+
+func writeStaleTemplFixture(t *testing.T) string {
+	t.Helper()
+
+	views := filepath.Join("app", "views", "posts")
+	if err := os.MkdirAll(views, 0o755); err != nil {
+		t.Fatalf("mkdir views: %v", err)
+	}
+
+	// Source without (or newer than) its generated counterpart.
+	writeFile(t, filepath.Join(views, "index.templ"), "templ Index() {}")
+
+	return views
+}
+
+func TestEnsureFreshTemplViewsAbortsWhenRegenerationFails(t *testing.T) {
+	useTempWorkingDir(t)
+	writeStaleTemplFixture(t)
+
+	// The templ tool cannot run outside a project with the tool directive, so
+	// the refresh fails — and the command must abort rather than export the
+	// stale pages compiled into the binary.
+	_, err := ensureFreshTemplViews("static:build", nil)
+	if err == nil || !strings.Contains(err.Error(), "regenerate templ views") {
+		t.Fatalf("ensureFreshTemplViews = %v, want a regeneration error", err)
+	}
+}
+
+func TestEnsureFreshTemplViewsSkipsReexecWhenMarked(t *testing.T) {
+	useTempWorkingDir(t)
+	writeStaleTemplFixture(t)
+
+	// A re-executed run must never re-execute again, even when the views
+	// still look stale.
+	t.Setenv(staticReexecEnv, "1")
+
+	reexecuted, err := ensureFreshTemplViews("static:build", nil)
+	if err != nil || reexecuted {
+		t.Fatalf("ensureFreshTemplViews = %v, %v; want false, nil", reexecuted, err)
+	}
+}
+
+func TestEnsureFreshTemplViewsNoopWhenFresh(t *testing.T) {
+	useTempWorkingDir(t)
+
+	views := writeStaleTemplFixture(t)
+	writeFile(t, filepath.Join(views, "index_templ.go"), "// generated")
+
+	reexecuted, err := ensureFreshTemplViews("static:build", nil)
+	if err != nil || reexecuted {
+		t.Fatalf("ensureFreshTemplViews = %v, %v; want false, nil", reexecuted, err)
+	}
+}
+
+func TestCountStaleTemplViews(t *testing.T) {
+	views := filepath.Join(t.TempDir(), "posts")
+	if err := os.MkdirAll(views, 0o755); err != nil {
+		t.Fatalf("mkdir views: %v", err)
+	}
+
+	// Generated after its source: fresh.
+	writeFile(t, filepath.Join(views, "index.templ"), "templ Index() {}")
+	writeFile(t, filepath.Join(views, "index_templ.go"), "// generated")
+
+	// Generated before its source: stale.
+	writeFile(t, filepath.Join(views, "show.templ"), "templ Show() {}")
+	writeFile(t, filepath.Join(views, "show_templ.go"), "// generated")
+	past := time.Now().Add(-time.Hour)
+	if err := os.Chtimes(filepath.Join(views, "show_templ.go"), past, past); err != nil {
+		t.Fatalf("chtimes: %v", err)
+	}
+
+	// No generated file at all: stale.
+	writeFile(t, filepath.Join(views, "new.templ"), "templ New() {}")
+
+	got, err := countStaleTemplViews(views)
+	if err != nil {
+		t.Fatalf("countStaleTemplViews: %v", err)
+	}
+	if got != 2 {
+		t.Fatalf("countStaleTemplViews = %d, want 2", got)
+	}
 }

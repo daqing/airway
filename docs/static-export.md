@@ -14,8 +14,7 @@ Airway application itself. 中文版: [docs/zh-CN/static-export.md](zh-CN/static
 ## Quick start
 
 ```bash
-airway js:build                # bundle the frontend (the dist/ output is committed)
-go run . static:build          # export registered pages + app/assets/dist into ./dist
+go run . static:build          # rebuilds the frontend bundle, renders registered pages, copies assets into ./dist
 airway static:serve            # preview on http://127.0.0.1:3000
 ```
 
@@ -23,11 +22,24 @@ Inside a project, a globally installed `airway` proxies to `go run .`
 automatically, so `airway static:build` and `go run . static:build` are
 equivalent.
 
+Two inputs feed the export, and each has its own refresh rule:
+
+- **Frontend sources** (`app/assets/js`) are rebuilt automatically before
+  every export — no manual `js:build` needed. Without a vendor directory
+  (`js:install` not run) the command falls back to the committed bundle with
+  a warning; a real build error aborts the export.
+- **templ views** (`app/views/**.templ`) are refreshed the same way: when a
+  view is newer than its generated file, the command regenerates it and
+  re-runs itself, so a single `static:build` exports the edited views. A
+  failing regeneration aborts the export instead of shipping stale pages.
+
 ## Registering pages
 
-Pages are registered from an init function in the project's root package (an
-`export.go` file) through `cmd.SetStaticPages` — the same compile-time
-registration pattern as plugins, REPL models, and the ssg site builder:
+Fresh projects ship with a ready-to-run `export.go` in the project root that
+exports the welcome page, so `static:build` works out of the box. Pages are
+registered from init functions in the project's root package through
+`cmd.SetStaticPages` — the same compile-time registration pattern as plugins,
+REPL models, and the ssg site builder:
 
 ```go
 package main
@@ -146,9 +158,8 @@ object storage behind a CDN. Two knobs matter:
 - **Sub-path deployments**: set `URL_PREFIX` (or `AIRWAY_URL_PREFIX`) when
   building so asset URLs carry the prefix, and upload the directory under
   that path.
-- **Frontend changes**: the bundle is copied from the committed
-  `app/assets/dist`, so run `airway js:build` first whenever frontend sources
-  changed.
+- **templ view changes** are picked up automatically: the command
+  regenerates stale views and re-runs itself, so no manual
+  `templates:compile` step is needed before exporting.
 
-A fresh clone rebuilds everything with `go run . js:build && go run .
-static:build`.
+A fresh clone rebuilds everything with `go run . static:build` alone.

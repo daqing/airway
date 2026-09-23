@@ -1,9 +1,12 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -113,6 +116,110 @@ func pinProductionEnv() {
 	os.Setenv("AIRWAY_ENV", "production")
 }
 
+// rebuildFrontendBundle refreshes app/assets/dist from app/assets/js before
+// exporting, so frontend edits are always reflected. Projects without
+// frontend sources keep using the committed bundle as-is; a missing vendor
+// directory degrades to the committed bundle with a warning, while a real
+// build failure aborts the export instead of shipping stale assets.
+func rebuildFrontendBundle() error {
+	if _, err := os.Stat(filepath.Join(jsbuild.SourceDir, "app.tsx")); err != nil {
+		return nil
+	}
+
+	if _, err := jsbuild.Build("."); err != nil {
+		if errors.Is(err, jsbuild.ErrVendorMissing) {
+			fmt.Fprintf(os.Stderr, "warning: %v; exporting the committed %s instead\n", err, jsbuild.DistDir)
+			return nil
+		}
+		return fmt.Errorf("frontend bundle: %w", err)
+	}
+
+	return nil
+}
+
+// staticReexecEnv marks an already re-executed static:build/static:serve, so
+// the templ refresh never loops.
+const staticReexecEnv = "AIRWAY_STATIC_REEXEC"
+
+// ensureFreshTemplViews makes edited .templ sources usable for the export: it
+// regenerates them (the templates:compile step) and then re-executes the
+// command, because the running process can only carry the previously compiled
+// views — regenerating alone would still export stale pages. It reports
+// whether the caller should stop, the re-executed run having taken over.
+func ensureFreshTemplViews(command string, args []string) (bool, error) {
+	stale, err := countStaleTemplViews(filepath.Join("app", "views"))
+	if err != nil || stale == 0 {
+		return false, nil
+	}
+
+	if os.Getenv(staticReexecEnv) != "" {
+		// Regenerating did not clear the staleness (for example generated
+		// files templ does not rewrite); export what the binary has instead
+		// of looping.
+		fmt.Fprintf(os.Stderr, "warning: %d templ view(s) still look stale after regenerating\n", stale)
+		return false, nil
+	}
+
+	fmt.Fprintf(os.Stderr, "%d templ view(s) changed; regenerating them first\n", stale)
+
+	if err := generateTemplViews(); err != nil {
+		return false, fmt.Errorf("regenerate templ views: %w", err)
+	}
+
+	if err := reexecCommand(command, args); err != nil {
+		return false, fmt.Errorf("re-run %s with the fresh views: %w", command, err)
+	}
+
+	return true, nil
+}
+
+// reexecCommand runs `go run . <command> <args>` in the project, so the
+// freshly generated views are compiled in before the command runs again. The
+// environment marker keeps the child from re-executing in turn.
+func reexecCommand(command string, args []string) error {
+	run := exec.Command("go", append([]string{"run", ".", command}, args...)...)
+	run.Env = append(os.Environ(), staticReexecEnv+"=1")
+	run.Stdin = os.Stdin
+	run.Stdout = os.Stdout
+	run.Stderr = os.Stderr
+	return run.Run()
+}
+
+func countStaleTemplViews(dir string) (int, error) {
+	stale := 0
+
+	err := filepath.WalkDir(dir, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if entry.IsDir() || !strings.HasSuffix(path, ".templ") {
+			return nil
+		}
+
+		info, err := entry.Info()
+		if err != nil {
+			return err
+		}
+
+		generated := strings.TrimSuffix(path, ".templ") + "_templ.go"
+		genInfo, err := os.Stat(generated)
+		if err != nil {
+			if os.IsNotExist(err) {
+				stale++
+				return nil
+			}
+			return err
+		}
+
+		if info.ModTime().After(genInfo.ModTime()) {
+			stale++
+		}
+		return nil
+	})
+
+	return stale, err
+}
+
 func runCLIStaticBuild(args []string) error {
 	out := "dist"
 
@@ -137,6 +244,18 @@ func runCLIStaticBuild(args []string) error {
 	}
 
 	pinProductionEnv()
+
+	reexecuted, err := ensureFreshTemplViews("static:build", args)
+	if err != nil {
+		return err
+	}
+	if reexecuted {
+		return nil
+	}
+
+	if err := rebuildFrontendBundle(); err != nil {
+		return err
+	}
 
 	if err := setupExportDB(); err != nil {
 		return err
@@ -184,6 +303,18 @@ func runCLIStaticServe(args []string) error {
 	}
 
 	pinProductionEnv()
+
+	reexecuted, err := ensureFreshTemplViews("static:serve", args)
+	if err != nil {
+		return err
+	}
+	if reexecuted {
+		return nil
+	}
+
+	if err := rebuildFrontendBundle(); err != nil {
+		return err
+	}
 
 	if err := setupExportDB(); err != nil {
 		return err
