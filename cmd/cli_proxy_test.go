@@ -101,7 +101,6 @@ func TestProxyableCommand(t *testing.T) {
 		{"plugin:install", true},
 		{"db:migrate", true},
 		{"generate", true},
-		{"cli", true},
 	}
 
 	for _, tt := range cases {

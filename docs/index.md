@@ -3,7 +3,7 @@ layout: home
 
 hero:
   name: Airway
-  text: Full-stack API framework in Go
+  text: Full-stack Go framework for web apps, APIs, static sites, and desktop apps
   tagline: Inspired by Ruby on Rails — Gin, a dialect-aware SQL builder, a generics-based repo/ORM, SQL migrations, unified storage, and pluggable plugins.
   actions:
     - theme: brand

@@ -17,8 +17,6 @@ go.mod 中 pin 的 airway 版本一致时代理才会执行（若通过 `replace
 静默运行项目二进制里过期的 CLI 逻辑。`new`、`version`、`help`
 始终本地执行；项目之外的命令行为不变；直接使用 `go run . <命令>` 与代理等价。
 
-旧形式 `airway cli <命令>` 仍作为兼容别名可用。
-
 ## 命令总览
 
 ```bash
@@ -233,7 +231,6 @@ airway db:status
 
 1. `AIRWAY_DSN`
 2. `DSN`
-3. 兼容旧项目时依次回退到 `AIRWAY_DB_DSN`、`AIRWAY_PG`
 
 在本地开发场景下，CLI 会自动加载项目根目录的 `.env` 文件，因此通常直接把 `DSN` 写在 `.env` 里即可。
 迁移命令会复用 Airway 当前 DSN 所对应的数据库类型，因此支持项目当前支持的 PostgreSQL、MySQL 和 SQLite。

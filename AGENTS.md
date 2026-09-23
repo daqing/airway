@@ -4,7 +4,9 @@ Guidance for AI coding agents working in this repository.
 
 ## Project Overview
 
-Airway is a full-stack API framework written in Go, inspired by Ruby on Rails. It is both:
+Airway is a full-stack Go framework, inspired by Ruby on Rails, building
+server-rendered web apps, JSON APIs, static showcase sites, and native desktop
+apps from the same application code. It is both:
 
 1. A **framework/library** — reusable layers under `lib/` (SQL builder, repository/ORM, migrations, storage, validation, rendering).
 2. A **runnable application skeleton** — `main.go` + `app/` + `config/` form a Gin-based HTTP server with WebSocket support, scaffolding CLI, and a REPL.
@@ -114,7 +116,7 @@ tmp/             Local dev database (airway.db), build artifacts. Git-ignored.
 
 ## Build, Run, and Test Commands
 
-Prerequisites: copy `.env.example` to `.env` and set `AIRWAY_DB_DSN` and `AIRWAY_PORT`.
+Prerequisites: copy `.env.example` to `.env` and set `AIRWAY_DSN` and `AIRWAY_PORT`.
 
 ```bash
 just dev                 # Start dev server with live reload (overmind + air, AIRWAY_ENV=local)
@@ -142,8 +144,7 @@ command to `go run .` (see `cmd.ProxyHostProject`; `new`/`version`/`help` and
 anything run outside a project stay local), so both forms are equivalent.
 The proxy aborts when the global CLI's version differs from the project's
 pinned `github.com/daqing/airway` version (a local-directory `replace` is
-compared against that checkout's `VERSION` file).
-The legacy `airway cli <command>` form still works as a compatibility alias:
+compared against that checkout's `VERSION` file):
 
 ```bash
 airway new [--local[=path]] myapp                      # scaffold a new project; --local replaces the framework with an airway checkout (default $PWD) for framework development
@@ -195,7 +196,7 @@ the globally installed `airway` proxies to `go run .` automatically, so
 Generators read the module path from the current directory's `go.mod`, so
 generated code imports the project's own packages.
 
-Migration and schema commands read `AIRWAY_DB_DSN` first and fall back to the legacy `AIRWAY_PG`.
+Migration and schema commands read `AIRWAY_DSN`/`DSN`.
 
 ## Code Conventions
 
@@ -249,7 +250,7 @@ keys the environment does not set), so `PORT=1988 airway server` overrides a
 `PORT`/`AIRWAY_PORT` in `.env`:
 
 - `AIRWAY_ENV` — `local` enables `.env` loading and Gin debug mode; anything else runs Gin in release mode.
-- `AIRWAY_DB_DSN` — database URL; driver inferred from scheme: `postgres://...`, `sqlite://./tmp/airway.db`, `sqlite://:memory:`, `mysql://...` (native Go MySQL driver DSN format also accepted).
+- `AIRWAY_DSN` — database URL (short alias `DSN`); driver inferred from scheme: `postgres://...`, `sqlite://./tmp/airway.db`, `sqlite://:memory:`, `mysql://...` (native Go MySQL driver DSN format also accepted).
 - `AIRWAY_REDIS` — optional Redis URL.
 - `AIRWAY_JS_REGISTRY` — npm registry for `js:add` / `js:install` (default `https://registry.npmjs.org`); set a mirror such as `https://registry.npmmirror.com` when the default is slow.
 - `AIRWAY_PORT` — listen port (default example: `1900`).

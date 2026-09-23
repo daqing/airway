@@ -3,7 +3,7 @@ layout: home
 
 hero:
   name: Airway
-  text: Go 全栈 API 框架
+  text: Go 全栈框架：构建 Web 应用、API、静态站点与桌面应用
   tagline: 灵感来自 Ruby on Rails —— Gin、方言感知的 SQL 构建器、基于泛型的 repo/ORM、SQL 迁移、统一存储与可插拔的 Plugin。
   actions:
     - theme: brand

@@ -119,8 +119,7 @@ airway db:status                 # show applied/pending per migration
 ```
 
 Database commands resolve the DSN from the first of these environment
-variables that is set: `DSN`, `AIRWAY_DSN`, `AIRWAY_DB_DSN` (legacy),
-`AIRWAY_PG` (legacy). Since the CLI auto-loads `.env`, setting `DSN` there is
+variables that is set: `DSN` or `AIRWAY_DSN`. Since the CLI auto-loads `.env`, setting `DSN` there is
 enough.
 
 The older Go DSL migration mechanism (`schema.RegisterChange`) is still
@@ -208,11 +207,6 @@ plugins, Go DSL migrations). Use the right binary for each:
 | `templates:compile` | **runs locally** — must work while the project does not compile (right after scaffolding wrote `.templ` files) | yes |
 | `repl` | framework's built-in models only | **use this** — sees your project models |
 | `plugin:list` / `plugin:install` | plugins compiled into `airway` itself | **use this** — sees your project's plugins |
-
-## Compatibility
-
-The pre-0.5 form `airway cli <command>` still works as an alias for
-`airway <command>`.
 
 See also: [docs/cli.md](cli.md) for the full scaffolding guide with a
 step-by-step feature example.

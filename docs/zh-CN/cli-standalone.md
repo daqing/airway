@@ -112,8 +112,7 @@ airway db:status                 # 查看每个迁移的 applied/pending 状态
 ```
 
 数据库命令按以下顺序读取第一个已设置的环境变量作为 DSN：`DSN`、
-`AIRWAY_DSN`、`AIRWAY_DB_DSN`（旧版）、`AIRWAY_PG`（旧版）。由于 CLI 会自动
-加载 `.env`，在其中配置 `DSN` 即可。
+`AIRWAY_DSN`。由于 CLI 会自动加载 `.env`，在其中配置 `DSN` 即可。
 
 旧的 Go DSL 迁移机制（`schema.RegisterChange`）仍然受支持，但 DSL 迁移只有
 编译进执行它的二进制时才会生效。如果 CLI 在 `db/migrate` 下发现时间戳命名
@@ -181,11 +180,6 @@ REPL 只能看到编译进当前二进制的模型——项目模型通过 `app/
 | `templates:compile` | **本地直接执行**——必须在项目尚不能编译时可用（刚生成 `.templ` 文件之后） | 可用 |
 | `repl` | 仅框架内置模型 | **推荐**——能看到你的项目模型 |
 | `plugin:list` / `plugin:install` | 仅编译进 `airway` 自身的 Plugin | **推荐**——能看到你项目的 Plugin |
-
-## 兼容性
-
-0.5 之前的 `airway cli <command>` 形式仍可作为 `airway <command>` 的别名
-使用。
 
 另请参阅：[../cli.md](../cli.md) 获取完整的脚手架指南和逐步特性示例。
 

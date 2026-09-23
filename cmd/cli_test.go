@@ -18,7 +18,7 @@ func TestRunCLICommandGeneratesModel(t *testing.T) {
 	wd := useTempWorkingDir(t)
 	makeDirs(t, filepath.Join(wd, "app", "models"))
 
-	if err := run([]string{"cli", "generate", "model", "post"}); err != nil {
+	if err := run([]string{"generate", "model", "post"}); err != nil {
 		t.Fatalf("run generate model: %v", err)
 	}
 
@@ -40,7 +40,7 @@ func TestRunCLICommandGeneratesAPI(t *testing.T) {
 	wd := useTempWorkingDir(t)
 	makeDirs(t, filepath.Join(wd, "app", "api"))
 
-	if err := run([]string{"cli", "generate", "api", "admin"}); err != nil {
+	if err := run([]string{"generate", "api", "admin"}); err != nil {
 		t.Fatalf("run generate api: %v", err)
 	}
 
@@ -72,7 +72,7 @@ func TestRunCLICommandGeneratesServiceAndCmdTemplates(t *testing.T) {
 	makeDirs(t, filepath.Join(wd, "app", "services"))
 	makeDirs(t, filepath.Join(wd, "cmd"))
 
-	if err := run([]string{"cli", "generate", "service", "post", "title:string", "published:bool"}); err != nil {
+	if err := run([]string{"generate", "service", "post", "title:string", "published:bool"}); err != nil {
 		t.Fatalf("run generate service: %v", err)
 	}
 
@@ -85,7 +85,7 @@ func TestRunCLICommandGeneratesServiceAndCmdTemplates(t *testing.T) {
 		t.Fatalf("expected generated insert hash, got:\n%s", serviceContent)
 	}
 
-	if err := run([]string{"cli", "generate", "cmd", "post", "title", "published"}); err != nil {
+	if err := run([]string{"generate", "cmd", "post", "title", "published"}); err != nil {
 		t.Fatalf("run generate cmd: %v", err)
 	}
 
@@ -129,7 +129,7 @@ func TestGenerateMigrationCreatesUpAndDownFiles(t *testing.T) {
 
 func TestCLIGenerateHelpPrintsUsage(t *testing.T) {
 	output := captureStdout(t, func() {
-		if err := run([]string{"cli", "generate", "-h"}); err != nil {
+		if err := run([]string{"generate", "-h"}); err != nil {
 			t.Fatalf("run generate help: %v", err)
 		}
 	})
@@ -147,32 +147,32 @@ func TestCLIGenerateSubcommandHelpPrintsUsage(t *testing.T) {
 	}{
 		{
 			name:     "action",
-			args:     []string{"cli", "generate", "action", "-h"},
+			args:     []string{"generate", "action", "-h"},
 			expected: "airway generate action [api] [action]",
 		},
 		{
 			name:     "api",
-			args:     []string{"cli", "generate", "api", "-h"},
+			args:     []string{"generate", "api", "-h"},
 			expected: "airway generate api [name]",
 		},
 		{
 			name:     "model",
-			args:     []string{"cli", "generate", "model", "-h"},
+			args:     []string{"generate", "model", "-h"},
 			expected: "airway generate model [name] [field:type]...",
 		},
 		{
 			name:     "migration",
-			args:     []string{"cli", "generate", "migration", "-h"},
+			args:     []string{"generate", "migration", "-h"},
 			expected: "airway generate migration [name]",
 		},
 		{
 			name:     "service",
-			args:     []string{"cli", "generate", "service", "-h"},
+			args:     []string{"generate", "service", "-h"},
 			expected: "airway generate service <name> <field:type> <field:type>...",
 		},
 		{
 			name:     "cmd",
-			args:     []string{"cli", "generate", "cmd", "-h"},
+			args:     []string{"generate", "cmd", "-h"},
 			expected: "airway generate cmd <name> <field> <field>...",
 		},
 	}
@@ -197,7 +197,7 @@ func TestGenerateMigrationHelpPrintsUsageWithoutCreatingFile(t *testing.T) {
 	makeDirs(t, filepath.Join(wd, "db", "migrate"))
 
 	output := captureStdout(t, func() {
-		if err := run([]string{"cli", "generate", "migration", "-h"}); err != nil {
+		if err := run([]string{"generate", "migration", "-h"}); err != nil {
 			t.Fatalf("run generate migration help: %v", err)
 		}
 	})
@@ -221,8 +221,7 @@ func TestCLISchemaDumpUsesCurrentDatabaseSchema(t *testing.T) {
 	makeDirs(t, filepath.Join(wd, "tmp"))
 	makeDirs(t, filepath.Join(wd, "db"))
 
-	t.Setenv("AIRWAY_DB_DSN", "sqlite://./tmp/live-schema.sqlite")
-	t.Setenv("AIRWAY_PG", "")
+	t.Setenv("AIRWAY_DSN", "sqlite://./tmp/live-schema.sqlite")
 
 	db, err := repo.NewDB("sqlite://./tmp/live-schema.sqlite")
 	if err != nil {
@@ -303,8 +302,8 @@ CREATE TABLE audit_logs (
 }
 
 func TestCLIDSNPrefersCurrentProjectEnvNames(t *testing.T) {
-	t.Setenv("AIRWAY_DB_DSN", "sqlite://./tmp/airway.db")
-	t.Setenv("AIRWAY_PG", "postgres://legacy")
+	t.Setenv("AIRWAY_DSN", "sqlite://./tmp/airway.db")
+	t.Setenv("DSN", "postgres://short-name")
 
 	dsn, err := cliDSN()
 	if err != nil {
@@ -312,21 +311,21 @@ func TestCLIDSNPrefersCurrentProjectEnvNames(t *testing.T) {
 	}
 
 	if dsn != "sqlite://./tmp/airway.db" {
-		t.Fatalf("expected AIRWAY_DB_DSN, got %q", dsn)
+		t.Fatalf("expected AIRWAY_DSN to win, got %q", dsn)
 	}
 }
 
-func TestCLIDSNFallsBackToLegacyEnvName(t *testing.T) {
-	t.Setenv("AIRWAY_DB_DSN", "")
-	t.Setenv("AIRWAY_PG", "postgres://legacy")
+func TestCLIDSNFallsBackToShortName(t *testing.T) {
+	t.Setenv("AIRWAY_DSN", "")
+	t.Setenv("DSN", "postgres://short-name")
 
 	dsn, err := cliDSN()
 	if err != nil {
 		t.Fatalf("cliDSN returned error: %v", err)
 	}
 
-	if dsn != "postgres://legacy" {
-		t.Fatalf("expected AIRWAY_PG fallback, got %q", dsn)
+	if dsn != "postgres://short-name" {
+		t.Fatalf("expected DSN fallback, got %q", dsn)
 	}
 }
 
@@ -335,7 +334,7 @@ func TestGenerateModelReturnsExistsError(t *testing.T) {
 	makeDirs(t, filepath.Join(wd, "app", "models"))
 	writeFile(t, filepath.Join(wd, "app", "models", "post.go"), "package models\n")
 
-	err := run([]string{"cli", "generate", "model", "post"})
+	err := run([]string{"generate", "model", "post"})
 	if !errors.Is(err, os.ErrExist) {
 		t.Fatalf("expected os.ErrExist, got %v", err)
 	}

@@ -14,7 +14,7 @@ import (
 func TestRunCLIOpenAPIGenerateWritesDocument(t *testing.T) {
 	useTempWorkingDir(t)
 
-	if err := run([]string{"cli", "openapi:generate"}); err != nil {
+	if err := run([]string{"openapi:generate"}); err != nil {
 		t.Fatalf("run openapi:generate: %v", err)
 	}
 
@@ -43,7 +43,7 @@ func TestRunCLIOpenAPIGenerateWritesDocument(t *testing.T) {
 func TestRunCLIOpenAPIGenerateHonorsOutFlag(t *testing.T) {
 	useTempWorkingDir(t)
 
-	if err := run([]string{"cli", "openapi:generate", "--out", "docs/api.json"}); err != nil {
+	if err := run([]string{"openapi:generate", "--out", "docs/api.json"}); err != nil {
 		t.Fatalf("run openapi:generate --out: %v", err)
 	}
 
@@ -55,7 +55,7 @@ func TestRunCLIOpenAPIGenerateHonorsOutFlag(t *testing.T) {
 
 func TestRunCLIOpenAPIGenerateHelpPrintsUsage(t *testing.T) {
 	output := captureStdout(t, func() {
-		if err := run([]string{"cli", "openapi:generate", "-h"}); err != nil {
+		if err := run([]string{"openapi:generate", "-h"}); err != nil {
 			t.Fatalf("run openapi:generate help: %v", err)
 		}
 	})

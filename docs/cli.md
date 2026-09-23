@@ -21,8 +21,6 @@ project binary's older CLI logic. `new`, `version` and `help` always run
 locally, as does everything outside a project; running `go run . <command>`
 yourself remains equivalent.
 
-The legacy form `airway cli <command>` still works as a compatibility alias.
-
 ## Command Overview
 
 ```bash
@@ -267,8 +265,8 @@ airway db:status
 
 Migration commands read:
 
-1. `AIRWAY_DB_DSN`
-2. `AIRWAY_PG` as a legacy fallback
+1. `AIRWAY_DSN`
+2. `DSN`
 
 In normal local development, these values can come directly from your project's `.env` file because the CLI loads it automatically.
 The migration commands use the current Airway DSN and work with the databases supported by the project, including PostgreSQL, MySQL, and SQLite.
