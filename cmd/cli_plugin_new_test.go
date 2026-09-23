@@ -150,3 +150,18 @@ func TestNewPluginScaffoldsAtRelativePath(t *testing.T) {
 		t.Fatalf("expected barplugin package, got:\n%s", pluginFile)
 	}
 }
+
+func TestNewPluginTreatsDotlessRelativePathAsDirectory(t *testing.T) {
+	wd := useTempWorkingDir(t)
+
+	// A dotless multi-element path is not a valid Go module path; it must
+	// scaffold in place with the last segment as the module instead.
+	if err := newPlugin("sites/airway-baz-plugin", false); err != nil {
+		t.Fatalf("new plugin: %v", err)
+	}
+
+	goMod := readFile(t, filepath.Join(wd, "sites", "airway-baz-plugin", "go.mod"))
+	if !strings.Contains(goMod, "module airway-baz-plugin") {
+		t.Fatalf("expected module airway-baz-plugin in go.mod, got:\n%s", goMod)
+	}
+}

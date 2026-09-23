@@ -122,9 +122,14 @@ func generateScaffold(args []string) error {
 		return err
 	}
 
-	// server-rendered page hosting the CRUD island
+	// server-rendered pages: the interactive list (CRUD island) and the
+	// detail page with the row's content baked into the HTML
 	if err := writeTemplateFile(scaffoldViewTemplate,
 		filepath.Join(".", "app", "views", plural, "index.templ"), data); err != nil {
+		return err
+	}
+	if err := writeTemplateFile(scaffoldShowTemplate,
+		filepath.Join(".", "app", "views", plural, "show.templ"), data); err != nil {
 		return err
 	}
 
@@ -134,12 +139,20 @@ func generateScaffold(args []string) error {
 		return err
 	}
 
+	// static export registration (one file per resource, so repeated
+	// scaffolds never need to merge into a shared file)
+	if err := writeTemplateFile(scaffoldExportTemplate,
+		filepath.Join(".", fmt.Sprintf("export_%s.go", plural)), data); err != nil {
+		return err
+	}
+
 	registerScaffoldRoutes(data)
 
 	fmt.Println("\nNext steps:")
-	fmt.Println("  airway templates:compile   # compile the .templ view")
+	fmt.Println("  airway templates:compile   # compile the .templ views")
 	fmt.Println("  airway js:build            # bundle the new island")
 	fmt.Println("  airway db:migrate          # create the table")
+	fmt.Println("  airway static:build        # export the pages + detail pages as static HTML (needs DSN; see docs/static-export.md)")
 	fmt.Println("  airway server              # visit /" + plural)
 	return nil
 }

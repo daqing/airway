@@ -7,6 +7,7 @@ Web 应用、JSON API、静态展示站点和原生桌面应用，支持 **Postg
 - **[English README](../../README.md)**
 - **[Admin 后台指南](../../ADMIN.zh-CN.md)** / **[Admin panel guide](../../ADMIN.md)**
 - **[静态展示站点（SSG）](../../SSG.zh-CN.md)** / **[Static showcase sites](../../SSG.md)**
+- **[静态导出指南](static-export.md)** / **[Static export guide](../static-export.md)**
 - **[CLI 脚手架指南](cli.md)** / **[CLI scaffolding guide](../cli.md)**
 - **[前端指南](frontend.md)** / **[Frontend guide](../frontend.md)**
 - **[OpenAPI 指南](openapi.md)** / **[OpenAPI guide](../openapi.md)**
@@ -29,6 +30,7 @@ Web 应用、JSON API、静态展示站点和原生桌面应用，支持 **Postg
 - **Admin 后台生成器**：一份 TOML 表规格即可生成完整的后台——认证、角色、审计日志、CSV 导出、服务端分页列表。
 - **桌面应用**：`airway desktop:init` 把项目导出为 Wails v3 桌面目标；同一套 Web 技术栈跑在 macOS、Windows、Linux 的原生 WebView 窗口里。
 - **静态展示站点**：`airway ssg:new` 脚手架一个页面即 Go 代码的静态站点，外观来自可替换的主题 module（`theme:new` / `theme:install`）；`airway ssg:build` 导出纯 HTML，可部署到任何静态托管。
+- **静态导出上 CDN**：`airway static:build` 把应用页面（在 `export.go` 中注册）导出为纯 HTML 加前端产物——templ 渲染的内容 + 完整保留的 Preact islands，可直接部署到任何 CDN（见 [docs/static-export.md](static-export.md)）。
 - **插件**：WordPress 风格的功能模块，以独立 Go module 分发——`go get` 安装，`plugins.go` 里一行 blank import 启用（见 [docs/plugin.md](plugin.md)）。
 - **脚手架 CLI**（`airway generate ...`、`db:migrate` 等）。
 - **Repo REPL**：支持类型化扫描与 Go 表达式求值。
@@ -43,7 +45,7 @@ Web 应用、JSON API、静态展示站点和原生桌面应用，支持 **Postg
 ```bash
 go install github.com/daqing/airway@latest
 airway new myapp        # 或：airway new github.com/me/myapp（目录取路径最后一段）
-                        # 或：airway new /path/to/myapp（本地路径，module 取路径最后一段）
+                        # 或：airway new /path/to/myapp（传路径，module 取路径最后一段；相对路径同理，如 sites/myapp）
 cd myapp
 ```
 
@@ -306,6 +308,13 @@ airway ssg:build [--out dist]               # 将 ssg.go 定义的站点导出�
 airway ssg:serve [--addr 127.0.0.1:3000]    # 本地服务预览站点
 airway theme:new [--local[=path]] <name>    # 脚手架新的站点主题 module
 airway theme:install <module | /path>       # 把站点主题接入宿主项目
+```
+
+### 静态导出（应用页面）
+
+```bash
+airway static:build [--out dist]            # 将 export.go 注册的页面 + 前端产物导出为静态 HTML
+airway static:serve [--addr 127.0.0.1:3000] # 本地服务预览静态页面
 ```
 
 ### 插件

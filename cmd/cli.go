@@ -73,6 +73,10 @@ func runCLI(args []string) error {
 		return runCLISSGBuild(xargs)
 	case "ssg:serve":
 		return runCLISSGServe(xargs)
+	case "static:build":
+		return runCLIStaticBuild(xargs)
+	case "static:serve":
+		return runCLIStaticServe(xargs)
 	case "theme:install":
 		return runCLIThemeInstall(xargs)
 	case "theme:new":
@@ -118,6 +122,8 @@ func printUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "  airway ssg:new [--local[=path]] <name>   scaffold a static showcase site project")
 	_, _ = fmt.Fprintln(w, "  airway ssg:build [--out dist]           export the site as static HTML (ssg.go)")
 	_, _ = fmt.Fprintln(w, "  airway ssg:serve [--addr 127.0.0.1:3000]  preview the site with a local server")
+	_, _ = fmt.Fprintln(w, "  airway static:build [--out dist]         export app pages (export.go) as static HTML")
+	_, _ = fmt.Fprintln(w, "  airway static:serve [--addr 127.0.0.1:3000]  preview the static pages with a local server")
 	_, _ = fmt.Fprintln(w, "  airway theme:install <module | /path>    install a site theme into the host project")
 	_, _ = fmt.Fprintln(w, "  airway theme:new [--local[=path]] <name> scaffold a new site theme module")
 	_, _ = fmt.Fprintln(w, "  airway templates:compile                 regenerate the templ views (shorthand for `go generate ./...`)")

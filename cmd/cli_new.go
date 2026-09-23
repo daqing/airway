@@ -18,18 +18,19 @@ import (
 var modulePathPattern = regexp.MustCompile(`^[a-z0-9]+([\w./-]*[\w.])?$`)
 
 // resolveNewTarget maps the `airway new` argument to the destination directory
-// and the Go module path. An absolute filesystem path (e.g.
-// /path/to/foobar) creates the project at that location, with the last path
-// segment as the module path; anything else is treated as the module path
-// itself, and the project is created in a subdirectory of the current
-// directory named after its last segment.
+// and the Go module path. A filesystem path — absolute (e.g.
+// /path/to/foobar) or relative (e.g. some/dir/foobar) — creates the project
+// at that location, with the last path segment as the module path. A bare
+// name ("foobar") or a module path ("github.com/me/foobar") creates the
+// project in a subdirectory of the current directory named after its last
+// segment.
 func resolveNewTarget(arg string) (destDir string, module string, err error) {
 	arg = strings.TrimSpace(arg)
 	if arg == "" {
 		return "", "", fmt.Errorf("invalid module path %q", arg)
 	}
 
-	if filepath.IsAbs(arg) {
+	if filepath.IsAbs(arg) || isRelativeDirPath(arg) {
 		destDir = filepath.Clean(arg)
 		module = filepath.Base(destDir)
 	} else {
@@ -46,6 +47,25 @@ func resolveNewTarget(arg string) (destDir string, module string, err error) {
 	}
 
 	return destDir, module, nil
+}
+
+// isRelativeDirPath reports whether arg is a path-like relative directory
+// reference (an explicit "./" or "../" prefix, or a slash whose first segment
+// holds no dot) rather than a module path. Go rejects multi-element module
+// paths whose first element has no dot ("tmp/demoapp"): their imports
+// resolve against the standard library instead of the module, so scaffolding
+// with such a module path would produce a project that cannot build.
+// Treating them as directories keeps `airway new tmp/demoapp` doing what the
+// caller meant.
+func isRelativeDirPath(arg string) bool {
+	if strings.HasPrefix(arg, "./") || strings.HasPrefix(arg, "../") {
+		return true
+	}
+	if !strings.Contains(arg, "/") {
+		return false
+	}
+
+	return !strings.Contains(arg[:strings.Index(arg, "/")], ".")
 }
 
 func runCLINew(args []string) error {
@@ -403,6 +423,7 @@ func printCLINewUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "  airway new myapp")
 	_, _ = fmt.Fprintln(w, "  airway new github.com/me/myapp")
 	_, _ = fmt.Fprintln(w, "  airway new /path/to/myapp    # create at that path; module: myapp")
+	_, _ = fmt.Fprintln(w, "  airway new some/dir/myapp    # relative path: same rule (module: myapp)")
 	_, _ = fmt.Fprintln(w, "  airway new --local myapp     # develop against the airway checkout in $PWD")
 	_, _ = fmt.Fprintln(w, "  airway new --local ~/src/airway myapp")
 }

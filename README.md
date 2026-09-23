@@ -9,6 +9,7 @@ runtime.
 - **[中文文档](docs/zh-CN/README.md)**
 - **[Admin panel guide](ADMIN.md)** / **[Admin 后台指南（中文）](ADMIN.zh-CN.md)**
 - **[Static showcase sites](SSG.md)** / **[静态展示站点（中文）](SSG.zh-CN.md)**
+- **[Static export guide](docs/static-export.md)** / **[静态导出指南（中文）](docs/zh-CN/static-export.md)**
 - **[CLI scaffolding guide](docs/cli.md)** / **[CLI 脚手架指南](docs/zh-CN/cli.md)**
 - **[Frontend guide](docs/frontend.md)** / **[前端指南（中文）](docs/zh-CN/frontend.md)**
 - **[OpenAPI guide](docs/openapi.md)** / **[OpenAPI 指南（中文）](docs/zh-CN/openapi.md)**
@@ -52,6 +53,10 @@ runtime.
   pages are Go code and whose looks come from swappable theme modules
   (`theme:new` / `theme:install`); `airway ssg:build` exports plain HTML for
   any static host.
+- **Static export for CDN**: `airway static:build` exports app pages
+  (registered in `export.go`) as plain HTML plus the frontend bundle —
+  templ-rendered content with Preact islands intact, deployable to any
+  CDN (see [docs/static-export.md](docs/static-export.md)).
 - **Plugins**: WordPress-style feature modules shipped as independent Go
   modules — install with `go get`, enable with one blank import in
   `plugins.go` (see [docs/plugin.md](docs/plugin.md)).
@@ -69,7 +74,8 @@ Requires Go **1.27.1 or later**. No Node.js, no CGO.
 ```bash
 go install github.com/daqing/airway@latest
 airway new myapp        # or: airway new github.com/me/myapp (directory = last path segment)
-                        # or: airway new /path/to/myapp (local path; module = last path segment)
+                        # or: airway new /path/to/myapp (path; module = last path segment)
+                        # relative paths work the same: airway new sites/myapp
 cd myapp
 ```
 
@@ -413,6 +419,13 @@ airway ssg:build [--out dist]               # export the site defined in ssg.go 
 airway ssg:serve [--addr 127.0.0.1:3000]    # preview the site with a local server
 airway theme:new [--local[=path]] <name>    # scaffold a new site theme module
 airway theme:install <module | /path>       # install a site theme into the host project
+```
+
+### Static export (app pages)
+
+```bash
+airway static:build [--out dist]            # export the pages registered in export.go + the frontend bundle as static HTML
+airway static:serve [--addr 127.0.0.1:3000] # preview the static pages with a local server
 ```
 
 ### Plugins

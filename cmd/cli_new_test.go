@@ -112,6 +112,50 @@ func TestNewProjectFromAbsolutePath(t *testing.T) {
 	}
 }
 
+func TestResolveNewTargetPaths(t *testing.T) {
+	for _, tc := range []struct {
+		arg     string
+		wantDir string
+		wantMod string
+	}{
+		// module paths: bare names and domain-prefixed paths
+		{"myapp", filepath.Join(".", "myapp"), "myapp"},
+		{"github.com/me/myapp", filepath.Join(".", "myapp"), "github.com/me/myapp"},
+		// filesystem paths: absolute and relative both create in place
+		{"/tmp/sites/myapp", "/tmp/sites/myapp", "myapp"},
+		{"tmp/demoapp", filepath.Join("tmp", "demoapp"), "demoapp"},
+		{"./demoapp", "demoapp", "demoapp"},
+		{"../sites/demoapp", filepath.Join("..", "sites", "demoapp"), "demoapp"},
+	} {
+		dir, module, err := resolveNewTarget(tc.arg)
+		if err != nil {
+			t.Fatalf("resolveNewTarget(%q): %v", tc.arg, err)
+		}
+		if dir != tc.wantDir || module != tc.wantMod {
+			t.Fatalf("resolveNewTarget(%q) = %q, %q; want %q, %q", tc.arg, dir, module, tc.wantDir, tc.wantMod)
+		}
+	}
+}
+
+func TestNewProjectFromRelativePath(t *testing.T) {
+	wd := useTempWorkingDir(t)
+
+	// A dotless multi-element path is not a valid Go module path; it must
+	// scaffold in place with the last segment as the module instead.
+	if err := newProject("sites/demoapp", false, false, ""); err != nil {
+		t.Fatalf("new project: %v", err)
+	}
+
+	goMod := readFile(t, filepath.Join(wd, "sites", "demoapp", "go.mod"))
+	if !strings.Contains(goMod, "module demoapp") {
+		t.Fatalf("expected module demoapp in go.mod, got:\n%s", goMod)
+	}
+
+	if _, err := os.Stat(filepath.Join(wd, "sites", "demoapp", "main.go")); err != nil {
+		t.Fatalf("expected project scaffolded at sites/demoapp: %v", err)
+	}
+}
+
 func TestNewProjectRejectsInvalidModulePath(t *testing.T) {
 	useTempWorkingDir(t)
 
