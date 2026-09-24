@@ -4,7 +4,7 @@ COPY airway .
 COPY db db
 
 ENV AIRWAY_ENV=production
-ENV PORT=1900
+ENV LISTEN=:1900
 ENV TZ="Asia/Shanghai"
 
 EXPOSE 1900

@@ -18,8 +18,8 @@ airway openapi:generate --out docs/api.json
 输出是确定性的（paths、operation、schema 均排序），变化后重新生成不会产生
 无意义的 diff；该文件是本地构建产物，已被 git 忽略。
 `info.version` 取自项目 `VERSION` 文件；`servers` 在实时端点模式下由请求
-Host 与 `URL_PREFIX` 推导，在 CLI 模式下由 `AIRWAY_PORT`（或 `PORT`）与
-`URL_PREFIX` 推导。当应用通过 `URL_PREFIX=/airway` 部署在反向代理之后时，
+Host 与 `URL_PREFIX` 推导，在 CLI 模式下由 `LISTEN` 与 `URL_PREFIX` 推导。
+当应用通过 `URL_PREFIX=/airway` 部署在反向代理之后时，
 文档挂载在 `/airway/openapi.json`，其 `servers` URL 自动携带前缀。
 
 ## 自动生成的内容

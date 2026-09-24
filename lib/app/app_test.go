@@ -7,11 +7,63 @@ import (
 	"testing"
 
 	"github.com/daqing/airway/config"
+	"github.com/daqing/airway/lib/utils"
 	"github.com/gin-gonic/gin"
 )
 
 func newTestApp() *App {
-	return NewApp("Airway", "0", WithRoutes(config.Routes, config.HealthRoutes))
+	return NewApp("Airway", WithRoutes(config.Routes, config.HealthRoutes))
+}
+
+func TestValidateListenAddress(t *testing.T) {
+	for _, tc := range []struct {
+		listen string
+		ok     bool
+	}{
+		{":1900", true},
+		{"0.0.0.0:1905", true},
+		{"127.0.0.1:1905", true},
+		{"[::1]:1905", true},
+		{"1905", false},
+		{"0.0.0.0", false},
+		{"::1905", false},
+	} {
+		err := validateListenAddress(tc.listen)
+		if tc.ok && err != nil {
+			t.Fatalf("validateListenAddress(%q) = %v, want nil", tc.listen, err)
+		}
+		if !tc.ok && err == nil {
+			t.Fatalf("validateListenAddress(%q) = nil, want an error", tc.listen)
+		}
+	}
+}
+
+func TestBrowsableAddr(t *testing.T) {
+	for _, tc := range []struct {
+		listen string
+		want   string
+	}{
+		{":1900", "127.0.0.1:1900"},
+		{"0.0.0.0:1905", "127.0.0.1:1905"},
+		{"[::]:1905", "127.0.0.1:1905"},
+		{"192.168.1.5:1905", "192.168.1.5:1905"},
+		{"example.com:1905", "example.com:1905"},
+		{"not-an-address", "not-an-address"},
+	} {
+		if got := browsableAddr(tc.listen); got != tc.want {
+			t.Fatalf("browsableAddr(%q) = %q, want %q", tc.listen, got, tc.want)
+		}
+	}
+}
+
+func TestNewAppUsesResolvedListenAddress(t *testing.T) {
+	t.Setenv("LISTEN", "0.0.0.0:1905")
+
+	// The App stores whatever the resolver returns, so the test stays honest
+	// even when the outer environment shadows the value.
+	if got, want := newTestApp().listen, utils.ListenAddress(); got != want {
+		t.Fatalf("listen = %q, want %q", got, want)
+	}
 }
 
 // When URL_PREFIX is configured, the public routes (home page, WebSocket, API)

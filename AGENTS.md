@@ -123,7 +123,7 @@ tmp/             Local dev database (airway.db), build artifacts. Git-ignored.
 
 ## Build, Run, and Test Commands
 
-Prerequisites: copy `.env.example` to `.env` and set `AIRWAY_DSN` and `AIRWAY_PORT`.
+Prerequisites: copy `.env.example` to `.env` and set `AIRWAY_DSN` and `LISTEN`.
 
 ```bash
 just dev                 # Start dev server with live reload (overmind + air, AIRWAY_ENV=local)
@@ -266,14 +266,14 @@ Migration and schema commands read `AIRWAY_DSN`/`DSN`.
 
 All configuration is via environment variables (see `.env.example`). The
 process environment always wins over `.env` values (loaded as fallbacks for
-keys the environment does not set), so `PORT=1988 airway server` overrides a
-`PORT`/`AIRWAY_PORT` in `.env`:
+keys the environment does not set), so `LISTEN=0.0.0.0:1988 airway server`
+overrides a `LISTEN` in `.env`:
 
 - `AIRWAY_ENV` — `local` enables `.env` loading and Gin debug mode; anything else runs Gin in release mode.
 - `AIRWAY_DSN` — database URL (short alias `DSN`); driver inferred from scheme: `postgres://...`, `sqlite://./tmp/airway.db`, `sqlite://:memory:`, `mysql://...` (native Go MySQL driver DSN format also accepted).
 - `AIRWAY_REDIS` — optional Redis URL.
 - `AIRWAY_JS_REGISTRY` — npm registry for `js:add` / `js:install` (default `https://registry.npmjs.org`); set a mirror such as `https://registry.npmmirror.com` when the default is slow.
-- `AIRWAY_PORT` — listen port (default example: `1900`).
+- `LISTEN` — address the server binds, `host:port` (e.g. `0.0.0.0:1905`, `:1905`); default `:1900`. `AIRWAY_LISTEN` is accepted as an alias.
 - `URL_PREFIX` — optional public sub-path prefix (e.g. `/airway`) under which the app is served behind a reverse proxy; empty means the root. `AIRWAY_URL_PREFIX` is accepted as an alias.
 - `STORAGE_DRIVER` — `local` (default), `s3`, `r2`, or `cos`; with `STORAGE_ROOT` for local, or `STORAGE_BUCKET` / `STORAGE_ACCESS_KEY` / `STORAGE_SECRET_KEY` / `STORAGE_REGION` / `STORAGE_ENDPOINT` / optional `STORAGE_PUBLIC_URL` (CDN base; disables presigned URLs) for cloud drivers.
 - `TZ` — server timezone (e.g. `Asia/Shanghai`).

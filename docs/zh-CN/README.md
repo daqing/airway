@@ -59,14 +59,14 @@ cd airway
 cp .env.example .env
 ```
 
-打开 `.env`，至少设置数据库 DSN 与端口：
+打开 `.env`，至少设置数据库 DSN 与监听地址：
 
 ```env
 DSN="sqlite://./tmp/airway.db"     # 或 postgres://...、mysql://...
-PORT="1900"
+LISTEN=":1900"                     # 要绑定的 host:port；":1900" 表示所有网卡
 ```
 
-环境变量既可以使用短名（`DSN`、`PORT`、`REDIS`、`URL_PREFIX`），也可以使用带 `AIRWAY_` 前缀的形式（`AIRWAY_DSN`、`AIRWAY_PORT` 等）。当两者都设置时，以 `AIRWAY_` 形式为准。参见[「配置」](#配置)。
+环境变量既可以使用短名（`DSN`、`LISTEN`、`REDIS`、`URL_PREFIX`），也可以使用带 `AIRWAY_` 前缀的形式（`AIRWAY_DSN`、`AIRWAY_LISTEN` 等）。当两者都设置时，以 `AIRWAY_` 形式为准。参见[「配置」](#配置)。
 
 ### 2. 启动服务
 
@@ -84,12 +84,12 @@ just dev
 
 ## 配置
 
-所有配置通过环境变量完成（见 `.env.example`）。`.env` 中的值是**回退值：进程环境始终优先**（例如 `PORT=1988 airway server` 会覆盖 `.env` 里的 `PORT`）。每个值都可以用短名或其 `AIRWAY_` 别名，两者都设置时以 `AIRWAY_` 形式为准。
+所有配置通过环境变量完成（见 `.env.example`）。`.env` 中的值是**回退值：进程环境始终优先**（例如 `LISTEN=0.0.0.0:1988 airway server` 会覆盖 `.env` 里的 `LISTEN`）。每个值都可以用短名或其 `AIRWAY_` 别名，两者都设置时以 `AIRWAY_` 形式为准。
 
 | 变量 | 说明 |
 | --- | --- |
 | `DSN` / `AIRWAY_DSN` | 数据库 URL，驱动由 scheme 推断（见下）。 |
-| `PORT` / `AIRWAY_PORT` | HTTP 监听端口（默认 `1900`）。 |
+| `LISTEN` / `AIRWAY_LISTEN` | 服务器绑定的地址，`host:port`（如 `0.0.0.0:1905`、`:1905`），默认 `:1900`。 |
 | `REDIS` / `AIRWAY_REDIS` | 可选的 Redis URL，用于缓存/队列。 |
 | `URL_PREFIX` / `AIRWAY_URL_PREFIX` | 可选的公开子路径前缀，如 `/airway`；留空则在根路径服务。 |
 | `AIRWAY_JS_REGISTRY` | `js:add` / `js:install` 使用的 npm registry（默认 `https://registry.npmjs.org`；需要时可设为 `https://registry.npmmirror.com` 等镜像）。 |

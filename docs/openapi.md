@@ -20,7 +20,7 @@ The output is deterministic (paths, operations and schemas are sorted), so
 regenerating after a change keeps diffs clean; the file itself is a local
 build artifact (git-ignored). `info.version` comes from the project's
 `VERSION` file, and the `servers` entry is derived from the request host and
-`URL_PREFIX` on the live endpoint, or `AIRWAY_PORT` / `PORT` and `URL_PREFIX`
+`URL_PREFIX` on the live endpoint, or from `LISTEN` and `URL_PREFIX`
 on the CLI. When the app is deployed behind a reverse proxy with
 `URL_PREFIX=/airway`, the document is served at `/airway/openapi.json` and its
 `servers` URL carries the prefix.

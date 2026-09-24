@@ -90,15 +90,15 @@ cd airway
 cp .env.example .env
 ```
 
-Open `.env` and set at least the database DSN and port:
+Open `.env` and set at least the database DSN and listen address:
 
 ```env
 DSN="sqlite://./tmp/airway.db"     # or postgres://..., mysql://...
-PORT="1900"
+LISTEN=":1900"                     # host:port to bind; ":1900" is every interface
 ```
 
-Environment values may use the short name (`DSN`, `PORT`, `REDIS`, `URL_PREFIX`)
-or the `AIRWAY_`-prefixed form (`AIRWAY_DSN`, `AIRWAY_PORT`, ...). When both are
+Environment values may use the short name (`DSN`, `LISTEN`, `REDIS`, `URL_PREFIX`)
+or the `AIRWAY_`-prefixed form (`AIRWAY_DSN`, `AIRWAY_LISTEN`, ...). When both are
 set, the `AIRWAY_` form wins. See [Configuration](#configuration).
 
 ### 2. Run the server
@@ -120,13 +120,13 @@ rendered with templ, `GET /health` returns `UP`).
 
 All configuration is via environment variables (see `.env.example`). Values in
 `.env` are fallbacks: **the process environment always wins** (e.g.
-`PORT=1988 airway server` overrides a `PORT` in `.env`). Each value accepts a
-short name or its `AIRWAY_` alias, with the alias taking precedence.
+`LISTEN=0.0.0.0:1988 airway server` overrides a `LISTEN` in `.env`). Each value
+accepts a short name or its `AIRWAY_` alias, with the alias taking precedence.
 
 | Variable | Description |
 | --- | --- |
 | `DSN` / `AIRWAY_DSN` | Database URL. Driver is inferred from the scheme (see below). |
-| `PORT` / `AIRWAY_PORT` | HTTP listen port (default `1900`). |
+| `LISTEN` / `AIRWAY_LISTEN` | Address the server binds, `host:port` (e.g. `0.0.0.0:1905`, `:1905`). Default `:1900`. |
 | `REDIS` / `AIRWAY_REDIS` | Optional Redis URL for cache/queue. |
 | `URL_PREFIX` / `AIRWAY_URL_PREFIX` | Optional public sub-path prefix, e.g. `/airway`. Empty serves at the root. |
 | `AIRWAY_JS_REGISTRY` | npm registry for `js:add` / `js:install` (default `https://registry.npmjs.org`; set a mirror like `https://registry.npmmirror.com` if needed). |
