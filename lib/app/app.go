@@ -134,11 +134,25 @@ func (a *App) Router() *gin.Engine {
 }
 
 func (a *App) Run() {
-	fmt.Printf("%s running at: http://%s%s\n", a.name, browsableAddr(a.listen), a.prefix)
+	fmt.Printf("%s running at: %s\n", a.name, runBanner(a.listen, a.prefix))
 
 	if err := http.ListenAndServe(a.listen, a.Handler()); err != nil {
 		log.Fatalf("%s: listen on %s failed: %v", a.name, a.listen, err)
 	}
+}
+
+// runBanner renders the address part of the startup log line: the configured
+// LISTEN address verbatim, so the log always echoes what the server bound.
+// Wildcard binds (":1999", "0.0.0.0:1999") additionally get the loopback URL,
+// which is the one a browser on this machine can actually open.
+func runBanner(listen, prefix string) string {
+	url := "http://" + browsableAddr(listen) + prefix
+
+	if host, _, ok := utils.ListenHostPort(listen); ok && host == "" {
+		return fmt.Sprintf("%s (%s)", listen, url)
+	}
+
+	return url
 }
 
 // browsableAddr turns a listen address into the URL a developer should open:

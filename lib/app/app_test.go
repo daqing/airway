@@ -56,6 +56,29 @@ func TestBrowsableAddr(t *testing.T) {
 	}
 }
 
+func TestRunBanner(t *testing.T) {
+	for _, tc := range []struct {
+		listen string
+		want   string
+	}{
+		// The configured address is echoed verbatim; wildcard binds get the
+		// loopback URL appended as a hint.
+		{"0.0.0.0:1999", "0.0.0.0:1999 (http://127.0.0.1:1999)"},
+		{":1900", ":1900 (http://127.0.0.1:1900)"},
+		{"[::]:1905", "[::]:1905 (http://127.0.0.1:1905)"},
+		{"127.0.0.1:1905", "http://127.0.0.1:1905"},
+		{"192.168.1.5:1905", "http://192.168.1.5:1905"},
+	} {
+		if got := runBanner(tc.listen, ""); got != tc.want {
+			t.Fatalf("runBanner(%q, \"\") = %q, want %q", tc.listen, got, tc.want)
+		}
+	}
+
+	if got, want := runBanner("0.0.0.0:1905", "/airway"), "0.0.0.0:1905 (http://127.0.0.1:1905/airway)"; got != want {
+		t.Fatalf("runBanner with prefix = %q, want %q", got, want)
+	}
+}
+
 func TestNewAppUsesResolvedListenAddress(t *testing.T) {
 	t.Setenv("LISTEN", "0.0.0.0:1905")
 
