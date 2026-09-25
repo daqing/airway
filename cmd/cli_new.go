@@ -204,7 +204,7 @@ func newProject(arg string, tidy, installJS bool, localDir string) error {
 
 	fmt.Println("\nNext steps:")
 	fmt.Printf("  cd %s\n", destDir)
-	fmt.Println("  # edit .env — set DSN and PORT")
+	fmt.Println("  # edit .env — set DSN and LISTEN")
 	fmt.Println("  airway db:create")
 	fmt.Println("  airway db:migrate")
 	if !jsInstalled {
@@ -383,9 +383,9 @@ func copyScaffoldEnv(destDir string) error {
 	return os.WriteFile(dst, data, 0o644)
 }
 
-// scaffoldPortFiles are the scaffolded files whose default port is rewritten
-// from 1900 (the framework repo's own default) to 1905, so a freshly generated
-// app doesn't collide with a locally running airway server.
+// scaffoldPortFiles are the scaffolded files whose default listen address is
+// rewritten from 1900 (the framework repo's own default) to 1905, so a freshly
+// generated app doesn't collide with a locally running airway server.
 var scaffoldPortFiles = []string{
 	".env.example",
 	"Dockerfile",

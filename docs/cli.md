@@ -79,7 +79,7 @@ follow-up steps:
 
 ```bash
 cd myapp
-# edit .env — set DSN and PORT
+# edit .env — set DSN and LISTEN
 airway db:create
 airway db:migrate
 airway server             # starts the HTTP server
@@ -100,8 +100,9 @@ already runs the binary with `server`.
 
 Environment values always win over `.env` values: `.env` is loaded as a
 fallback for keys the process environment does not set, so
-`PORT=1988 go run . server` listens on 1988 even when `.env` defines
-`PORT` or `AIRWAY_PORT`. The server starts without `AIRWAY_ENV` in the
+`LISTEN=0.0.0.0:1988 go run . server` binds that address even when `.env`
+defines `LISTEN`. The value is `host:port` (a bare port is rejected); the
+default is `:1900`. The server starts without `AIRWAY_ENV` in the
 environment as long as `.env` provides it.
 
 ## Upload a file

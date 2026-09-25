@@ -57,6 +57,15 @@ func TestScaffoldWritesTemplateWithModuleReplaced(t *testing.T) {
 		t.Fatalf("expected main.go to mount project routes, got:\n%s", mainGo)
 	}
 
+	// The scaffold must ship the LISTEN address, not the legacy PORT key.
+	envExample := readFile(t, filepath.Join(destDir, ".env.example"))
+	if !strings.Contains(envExample, `LISTEN="`) {
+		t.Fatalf("expected LISTEN in .env.example, got:\n%s", envExample)
+	}
+	if strings.Contains(envExample, "PORT=") {
+		t.Fatalf("expected no legacy PORT in .env.example, got:\n%s", envExample)
+	}
+
 	exportGo := readFile(t, filepath.Join(destDir, "export.go"))
 	if !strings.Contains(exportGo, `"github.com/example/demo/app/views/home"`) {
 		t.Fatalf("expected project import rewritten in export.go, got:\n%s", exportGo)

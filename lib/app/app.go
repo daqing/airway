@@ -7,6 +7,8 @@ package app
 
 import (
 	"fmt"
+	"log"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -17,10 +19,10 @@ import (
 )
 
 type App struct {
-	r        *gin.Engine // Full router: public + internal routes at the root
-	internal *gin.Engine // Internal-only router (health) for unprefixed requests
-	name     string      // Application name
-	port     string
+	r        *gin.Engine                       // Full router: public + internal routes at the root
+	internal *gin.Engine                       // Internal-only router (health) for unprefixed requests
+	name     string                            // Application name
+	listen   string                            // Listen address (host:port), from LISTEN
 	prefix   string                            // Public sub-path prefix ("" = serve at root)
 	outer    []func(http.Handler) http.Handler // Wrappers around the outermost handler
 }
@@ -60,7 +62,7 @@ func WithHandlerWrapper(wrap func(http.Handler) http.Handler) Option {
 	return func(o *options) { o.outer = append(o.outer, wrap) }
 }
 
-func NewApp(name, port string, opts ...Option) *App {
+func NewApp(name string, opts ...Option) *App {
 	cfg := options{}
 	for _, opt := range opts {
 		opt(&cfg)
@@ -68,6 +70,11 @@ func NewApp(name, port string, opts ...Option) *App {
 
 	if cfg.routes == nil {
 		panic("app: no routes configured — pass app.WithRoutes(config.Routes, config.HealthRoutes)")
+	}
+
+	listen := utils.ListenAddress()
+	if err := validateListenAddress(listen); err != nil {
+		panic("app: " + err.Error())
 	}
 
 	router := newEngine(cfg.cors)
@@ -82,7 +89,7 @@ func NewApp(name, port string, opts ...Option) *App {
 		r:        router,
 		internal: internal,
 		name:     name,
-		port:     port,
+		listen:   listen,
 		prefix:   utils.URLPrefix(),
 		outer:    cfg.outer,
 	}
@@ -127,8 +134,51 @@ func (a *App) Router() *gin.Engine {
 }
 
 func (a *App) Run() {
-	fmt.Printf("%s running at: http://127.0.0.1:%s%s\n", a.name, a.port, a.prefix)
-	_ = http.ListenAndServe(":"+a.port, a.Handler())
+	fmt.Printf("%s running at: %s\n", a.name, runBanner(a.listen, a.prefix))
+
+	if err := http.ListenAndServe(a.listen, a.Handler()); err != nil {
+		log.Fatalf("%s: listen on %s failed: %v", a.name, a.listen, err)
+	}
+}
+
+// runBanner renders the address part of the startup log line: the configured
+// LISTEN address verbatim, so the log always echoes what the server bound.
+// Wildcard binds (":1999", "0.0.0.0:1999") additionally get the loopback URL,
+// which is the one a browser on this machine can actually open.
+func runBanner(listen, prefix string) string {
+	url := "http://" + browsableAddr(listen) + prefix
+
+	if host, _, ok := utils.ListenHostPort(listen); ok && host == "" {
+		return fmt.Sprintf("%s (%s)", listen, url)
+	}
+
+	return url
+}
+
+// browsableAddr turns a listen address into the URL a developer should open:
+// wildcard hosts ("", "0.0.0.0", "::") become 127.0.0.1, so a
+// LISTEN=0.0.0.0:1905 log line still points somewhere clickable.
+func browsableAddr(listen string) string {
+	host, port, ok := utils.ListenHostPort(listen)
+	if !ok {
+		return listen
+	}
+
+	if host == "" {
+		host = "127.0.0.1"
+	}
+
+	return net.JoinHostPort(host, port)
+}
+
+// validateListenAddress checks the address the server will bind: LISTEN
+// carries host and port together, so a bare port ("1905") is rejected.
+func validateListenAddress(listen string) error {
+	if _, _, err := net.SplitHostPort(listen); err != nil {
+		return fmt.Errorf("invalid listen address %q — use host:port, e.g. 0.0.0.0:1905 or :1905", listen)
+	}
+
+	return nil
 }
 
 // prefixHandler routes requests based on the configured sub-path prefix. This

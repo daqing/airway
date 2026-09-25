@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -51,7 +52,7 @@ func runCLIOpenAPIGenerate(args []string) error {
 
 	body, err := openapi.Build(engine, openapi.BuildOptions{
 		Version: Version,
-		Server:  "http://localhost:" + cliPort() + utils.URLPrefix(),
+		Server:  cliServerURL(),
 		Warn:    log.Printf,
 	})
 	if err != nil {
@@ -72,14 +73,20 @@ func runCLIOpenAPIGenerate(args []string) error {
 	return nil
 }
 
-// cliPort mirrors the server's port resolution (AIRWAY_PORT, then PORT) for
-// the generated servers entry.
-func cliPort() string {
-	if port := utils.GetEnvMulti("AIRWAY_PORT", "PORT"); port != "" {
-		return port
+// cliServerURL derives the servers entry from the configured listen address
+// (utils.ListenAddress): wildcard binds point at localhost, so the document
+// names an address a client can reach.
+func cliServerURL() string {
+	host, port, ok := utils.ListenHostPort(utils.ListenAddress())
+	if !ok {
+		return "http://localhost" + utils.URLPrefix()
 	}
 
-	return "1900"
+	if host == "" {
+		host = "localhost"
+	}
+
+	return "http://" + net.JoinHostPort(host, port) + utils.URLPrefix()
 }
 
 func printCLIOpenAPIGenerateUsage(w io.Writer) {

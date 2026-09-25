@@ -46,7 +46,7 @@ jobs:
       - name: serve and probe
         run: |
           cd /tmp/demo
-          AIRWAY_ENV=local DSN="sqlite://./tmp/airway.db" STORAGE_DRIVER=local AIRWAY_PORT=1905 \
+          AIRWAY_ENV=local DSN="sqlite://./tmp/airway.db" STORAGE_DRIVER=local LISTEN=:1905 \
             ./demo server &
           sleep 3
           curl -sf http://127.0.0.1:1905/posts > /dev/null

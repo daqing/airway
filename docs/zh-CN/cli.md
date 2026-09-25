@@ -61,7 +61,7 @@ js:install`），并打印后续步骤：
 
 ```bash
 cd myapp
-# 编辑 .env —— 配置 DSN 和 PORT
+# 编辑 .env —— 配置 DSN 和 LISTEN
 airway db:create
 airway db:migrate
 go run .                # 启动服务器（等同于 go run . server）
@@ -80,8 +80,9 @@ airway server        # 或者在源码目录中：go run . server
 `go run . server`。Docker 镜像已经以 `server` 参数启动。
 
 环境变量始终优先于 `.env`：`.env` 只为进程环境未设置的键提供回退值，因此
-`PORT=1988 go run . server` 即使在 `.env` 定义了 `PORT` 或 `AIRWAY_PORT` 时
-也会监听 1988。只要 `.env` 提供了 `AIRWAY_ENV`，环境中不带它也能启动服务。
+`LISTEN=0.0.0.0:1988 go run . server` 在 `.env` 定义了 `LISTEN` 时也会绑定
+该地址。值必须是 `host:port`（裸端口会被拒绝），默认 `:1900`。只要 `.env`
+提供了 `AIRWAY_ENV`，环境中不带它也能启动服务。
 
 ## 上传文件
 

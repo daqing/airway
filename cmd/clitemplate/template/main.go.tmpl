@@ -47,8 +47,8 @@ func main() {
 func runServer() {
 	// .env supplies fallbacks for anything the process environment does not
 	// set (godotenv.Load never overrides existing values), so
-	// `PORT=1988 airway server` wins over a PORT in .env. Load it before any
-	// env checks so AIRWAY_ENV itself can come from .env.
+	// `LISTEN=0.0.0.0:1988 airway server` wins over a LISTEN in .env. Load it
+	// before any env checks so AIRWAY_ENV itself can come from .env.
 	if err := godotenv.Load(".env"); err != nil && !errors.Is(err, os.ErrNotExist) {
 		log.Printf("Loading env file: .env failed: %v", err)
 	}
@@ -113,7 +113,6 @@ func loadCLIEnv() {
 }
 
 func runApp() {
-	a := app.NewApp("Airway", utils.GetEnvOr("AIRWAY_PORT", "PORT"),
-		app.WithRoutes(config.Routes, config.HealthRoutes))
+	a := app.NewApp("Airway", app.WithRoutes(config.Routes, config.HealthRoutes))
 	a.Run()
 }

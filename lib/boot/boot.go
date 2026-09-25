@@ -129,5 +129,5 @@ func New(opts Options) (*app.App, error) {
 		appOpts = append(appOpts, app.WithRoutes(opts.Routes, opts.HealthRoutes))
 	}
 
-	return app.NewApp(opts.AppName, "0", appOpts...), nil
+	return app.NewApp(opts.AppName, appOpts...), nil
 }
