@@ -204,7 +204,7 @@ func newProject(arg string, tidy, installJS bool, localDir string) error {
 
 	fmt.Println("\nNext steps:")
 	fmt.Printf("  cd %s\n", destDir)
-	fmt.Println("  # edit .env — set DSN and PORT")
+	fmt.Println("  # edit .env — set DSN and LISTEN")
 	fmt.Println("  airway db:create")
 	fmt.Println("  airway db:migrate")
 	if !jsInstalled {

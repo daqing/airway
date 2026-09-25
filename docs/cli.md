@@ -79,7 +79,7 @@ follow-up steps:
 
 ```bash
 cd myapp
-# edit .env — set DSN and PORT
+# edit .env — set DSN and LISTEN
 airway db:create
 airway db:migrate
 airway server             # starts the HTTP server

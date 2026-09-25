@@ -61,7 +61,7 @@ js:install`），并打印后续步骤：
 
 ```bash
 cd myapp
-# 编辑 .env —— 配置 DSN 和 PORT
+# 编辑 .env —— 配置 DSN 和 LISTEN
 airway db:create
 airway db:migrate
 go run .                # 启动服务器（等同于 go run . server）
