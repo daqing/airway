@@ -331,8 +331,8 @@ func (jq *JoinQuery) buildJoinCondition(primaryType reflect.Type, config *joinRe
 	switch config.relationType {
 	case BelongsTo:
 		// belongs_to: 主表有外键
-		mainFK := toDBFieldName(fk)
-		joinPK := toDBFieldName(pk)
+		mainFK := snakeCaseFieldName(fk)
+		joinPK := snakeCaseFieldName(pk)
 		return buildingsql.Compare(
 			buildingsql.Field(mainTable, mainFK),
 			"=",
@@ -340,8 +340,8 @@ func (jq *JoinQuery) buildJoinCondition(primaryType reflect.Type, config *joinRe
 		)
 	default:
 		// has_one, has_many: 关联表有外键
-		mainPK := toDBFieldName(pk)
-		joinFK := toDBFieldName(primaryType.Name() + "ID")
+		mainPK := snakeCaseFieldName(pk)
+		joinFK := snakeCaseFieldName(primaryType.Name() + "ID")
 		return buildingsql.Compare(
 			buildingsql.Field(mainTable, mainPK),
 			"=",

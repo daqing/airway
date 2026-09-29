@@ -192,10 +192,10 @@ func (p *Preloader) fetchRelatedRecords(config *preloadRelConfig, pks []int64, c
 	var dbFK string
 	if config.relationType == BelongsTo {
 		// BelongsTo: 关联表的主键在主表的外键中
-		dbFK = toDBFieldName(config.primaryKey)
+		dbFK = snakeCaseFieldName(config.primaryKey)
 	} else {
 		// HasOne/HasMany: 关联表的外键等于主表的主键
-		dbFK = toDBFieldName(config.foreignKey)
+		dbFK = snakeCaseFieldName(config.foreignKey)
 	}
 
 	builder := buildingsql.Select("*").From(table).
@@ -353,17 +353,6 @@ func getTableNameFromType(t reflect.Type) string {
 		return table.TableName()
 	}
 	return strings.ToLower(t.Name()) + "s"
-}
-
-func toDBFieldName(goField string) string {
-	var result strings.Builder
-	for i, r := range goField {
-		if i > 0 && r >= 'A' && r <= 'Z' {
-			result.WriteByte('_')
-		}
-		result.WriteRune(r)
-	}
-	return strings.ToLower(result.String())
 }
 
 // ==================== 便捷函数（使用CurrentDB）====================
