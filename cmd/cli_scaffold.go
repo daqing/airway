@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 )
 
 // --- generate island ---
@@ -74,7 +73,6 @@ func generateScaffold(args []string) error {
 		APIName:    apiName,
 		Module:     currentModulePath(),
 		Fields:     fields,
-		IDColumn:   idColumnForDSN(),
 	}
 
 	// model with the declared fields
@@ -83,19 +81,14 @@ func generateScaffold(args []string) error {
 		return err
 	}
 
-	// migration pair, tailored to the configured database dialect
-	version := time.Now().Format("20060102150405")
+	// Go DSL migration, portable across PostgreSQL, MySQL and SQLite
+	version := nextMigrationVersion("create_" + plural)
 	mig := scaffoldMigrationData{Version: version, scaffoldData: data}
-	mig.Version = version
-	migName := fmt.Sprintf("%s_create_%s", version, plural)
-	if err := writeTemplateFile(scaffoldUpTemplate,
-		filepath.Join(".", "db", "migrate", migName+".up.sql"), mig); err != nil {
+	if err := writeTemplateFile(scaffoldMigrationTemplate,
+		filepath.Join(".", "db", "migrate", version+"_create_"+plural+".go"), mig); err != nil {
 		return err
 	}
-	if err := writeTemplateFile(scaffoldDownTemplate,
-		filepath.Join(".", "db", "migrate", migName+".down.sql"), mig); err != nil {
-		return err
-	}
+	noteMigrationImport(data.Module)
 
 	// service layer (same as `generate service`)
 	if err := generateService(args); err != nil {
@@ -146,6 +139,10 @@ func generateScaffold(args []string) error {
 		return err
 	}
 
+	// keep the project compilable: the new views only have .templ files, and
+	// the root package imports them through export_<resource>.go
+	compileViewsOrNote()
+
 	registerScaffoldRoutes(data)
 
 	fmt.Println("\nNext steps:")
@@ -158,11 +155,10 @@ func generateScaffold(args []string) error {
 }
 
 type scaffoldField struct {
-	Name    string // Title
-	JSON    string // title
-	GoType  string // string
-	SQLCol  string // title VARCHAR(255)
-	SQLName string // title
+	Name   string // Title
+	JSON   string // title
+	GoType string // string
+	DSL    string // t.String("title")
 }
 
 type scaffoldData struct {
@@ -172,7 +168,6 @@ type scaffoldData struct {
 	SlugPlural string
 	APIName    string
 	Module     string
-	IDColumn   string
 	Fields     []scaffoldField
 }
 
@@ -188,49 +183,29 @@ func parseScaffoldFields(args []string) ([]scaffoldField, error) {
 		if err != nil {
 			return nil, err
 		}
-		var goType, sqlType string
+		var goType, dsl string
 		switch strings.ToLower(fieldType) {
 		case "string":
-			goType, sqlType = "string", "VARCHAR(255)"
+			goType, dsl = "string", fmt.Sprintf("t.String(%q)", fieldName)
 		case "text":
-			goType, sqlType = "string", "TEXT"
+			goType, dsl = "string", fmt.Sprintf("t.Text(%q)", fieldName)
 		case "integer", "int":
-			goType, sqlType = "int64", "BIGINT"
+			goType, dsl = "int64", fmt.Sprintf("t.BigInt(%q)", fieldName)
 		case "float":
-			goType, sqlType = "float64", "DOUBLE PRECISION"
+			goType, dsl = "float64", fmt.Sprintf("t.Float(%q)", fieldName)
 		case "boolean", "bool":
-			goType, sqlType = "bool", "BOOLEAN"
+			goType, dsl = "bool", fmt.Sprintf("t.Boolean(%q)", fieldName)
 		default:
 			return nil, fmt.Errorf("unsupported field type %q (use string, text, integer, float or boolean)", fieldType)
 		}
 		fields = append(fields, scaffoldField{
-			Name:    toCamelName(fieldName),
-			JSON:    fieldName,
-			GoType:  goType,
-			SQLCol:  fieldName + " " + sqlType,
-			SQLName: fieldName,
+			Name:   toCamelName(fieldName),
+			JSON:   fieldName,
+			GoType: goType,
+			DSL:    dsl,
 		})
 	}
 	return fields, nil
-}
-
-// idColumnForDSN renders the auto-increment primary key for the database
-// the project is currently configured for (scaffold migrations are
-// dialect-specific).
-func idColumnForDSN() string {
-	dsn, err := cliDSN()
-	if err != nil {
-		return "id INTEGER PRIMARY KEY AUTOINCREMENT"
-	}
-	lower := strings.ToLower(dsn)
-	switch {
-	case strings.HasPrefix(lower, "postgres://"), strings.HasPrefix(lower, "postgresql://"):
-		return "id BIGSERIAL PRIMARY KEY"
-	case strings.HasPrefix(lower, "mysql://"), strings.Contains(lower, "@tcp("):
-		return "id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY"
-	default:
-		return "id INTEGER PRIMARY KEY AUTOINCREMENT"
-	}
 }
 
 func pluralize(name string) string {

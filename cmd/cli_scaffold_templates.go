@@ -24,15 +24,19 @@ func init() {
 }
 `
 
-const scaffoldUpTemplate = `CREATE TABLE {{.SlugPlural}} (
-	{{.IDColumn}},
-{{range .Fields}}	{{.SQLCol}},
-{{end}}	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-`
+const scaffoldMigrationTemplate = `package migrations
 
-const scaffoldDownTemplate = `DROP TABLE IF EXISTS {{.SlugPlural}};
+import "github.com/daqing/airway/lib/migrate/schema"
+
+func init() {
+	schema.RegisterChange("{{.Version}}", "create_{{.SlugPlural}}", func(m *schema.Migrator) {
+		m.CreateTable("{{.SlugPlural}}", func(t *schema.Table) {
+			t.ID()
+{{range .Fields}}			{{.DSL}}
+{{end}}			t.Timestamps()
+		})
+	})
+}
 `
 
 const scaffoldRoutesTemplate = `package {{.APIName}}

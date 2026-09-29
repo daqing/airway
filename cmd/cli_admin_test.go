@@ -1,12 +1,15 @@
 package cmd
 
 import (
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
-	"text/template"
+	"testing/fstest"
 
+	"github.com/daqing/airway/lib/migrate"
+	"github.com/daqing/airway/lib/migrate/schema"
 	"github.com/daqing/airway/lib/repo"
 	"github.com/daqing/airway/lib/sql"
 	"github.com/daqing/airway/lib/utils"
@@ -362,60 +365,48 @@ func TestGenerateAdminEndToEnd(t *testing.T) {
 		"admin_api.Routes(r)",
 		"github.com/test/app/app/api/admin_api")
 
-	// Migration: auth tables first, then referenced tables before referencing
-	// ones, with FK constraints and indexes.
-	upPath := filepath.Join(wd, "db", "migrate")
-	entries, err := os.ReadDir(upPath)
+	// Migration: a single Go DSL file registering auth tables first, then
+	// referenced tables before referencing ones, with FK constraints and
+	// indexes.
+	migrationsDir := filepath.Join(wd, "db", "migrate")
+	entries, err := os.ReadDir(migrationsDir)
 	if err != nil {
 		t.Fatalf("read db/migrate: %v", err)
 	}
-	var upFile string
+	var migFile string
 	for _, entry := range entries {
-		if strings.HasSuffix(entry.Name(), ".up.sql") {
-			upFile = filepath.Join(upPath, entry.Name())
+		if strings.HasSuffix(entry.Name(), ".go") {
+			migFile = filepath.Join(migrationsDir, entry.Name())
 		}
 	}
-	if upFile == "" {
-		t.Fatalf("no up migration generated in db/migrate")
+	if migFile == "" {
+		t.Fatalf("no migration generated in db/migrate")
 	}
 
-	up, err := os.ReadFile(upFile)
-	if err != nil {
-		t.Fatalf("read up migration: %v", err)
-	}
-	upSQL := string(up)
+	migSQL := readFile(t, migFile)
 
 	for _, want := range []string{
-		"CREATE TABLE admin_users",
-		"CREATE UNIQUE INDEX idx_admin_users_username",
-		"CREATE TABLE admin_sessions",
-		"CREATE TABLE categories",
-		"CREATE TABLE posts",
-		"CHECK (status IN ('draft', 'published', 'archived'))",
-		"FOREIGN KEY (category_id) REFERENCES categories(id)",
-		"FOREIGN KEY (parent_id) REFERENCES categories(id)",
-		"CREATE INDEX idx_posts_category_id ON posts (category_id)",
+		`m.CreateTable("admin_users"`,
+		`t.UniqueIndex("username")`,
+		`m.CreateTable("admin_sessions"`,
+		`m.CreateTable("categories"`,
+		`m.CreateTable("posts"`,
+		`t.String("status").Check("status IN ('draft', 'published', 'archived')")`,
+		`t.ForeignKey("category_id", "categories")`,
+		`t.ForeignKey("parent_id", "categories")`,
+		`t.Index("category_id")`,
 	} {
-		if !strings.Contains(upSQL, want) {
-			t.Fatalf("up migration: expected %q in:\n%s", want, upSQL)
+		if !strings.Contains(migSQL, want) {
+			t.Fatalf("migration: expected %q in:\n%s", want, migSQL)
 		}
 	}
 
-	if catPos := strings.Index(upSQL, "CREATE TABLE categories"); catPos == -1 || catPos > strings.Index(upSQL, "CREATE TABLE posts") {
-		t.Fatalf("expected categories before posts in:\n%s", upSQL)
+	if catPos := strings.Index(migSQL, `m.CreateTable("categories"`); catPos == -1 || catPos > strings.Index(migSQL, `m.CreateTable("posts"`) {
+		t.Fatalf("expected categories before posts in:\n%s", migSQL)
 	}
 
-	downPath := strings.TrimSuffix(upFile, ".up.sql") + ".down.sql"
-	down, err := os.ReadFile(downPath)
-	if err != nil {
-		t.Fatalf("read down migration: %v", err)
-	}
-	downSQL := string(down)
-	if strings.Index(downSQL, "DROP TABLE IF EXISTS posts") > strings.Index(downSQL, "DROP TABLE IF EXISTS categories") {
-		t.Fatalf("expected children dropped first in:\n%s", downSQL)
-	}
-	if !strings.Contains(downSQL, "DROP TABLE IF EXISTS admin_users") {
-		t.Fatalf("expected auth tables dropped in:\n%s", downSQL)
+	if !strings.Contains(migSQL, "schema.RegisterChange(") {
+		t.Fatalf("expected a RegisterChange migration, got:\n%s", migSQL)
 	}
 }
 
@@ -447,7 +438,7 @@ func TestGenerateAdminIsAdditive(t *testing.T) {
 	}
 	assertFileCount(migrationsDir, firstRunCount)
 
-	// Adding a table generates only that table (plus a new migration pair).
+	// Adding a table generates only that table (plus a new migration file).
 	configPath := filepath.Join("config", "admin.toml")
 	raw, err := os.ReadFile(configPath)
 	if err != nil {
@@ -467,22 +458,22 @@ func TestGenerateAdminIsAdditive(t *testing.T) {
 	}
 
 	entries, _ = os.ReadDir(migrationsDir)
-	if len(entries) != firstRunCount+2 {
-		t.Fatalf("expected one new migration pair, got %d extra entries", len(entries)-firstRunCount)
+	if len(entries) != firstRunCount+1 {
+		t.Fatalf("expected one new migration, got %d extra entries", len(entries)-firstRunCount)
 	}
 
-	var upFile string
+	var newMig string
 	for _, entry := range entries {
-		if strings.HasSuffix(entry.Name(), ".up.sql") && !strings.Contains(readFile(t, filepath.Join(migrationsDir, entry.Name())), "admin_users") {
-			upFile = entry.Name()
+		if strings.HasSuffix(entry.Name(), ".go") && !strings.Contains(readFile(t, filepath.Join(migrationsDir, entry.Name())), "admin_users") {
+			newMig = entry.Name()
 		}
 	}
-	if upFile == "" {
+	if newMig == "" {
 		t.Fatalf("expected a second migration without auth tables")
 	}
-	up := readFile(t, filepath.Join(migrationsDir, upFile))
-	if !strings.Contains(up, "CREATE TABLE tags") || strings.Contains(up, "CREATE TABLE posts") {
-		t.Fatalf("second migration should only contain the new table:\n%s", up)
+	content := readFile(t, filepath.Join(migrationsDir, newMig))
+	if !strings.Contains(content, `m.CreateTable("tags"`) || strings.Contains(content, `m.CreateTable("posts"`) {
+		t.Fatalf("second migration should only contain the new table:\n%s", content)
 	}
 }
 
@@ -497,24 +488,32 @@ func TestGenerateAdminMissingConfig(t *testing.T) {
 func TestRunAdminUser(t *testing.T) {
 	writeAdminTestProject(t)
 
-	// The admin_users table comes from the generated migration; render and
-	// apply it against a temp SQLite database.
+	// The admin_users table comes from a Go DSL migration; register an
+	// equivalent change and apply it against a temp SQLite database.
 	dbPath := filepath.Join("tmp", "admin-user-test.db")
 	if err := os.MkdirAll(filepath.Dir(dbPath), 0o755); err != nil {
 		t.Fatalf("mkdir tmp: %v", err)
 	}
 	t.Setenv("AIRWAY_DSN", "sqlite://"+dbPath)
 
-	var upSQL strings.Builder
-	tpl, err := template.New("up").Parse(adminMigrationUpTemplate)
-	if err != nil {
-		t.Fatalf("parse migration template: %v", err)
-	}
-	if err := tpl.Execute(&upSQL, adminMigrationData{
-		IDColumn: "id INTEGER PRIMARY KEY AUTOINCREMENT",
-		Auth:     true,
+	schema.ResetRegistryForTest()
+	t.Cleanup(schema.ResetRegistryForTest)
+	schema.RegisterChange("20260327120000", "create_admin_users", func(m *schema.Migrator) {
+		m.CreateTable("admin_users", func(t *schema.Table) {
+			t.ID()
+			t.String("username", 255).Null(false)
+			t.String("password_digest", 255).Null(false)
+			t.String("role", 20).Null(false).Default("editor")
+			t.Timestamps()
+			t.UniqueIndex("username")
+		})
+	})
+	if err := migrate.Run(migrate.Options{
+		DSN:        "sqlite://" + dbPath,
+		Migrations: fstest.MapFS{},
+		Out:        io.Discard,
 	}); err != nil {
-		t.Fatalf("render migration: %v", err)
+		t.Fatalf("apply migration: %v", err)
 	}
 
 	db, err := repo.NewDB("sqlite://" + dbPath)
@@ -522,15 +521,6 @@ func TestRunAdminUser(t *testing.T) {
 		t.Fatalf("open sqlite db: %v", err)
 	}
 	defer db.Close()
-
-	for _, stmt := range strings.Split(upSQL.String(), ";") {
-		if strings.TrimSpace(stmt) == "" {
-			continue
-		}
-		if _, err := db.Conn().Exec(stmt); err != nil {
-			t.Fatalf("exec migration statement %q: %v", strings.TrimSpace(stmt), err)
-		}
-	}
 
 	if err := runAdminRoot([]string{"admin", "s3cret"}); err != nil {
 		t.Fatalf("runAdminUser: %v", err)
@@ -676,15 +666,18 @@ func TestGenerateAdminAuthUpgradeMigration(t *testing.T) {
 	var upgrade string
 	for _, entry := range entries {
 		content := readFile(t, filepath.Join(migrationsDir, entry.Name()))
-		if strings.Contains(content, "ALTER TABLE admin_users ADD COLUMN role") {
+		if strings.Contains(content, `Name: "role"`) {
 			upgrade = content
 		}
 	}
 	if upgrade == "" {
 		t.Fatalf("expected an auth upgrade migration with the role column")
 	}
-	if !strings.Contains(upgrade, "CREATE TABLE admin_audit_logs") {
+	if !strings.Contains(upgrade, `m.CreateTable("admin_audit_logs"`) {
 		t.Fatalf("upgrade migration should create admin_audit_logs:\n%s", upgrade)
+	}
+	if !strings.Contains(upgrade, `m.AddColumn("admin_users", schema.Column{Name: "username"`) {
+		t.Fatalf("upgrade migration should add the username column:\n%s", upgrade)
 	}
 }
 
@@ -697,16 +690,24 @@ func TestRunAdminUserRole(t *testing.T) {
 	}
 	t.Setenv("AIRWAY_DSN", "sqlite://"+dbPath)
 
-	var upSQL strings.Builder
-	tpl, err := template.New("up").Parse(adminMigrationUpTemplate)
-	if err != nil {
-		t.Fatalf("parse migration template: %v", err)
-	}
-	if err := tpl.Execute(&upSQL, adminMigrationData{
-		IDColumn: "id INTEGER PRIMARY KEY AUTOINCREMENT",
-		Auth:     true,
+	schema.ResetRegistryForTest()
+	t.Cleanup(schema.ResetRegistryForTest)
+	schema.RegisterChange("20260327120000", "create_admin_users", func(m *schema.Migrator) {
+		m.CreateTable("admin_users", func(t *schema.Table) {
+			t.ID()
+			t.String("username", 255).Null(false)
+			t.String("password_digest", 255).Null(false)
+			t.String("role", 20).Null(false).Default("editor")
+			t.Timestamps()
+			t.UniqueIndex("username")
+		})
+	})
+	if err := migrate.Run(migrate.Options{
+		DSN:        "sqlite://" + dbPath,
+		Migrations: fstest.MapFS{},
+		Out:        io.Discard,
 	}); err != nil {
-		t.Fatalf("render migration: %v", err)
+		t.Fatalf("apply migration: %v", err)
 	}
 
 	db, err := repo.NewDB("sqlite://" + dbPath)
@@ -714,15 +715,6 @@ func TestRunAdminUserRole(t *testing.T) {
 		t.Fatalf("open sqlite db: %v", err)
 	}
 	defer db.Close()
-
-	for _, stmt := range strings.Split(upSQL.String(), ";") {
-		if strings.TrimSpace(stmt) == "" {
-			continue
-		}
-		if _, err := db.Conn().Exec(stmt); err != nil {
-			t.Fatalf("exec migration statement: %v", err)
-		}
-	}
 
 	if err := runAdminMember([]string{"viewer", "pw", "--role=viewer"}); err != nil {
 		t.Fatalf("runAdminMember viewer: %v", err)

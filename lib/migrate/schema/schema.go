@@ -15,6 +15,7 @@ const (
 	TypeBoolean  TypeKind = "boolean"
 	TypeInteger  TypeKind = "integer"
 	TypeBigInt   TypeKind = "bigint"
+	TypeFloat    TypeKind = "float"
 	TypeDateTime TypeKind = "datetime"
 	TypeJSON     TypeKind = "json"
 )
@@ -34,6 +35,10 @@ type Column struct {
 	PrimaryKey    bool
 	AutoIncrement bool
 	Unique        bool
+	// Check is a raw CHECK expression rendered as-is, e.g.
+	// "status IN ('draft', 'published')". It is not translated across
+	// dialects beyond identifier quoting conventions of the target.
+	Check string
 }
 
 type Index struct {
@@ -413,6 +418,10 @@ func (t *Table) JSON(name string) *ColumnBuilder {
 	return t.addColumn(Column{Name: name, Type: Type{Kind: TypeJSON}})
 }
 
+func (t *Table) Float(name string) *ColumnBuilder {
+	return t.addColumn(Column{Name: name, Type: Type{Kind: TypeFloat}})
+}
+
 func (t *Table) DateTime(name string) *ColumnBuilder {
 	return t.addColumn(Column{Name: name, Type: Type{Kind: TypeDateTime}})
 }
@@ -475,6 +484,11 @@ func (b *ColumnBuilder) Null(allowed bool) *ColumnBuilder {
 
 func (b *ColumnBuilder) Default(value any) *ColumnBuilder {
 	b.column().Default = value
+	return b
+}
+
+func (b *ColumnBuilder) Check(expr string) *ColumnBuilder {
+	b.column().Check = strings.TrimSpace(expr)
 	return b
 }
 
@@ -738,7 +752,7 @@ func reverseOps(ops []Operation) []Operation {
 	for i := len(ops) - 1; i >= 0; i-- {
 		reverse, ok := ops[i].Reverse()
 		if !ok {
-			panic(fmt.Sprintf("migration operation %T is not automatically reversible", ops[i]))
+			panic(fmt.Sprintf("migration operation %T is not automatically reversible — use schema.Register with an explicit down migration", ops[i]))
 		}
 
 		reversed = append(reversed, reverse)

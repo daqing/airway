@@ -185,17 +185,17 @@ airway generate cmd post title published
 airway generate migration create_posts
 ```
 
-会在 `db/migrate/` 下生成一对带时间戳的 SQL 文件：
+会在 `db/migrate/` 下生成一个带时间戳的 Go DSL 迁移文件，例如
+`<时间戳>_create_posts.go`。文件在 `init()` 里向 `lib/migrate/schema`
+注册一条迁移；down 迁移由框架自动反转生成。因为迁移写在 DSL 上、而不是
+某种数据库的 SQL 上，同一份文件可以在 PostgreSQL、MySQL 和 SQLite 上运行。
+DSL 表达不了的内容可以用 `schema.Register(version, name, up, down)`（手写
+down）或在 change 内用 `m.Reversible(up, down)` 退回原始 SQL。
 
-- `<时间戳>_create_posts.up.sql` —— 正向迁移
-- `<时间戳>_create_posts.down.sql` —— 回滚迁移
-
-两个文件里带有注释掉的 `CREATE TABLE` / `DROP TABLE` 示例，编辑成你需要的
-表结构即可。
-
-旧的 Go DSL 迁移机制（`lib/migrate/schema` 的 `schema.RegisterChange`）仍然保留，
-但 DSL 迁移只在编译进执行迁移的二进制时生效。CLI 在 `./db/migrate` 下发现
-时间戳命名的 `.go` 迁移文件时会打印警告，提醒这一点。
+迁移只有编译进项目二进制后才会执行：`db/migrate` 包需要在 `main.go` 里
+空白导入（`airway new` 生成的项目已带这个导入；对旧项目，生成器会自动把它
+拼进可识别的 `main.go`）。旧的 SQL 迁移对（`<版本>_<名称>.up.sql` /
+`.down.sql`）仍然会被执行，所以存量项目不受影响，新迁移一律用 DSL 编写。
 
 ## 数据库迁移命令
 
@@ -304,18 +304,19 @@ REPL 只能看到编译进当前二进制、通过 `github.com/daqing/airway/lib
 airway generate migration create_posts
 ```
 
-然后编辑 `db/migrate/` 下面新生成的 `.up.sql` 文件，写入表结构。
+然后编辑 `db/migrate/` 下面新生成的 Go 文件，写入表结构。
 
 例如：
 
-```sql
-CREATE TABLE posts (
-  id BIGSERIAL PRIMARY KEY,
-  title TEXT NOT NULL,
-  published BOOLEAN NOT NULL DEFAULT FALSE,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
+```go
+schema.RegisterChange("20260101120000", "create_posts", func(m *schema.Migrator) {
+	m.CreateTable("posts", func(t *schema.Table) {
+		t.ID()
+		t.String("title", 255).Null(false)
+		t.Boolean("published").Null(false).Default(false)
+		t.Timestamps()
+	})
+})
 ```
 
 执行迁移：
@@ -463,16 +464,21 @@ category_id = "references"          # 目标表根据 _id 后缀推断
 `datetime`、`enum:a,b,c`、`references[:table]` 和 `attachment`。每张表
 都会自动带上 `id`、`created_at`、`updated_at`，不要在配置里声明。
 
-运行生成器，然后执行标准的后续步骤：
+运行生成器——它会立即编译新生成的 .templ 视图，`go run .` 不受影响——
+然后执行标准的后续步骤：
 
 ```bash
 airway admin:generate
-airway templates:compile                  # 编译 .templ 视图
 airway js:build                           # 打包 CRUD island
 airway db:migrate                         # 建表
 airway admin:root admin      # 创建第一个管理员账号
 airway server                             # 访问 /admin
 ```
+
+（只有手动改过 `.templ` 文件后才需要 `airway templates:compile`；项目
+尚不能编译时它无法用 `go run . templates:compile` 代替——`go run` 会先
+编译整个项目，而死锁正是由于视图尚未编译。全局安装的 airway 不编译
+项目、直接按源码生成，因此随时可用。）
 
 生成的内容包括：
 

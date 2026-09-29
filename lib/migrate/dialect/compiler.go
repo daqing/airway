@@ -176,6 +176,9 @@ func (c *Compiler) columnSQL(column schema.Column) (string, error) {
 	if column.Default != nil {
 		parts = append(parts, "DEFAULT "+c.renderDefault(column.Default))
 	}
+	if column.Check != "" {
+		parts = append(parts, "CHECK ("+column.Check+")")
+	}
 
 	return strings.Join(parts, " "), nil
 }
@@ -279,6 +282,15 @@ func (c *Compiler) renderType(t schema.Type) (string, error) {
 		return "INTEGER", nil
 	case schema.TypeBigInt:
 		return "BIGINT", nil
+	case schema.TypeFloat:
+		switch c.driver {
+		case repo.DriverPostgres:
+			return "DOUBLE PRECISION", nil
+		case repo.DriverMySQL:
+			return "DOUBLE", nil
+		case repo.DriverSQLite:
+			return "REAL", nil
+		}
 	case schema.TypeDateTime:
 		switch c.driver {
 		case repo.DriverPostgres:

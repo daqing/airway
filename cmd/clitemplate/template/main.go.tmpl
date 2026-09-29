@@ -18,6 +18,11 @@ import (
 	"github.com/joho/godotenv"
 
 	"{{module}}/config"
+
+	// Registers the Go DSL migrations under db/migrate with
+	// lib/migrate/schema (the package ships a doc.go placeholder until
+	// `generate migration` adds files).
+	_ "{{module}}/db/migrate"
 )
 
 // The project binary starts the HTTP server by default (or via `server`).

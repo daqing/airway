@@ -364,7 +364,7 @@ airway generate model post                  # new model in app/models/
 airway generate service post title:string   # CRUD service in app/services/
 airway generate island chart                # interactive island component
 airway generate scaffold post title:string  # full CRUD: model+migration+API+page+island
-airway generate migration create_posts      # new .up.sql/.down.sql pair in db/migrate/
+airway generate migration create_posts      # new Go DSL migration in db/migrate/ (runs on every supported database)
 airway repl                                 # interactive repo REPL (proxied to go run . in projects)
 airway version                              # print version (also -v, --version)
 ```

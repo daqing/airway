@@ -1402,67 +1402,59 @@ export default function {{.NamePlural}}Crud() {
 }
 `
 
-const adminMigrationUpTemplate = `{{if .Auth}}-- Admin authentication tables.
-CREATE TABLE admin_users (
-	{{.IDColumn}},
-	username VARCHAR(255) NOT NULL,
-	password_digest VARCHAR(255) NOT NULL,
-	role VARCHAR(20) NOT NULL DEFAULT 'editor',
-	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-CREATE UNIQUE INDEX idx_admin_users_username ON admin_users (username);
+// adminMigrationTemplate registers one Go DSL migration per run: the
+// authentication tables (or the upgrade for pre-roles/audit installs) plus
+// every newly generated table in reference dependency order. RegisterChange
+// derives the down migration by reversing the change, so rollback drops
+// tables children-first automatically.
+const adminMigrationTemplate = `package migrations
 
-CREATE TABLE admin_sessions (
-	{{.IDColumn}},
-	token VARCHAR(64) NOT NULL,
-	admin_user_id BIGINT NOT NULL,
-	expires_at TIMESTAMP NOT NULL,
-	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	FOREIGN KEY (admin_user_id) REFERENCES admin_users(id)
-);
-CREATE INDEX idx_admin_sessions_token ON admin_sessions (token);
+import "github.com/daqing/airway/lib/migrate/schema"
 
-CREATE TABLE admin_audit_logs (
-	{{.IDColumn}},
-	admin_user_id BIGINT NOT NULL DEFAULT 0,
-	admin_username VARCHAR(255) NOT NULL DEFAULT '',
-	action VARCHAR(20) NOT NULL,
-	resource VARCHAR(100) NOT NULL DEFAULT '',
-	resource_id BIGINT NOT NULL DEFAULT 0,
-	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-CREATE INDEX idx_admin_audit_logs_created_at ON admin_audit_logs (created_at);
+func init() {
+	schema.RegisterChange("{{.Version}}", "create_admin_tables", func(m *schema.Migrator) {
+{{if .Auth}}		// Authentication and audit trail.
+		m.CreateTable("admin_users", func(t *schema.Table) {
+			t.ID()
+			t.String("username", 255).Null(false)
+			t.String("password_digest", 255).Null(false)
+			t.String("role", 20).Null(false).Default("editor")
+			t.Timestamps()
+			t.UniqueIndex("username")
+		})
+		m.CreateTable("admin_sessions", func(t *schema.Table) {
+			t.ID()
+			t.String("token", 64).Null(false)
+			t.BigInt("admin_user_id").Null(false)
+			t.DateTime("expires_at").Null(false)
+			t.DateTime("created_at").Null(false).Default(schema.CurrentTimestamp)
+			t.Index("token")
+			t.ForeignKey("admin_user_id", "admin_users")
+		})
+		{{template "audit_logs" .}}
+{{else if .AuthUpgrade}}		// Upgrade a pre-roles/audit admin install. The legacy email
+		// column is kept as-is; sign-in now uses username.
+		m.AddColumn("admin_users", schema.Column{Name: "username", Type: schema.Type{Kind: schema.TypeString}, Null: schema.Bool(false), Default: ""})
+		m.AddColumn("admin_users", schema.Column{Name: "role", Type: schema.Type{Kind: schema.TypeString, Length: 20}, Null: schema.Bool(false), Default: "editor"})
+		{{template "audit_logs" .}}
 
-{{else if .AuthUpgrade}}-- Upgrade a pre-roles/audit admin install. The legacy email
--- column is kept as-is; sign-in now uses username.
-ALTER TABLE admin_users ADD COLUMN username VARCHAR(255) NOT NULL DEFAULT '';
-ALTER TABLE admin_users ADD COLUMN role VARCHAR(20) NOT NULL DEFAULT 'editor';
-
-CREATE TABLE admin_audit_logs (
-	{{.IDColumn}},
-	admin_user_id BIGINT NOT NULL DEFAULT 0,
-	admin_username VARCHAR(255) NOT NULL DEFAULT '',
-	action VARCHAR(20) NOT NULL,
-	resource VARCHAR(100) NOT NULL DEFAULT '',
-	resource_id BIGINT NOT NULL DEFAULT 0,
-	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-CREATE INDEX idx_admin_audit_logs_created_at ON admin_audit_logs (created_at);
-
-{{end}}-- Admin resource tables, generated from config/admin.toml.
-{{range $table := .Tables}}CREATE TABLE {{$table.SlugPlural}} (
-	{{$.IDColumn}},
-{{range .Fields}}	{{.SQLCol}},
-{{end}}	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP{{range .Fields}}{{if eq .Kind "references"}},
-	FOREIGN KEY ({{.JSON}}) REFERENCES {{.RefPlural}}(id){{end}}{{end}}
-);
-{{range .Fields}}{{if eq .Kind "references"}}CREATE INDEX idx_{{$table.SlugPlural}}_{{.JSON}} ON {{$table.SlugPlural}} ({{.JSON}});
-{{end}}{{end}}{{end}}`
-
-const adminMigrationDownTemplate = `{{if or .Auth .AuthUpgrade}}DROP TABLE IF EXISTS admin_audit_logs;
-{{end}}{{range .Reversed}}DROP TABLE IF EXISTS {{.SlugPlural}};
-{{end}}{{if .Auth}}DROP TABLE IF EXISTS admin_sessions;
-DROP TABLE IF EXISTS admin_users;
+{{end}}{{range .Tables}}		m.CreateTable("{{.SlugPlural}}", func(t *schema.Table) {
+			t.ID()
+{{range .Fields}}			{{.DSLColumn}}
+{{end}}			t.Timestamps()
+{{range .Fields}}{{if eq .Kind "references"}}			t.Index("{{.JSON}}")
+			t.ForeignKey("{{.JSON}}", "{{.RefPlural}}")
+{{end}}{{end}}		})
+{{end}}	})
+}
+{{define "audit_logs"}}m.CreateTable("admin_audit_logs", func(t *schema.Table) {
+			t.ID()
+			t.BigInt("admin_user_id").Null(false).Default(0)
+			t.String("admin_username", 255).Null(false).Default("")
+			t.String("action", 20).Null(false)
+			t.String("resource", 100).Null(false).Default("")
+			t.BigInt("resource_id").Null(false).Default(0)
+			t.DateTime("created_at").Null(false).Default(schema.CurrentTimestamp)
+			t.Index("created_at")
+		})
 {{end}}`

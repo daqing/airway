@@ -27,7 +27,8 @@ func TestScaffoldWritesTemplateWithModuleReplaced(t *testing.T) {
 		"app/models/registry.go",
 		"app/views/home/index.templ",
 		"app/views/home/index_templ.go",
-		"db/migrate/.keep",
+		"db/migrate/doc.go",
+		"db/migrate/migrations_test.go",
 		"deps/.keep",
 	} {
 		if _, err := os.Stat(filepath.Join(destDir, rel)); err != nil {

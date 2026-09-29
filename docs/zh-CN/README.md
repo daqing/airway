@@ -253,7 +253,7 @@ airway generate model post                  # 在 app/models/ 中新建模型
 airway generate service post title:string   # 在 app/services/ 中生成 CRUD service
 airway generate island chart                # 交互式 island 组件
 airway generate scaffold post title:string  # 全套 CRUD：模型+迁移+API+页面+island
-airway generate migration create_posts      # 在 db/migrate/ 中生成 .up.sql/.down.sql 对
+airway generate migration create_posts      # 在 db/migrate/ 中生成 Go DSL 迁移（跨数据库兼容）
 airway repl                                 # 交互式 repo REPL（项目内自动代理到 go run .）
 airway version                              # 打印版本（亦支持 -v、--version）
 ```

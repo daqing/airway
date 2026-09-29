@@ -219,19 +219,21 @@ This generator is useful if your project exposes extra custom CLI helpers around
 airway generate migration create_posts
 ```
 
-This creates a pair of timestamped SQL files under `db/migrate/`:
+This creates a timestamped Go DSL migration under `db/migrate/`,
+e.g. `<timestamp>_create_posts.go`. The file registers one migration with
+`lib/migrate/schema` in `init()`; the down migration is derived automatically
+by reversing the change. Because the migration is written against the DSL —
+not a single database's SQL — the same file runs on PostgreSQL, MySQL and
+SQLite. For anything the DSL cannot express, drop to raw SQL with
+`schema.Register(version, name, up, down)` (explicit down) or
+`m.Reversible(up, down)` inside the change.
 
-- `<timestamp>_create_posts.up.sql` — the forward migration
-- `<timestamp>_create_posts.down.sql` — the rollback migration
-
-Both files contain commented-out `CREATE TABLE` / `DROP TABLE` examples to get
-you started; edit them to define your real schema.
-
-The older Go DSL migration mechanism (`schema.RegisterChange` in
-`lib/migrate/schema`) is still supported, but DSL migrations only take effect
-when they are compiled into the binary that runs the migration. When the CLI
-finds timestamp-named `.go` migration files under `./db/migrate`, it prints a
-warning to remind you of this.
+The migration only runs when it is compiled into the project binary: the
+package under `db/migrate` must be blank-imported from `main.go` (projects
+scaffolded by `airway new` already carry this import, and the generator
+splices it into a recognized `main.go` for older projects). Legacy timestamped
+SQL pairs (`<version>_<name>.up.sql` / `.down.sql`) are still executed, so
+existing projects keep working while new migrations are written in the DSL.
 
 ## Migration Commands
 
@@ -379,18 +381,19 @@ Here is a minimal workflow for adding a `posts` feature from scratch.
 airway generate migration create_posts
 ```
 
-Then edit the generated `.up.sql` file in `db/migrate/` and define the table you need.
+Then edit the generated Go file in `db/migrate/` and define the table you need.
 
 Example:
 
-```sql
-CREATE TABLE posts (
-  id BIGSERIAL PRIMARY KEY,
-  title TEXT NOT NULL,
-  published BOOLEAN NOT NULL DEFAULT FALSE,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
+```go
+schema.RegisterChange("20260101120000", "create_posts", func(m *schema.Migrator) {
+	m.CreateTable("posts", func(t *schema.Table) {
+		t.ID()
+		t.String("title", 255).Null(false)
+		t.Boolean("published").Null(false).Default(false)
+		t.Timestamps()
+	})
+})
 ```
 
 Run the migration:
@@ -511,22 +514,26 @@ At that point you have the full skeleton for:
 ## Scaffold a CRUD resource
 
 `airway generate scaffold post title:string` produces the whole vertical
-slice — model with fields, a dialect-aware migration (the auto-increment
-primary key follows your configured DSN), the CRUD service, a JSON API
-under `/api/v1/posts`, a templ page at `/posts`, a server-rendered detail
-page at `/posts/:id`, a CRUD island (DataTable + modal form, wired to the
-API through `apiFetch`), and a static export registration (`export_posts.go`:
-the list page plus one detail page per row; see
-[docs/static-export.md](static-export.md)). It also registers the routes in
-`config/routes.go`. Afterwards run:
+slice — model with fields, a Go DSL migration that runs on every supported
+database, the CRUD service, a JSON API under `/api/v1/posts`, a templ page at
+`/posts`, a server-rendered detail page at `/posts/:id`, a CRUD island
+(DataTable + modal form, wired to the API through `apiFetch`), and a static
+export registration (`export_posts.go`: the list page plus one detail page per
+row; see [docs/static-export.md](static-export.md)). It also registers the
+routes in `config/routes.go` and compiles the new .templ views right away, so
+`go run .` keeps working — afterwards run:
 
 ```bash
-airway templates:compile   # compile the .templ views (works even on a fresh scaffold)
 airway js:build            # bundle the new island
 airway db:migrate          # create the table
 airway server              # visit /posts
 airway static:build        # export the pages + detail pages as static HTML (needs DSN)
 ```
+
+(`airway templates:compile` is only needed after hand-editing `.templ` files;
+right after scaffolding the views are already compiled. Without a global
+airway binary it cannot be replaced by `go run . templates:compile` while the
+project does not compile.)
 
 `airway generate island chart` scaffolds a single interactive island under
 `app/assets/js/islands/`; embed it with `@assets.Island("chart", props)`.
@@ -564,11 +571,11 @@ Supported field types: `string`, `text`, `integer`, `float`, `boolean`,
 `created_at` and `updated_at` are added to every table automatically and
 must not be declared.
 
-Run the generator, then the standard follow-ups:
+Run the generator — it compiles the new .templ views right away so `go run .`
+keeps working — then the standard follow-ups:
 
 ```bash
 airway admin:generate
-airway templates:compile                  # compile the .templ views
 airway js:build                           # bundle the CRUD islands
 airway db:migrate                         # create the tables
 airway admin:root admin      # create the first administrator account

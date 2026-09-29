@@ -711,11 +711,16 @@ func (u migrationUnit) displayName() string {
 
 var dslMigrationFilePattern = regexp.MustCompile(`^\d+_.*\.go$`)
 
-// warnOnDSLMigrationFiles prints a heads-up when the project still has Go DSL
-// migration files. Those register through init() and only run when compiled
-// into the binary that executes them; a source filesystem without them stays
-// silent.
+// warnOnDSLMigrationFiles prints a heads-up when the project has Go DSL
+// migration files but none of them registered: the db/migrate package is
+// not compiled into the binary that executes the migration, so only SQL
+// files would run. When at least one definition is registered the package
+// is imported and every file in it takes effect.
 func warnOnDSLMigrationFiles(out io.Writer, dir fs.FS) {
+	if len(schema.Definitions()) > 0 {
+		return
+	}
+
 	entries, err := fs.ReadDir(dir, ".")
 	if err != nil {
 		return
@@ -726,7 +731,7 @@ func warnOnDSLMigrationFiles(out io.Writer, dir fs.FS) {
 			continue
 		}
 
-		fmt.Fprintf(out, "WARNING: %s is a Go DSL migration; it only runs when compiled into a binary that imports it. Prefer SQL migrations (<version>_<name>.up.sql/.down.sql) so `airway db:migrate` can run them.\n", entry.Name())
+		fmt.Fprintf(out, "WARNING: %s is a Go DSL migration; it only runs when compiled into a binary that imports it. Blank-import your project's db/migrate package from main.go so `airway db:migrate` can run it.\n", entry.Name())
 	}
 }
 

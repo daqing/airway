@@ -41,6 +41,42 @@ func TestCompilerCreatesForeignKeyAndIndexSQLForSQLite(t *testing.T) {
 	}
 }
 
+func TestCompilerRendersFloatAndCheckPerDialect(t *testing.T) {
+	cases := []struct {
+		driver repo.Driver
+		want   string
+	}{
+		{repo.DriverPostgres, `"score" DOUBLE PRECISION CHECK (score >= 0 AND score <= 10)`},
+		{repo.DriverMySQL, "`score` DOUBLE CHECK (score >= 0 AND score <= 10)"},
+		{repo.DriverSQLite, `"score" REAL CHECK (score >= 0 AND score <= 10)`},
+	}
+
+	for _, tc := range cases {
+		compiler := NewCompiler(tc.driver)
+		statements, err := compiler.Compile(schema.AddColumnOp{
+			Table: "posts",
+			Column: schema.Column{
+				Name:  "score",
+				Type:  schema.Type{Kind: schema.TypeFloat},
+				Check: "score >= 0 AND score <= 10",
+			},
+		})
+		if err != nil {
+			t.Fatalf("compile add column on %s: %v", tc.driver, err)
+		}
+		want := "ALTER TABLE "
+		switch tc.driver {
+		case repo.DriverMySQL:
+			want += "`posts` ADD COLUMN " + tc.want
+		default:
+			want += `"posts" ADD COLUMN ` + tc.want
+		}
+		if len(statements) != 1 || statements[0] != want {
+			t.Fatalf("unexpected add column SQL on %s: %#v", tc.driver, statements)
+		}
+	}
+}
+
 func TestCompilerSupportsRenameAndRemoveIndexOnSQLite(t *testing.T) {
 	compiler := NewCompiler(repo.DriverSQLite)
 

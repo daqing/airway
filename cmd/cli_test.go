@@ -99,7 +99,7 @@ func TestRunCLICommandGeneratesServiceAndCmdTemplates(t *testing.T) {
 	}
 }
 
-func TestGenerateMigrationCreatesUpAndDownFiles(t *testing.T) {
+func TestGenerateMigrationCreatesDSLFile(t *testing.T) {
 	wd := useTempWorkingDir(t)
 	makeDirs(t, filepath.Join(wd, "db", "migrate"))
 
@@ -114,16 +114,97 @@ func TestGenerateMigrationCreatesUpAndDownFiles(t *testing.T) {
 		t.Fatalf("run generate migration: %v", err)
 	}
 
-	upPath := filepath.Join(wd, "db", "migrate", "20260327123456_create_posts.up.sql")
-	upContent := readFile(t, upPath)
-	if !strings.Contains(upContent, "CREATE TABLE posts") {
-		t.Fatalf("expected CREATE TABLE example in up migration, got:\n%s", upContent)
+	migPath := filepath.Join(wd, "db", "migrate", "20260327123456_create_posts.go")
+	content := readFile(t, migPath)
+	for _, want := range []string{
+		"package migrations",
+		`schema.RegisterChange("20260327123456", "create_posts"`,
+		`m.CreateTable("posts"`,
+		"t.ID()",
+		"t.Timestamps()",
+	} {
+		if !strings.Contains(content, want) {
+			t.Fatalf("expected %q in generated migration, got:\n%s", want, content)
+		}
+	}
+}
+
+func TestGenerateMigrationGenericBodyMentionsRawSQLRegistration(t *testing.T) {
+	wd := useTempWorkingDir(t)
+	makeDirs(t, filepath.Join(wd, "db", "migrate"))
+
+	if err := run([]string{"generate", "migration", "add_slug_to_posts"}); err != nil {
+		t.Fatalf("run generate migration: %v", err)
 	}
 
-	downPath := filepath.Join(wd, "db", "migrate", "20260327123456_create_posts.down.sql")
-	downContent := readFile(t, downPath)
-	if !strings.Contains(downContent, "DROP TABLE posts") {
-		t.Fatalf("expected DROP TABLE example in down migration, got:\n%s", downContent)
+	entries, err := os.ReadDir(filepath.Join(wd, "db", "migrate"))
+	if err != nil {
+		t.Fatalf("read migration dir: %v", err)
+	}
+	if len(entries) != 1 || !strings.HasSuffix(entries[0].Name(), "_add_slug_to_posts.go") {
+		t.Fatalf("expected a single .go migration, got %d entries", len(entries))
+	}
+
+	content := readFile(t, filepath.Join(wd, "db", "migrate", entries[0].Name()))
+	if !strings.Contains(content, "schema.RegisterChange(") {
+		t.Fatalf("expected RegisterChange in generated migration, got:\n%s", content)
+	}
+	if !strings.Contains(content, "schema.Register(version, name, up, down)") {
+		t.Fatalf("expected raw SQL guidance in generated migration, got:\n%s", content)
+	}
+}
+
+func TestGenerateScaffoldCreatesDSLMigration(t *testing.T) {
+	wd := useTempWorkingDir(t)
+	makeDirs(t, filepath.Join(wd, "config"))
+
+	if err := run([]string{"generate", "scaffold", "post", "title:string", "body:text", "views:integer", "score:float", "published:boolean"}); err != nil {
+		t.Fatalf("run generate scaffold: %v", err)
+	}
+
+	entries, err := os.ReadDir(filepath.Join(wd, "db", "migrate"))
+	if err != nil {
+		t.Fatalf("read migration dir: %v", err)
+	}
+	if len(entries) != 1 || !strings.HasSuffix(entries[0].Name(), "_create_posts.go") {
+		t.Fatalf("expected a single scaffold .go migration, got %d entries", len(entries))
+	}
+
+	content := readFile(t, filepath.Join(wd, "db", "migrate", entries[0].Name()))
+	for _, want := range []string{
+		"package migrations",
+		`schema.RegisterChange(`,
+		`m.CreateTable("posts"`,
+		`t.String("title")`,
+		`t.Text("body")`,
+		`t.BigInt("views")`,
+		`t.Float("score")`,
+		`t.Boolean("published")`,
+		"t.Timestamps()",
+	} {
+		if !strings.Contains(content, want) {
+			t.Fatalf("expected %q in scaffold migration, got:\n%s", want, content)
+		}
+	}
+}
+
+func TestGenerateScaffoldPrintsGlobalCompileHintWhenTemplUnavailable(t *testing.T) {
+	useTempWorkingDir(t)
+
+	// The temp dir has no go.mod, so `go tool templ` cannot run: the
+	// scaffold must surface the manual path (global airway templates:compile)
+	// instead of leaving the project in a state `go run .` cannot rebuild.
+	output := captureStdout(t, func() {
+		if err := run([]string{"generate", "scaffold", "post", "title:string"}); err != nil {
+			t.Fatalf("run generate scaffold: %v", err)
+		}
+	})
+
+	if !strings.Contains(output, "could not compile the .templ views automatically") {
+		t.Fatalf("expected the templ hint in output, got:\n%s", output)
+	}
+	if !strings.Contains(output, "globally installed") {
+		t.Fatalf("expected the global-airway hint in output, got:\n%s", output)
 	}
 }
 

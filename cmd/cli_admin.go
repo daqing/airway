@@ -9,7 +9,6 @@ import (
 	"sort"
 	"strings"
 	"text/template"
-	"time"
 
 	"github.com/pelletier/go-toml/v2"
 )
@@ -39,7 +38,6 @@ type adminField struct {
 	RefGoName   string   // referenced model name, for Relations()
 	RefPlural   string   // referenced SQL table, for the island's remote select
 	GoType      string   // model / params field type
-	SQLCol      string   // column DDL fragment (table-level FK lines are added separately)
 	// Form marks fields that appear in forms, table columns, params and CSV
 	// export — everything but deleted_at, which is lifecycle, not content.
 	Form bool
@@ -50,6 +48,34 @@ type adminField struct {
 	FilterExpr string
 	// CSVExpr is the Go expression rendering the model field as a CSV cell.
 	CSVExpr string
+}
+
+// DSLColumn renders the field as a schema.Table builder call inside the
+// generated Go DSL migration. References add their index and foreign key
+// separately in the migration template.
+func (f adminField) DSLColumn() string {
+	switch f.Kind {
+	case adminKindText:
+		return fmt.Sprintf("t.Text(%q)", f.JSON)
+	case adminKindInteger:
+		return fmt.Sprintf("t.BigInt(%q)", f.JSON)
+	case adminKindFloat:
+		return fmt.Sprintf("t.Float(%q)", f.JSON)
+	case adminKindBoolean:
+		return fmt.Sprintf("t.Boolean(%q)", f.JSON)
+	case adminKindDatetime:
+		return fmt.Sprintf("t.DateTime(%q)", f.JSON)
+	case adminKindEnum:
+		quoted := make([]string, 0, len(f.Options))
+		for _, option := range f.Options {
+			quoted = append(quoted, "'"+option+"'")
+		}
+		return fmt.Sprintf("t.String(%q).Check(%q)", f.JSON, f.JSON+" IN ("+strings.Join(quoted, ", ")+")")
+	case adminKindReferences:
+		return fmt.Sprintf("t.BigInt(%q)", f.JSON)
+	default: // string, attachment
+		return fmt.Sprintf("t.String(%q)", f.JSON)
+	}
 }
 
 type adminTable struct {
@@ -264,17 +290,17 @@ func parseAdminField(name, spec string) (adminField, error) {
 
 	switch head {
 	case adminKindString:
-		field.Kind, field.GoType, field.SQLCol = adminKindString, "string", name+" VARCHAR(255)"
+		field.Kind, field.GoType = adminKindString, "string"
 	case adminKindText:
-		field.Kind, field.GoType, field.SQLCol = adminKindText, "string", name+" TEXT"
+		field.Kind, field.GoType = adminKindText, "string"
 	case adminKindInteger, "int":
-		field.Kind, field.GoType, field.SQLCol = adminKindInteger, "int64", name+" BIGINT"
+		field.Kind, field.GoType = adminKindInteger, "int64"
 	case adminKindFloat:
-		field.Kind, field.GoType, field.SQLCol = adminKindFloat, "float64", name+" DOUBLE PRECISION"
+		field.Kind, field.GoType = adminKindFloat, "float64"
 	case adminKindBoolean, "bool":
-		field.Kind, field.GoType, field.SQLCol = adminKindBoolean, "bool", name+" BOOLEAN"
+		field.Kind, field.GoType = adminKindBoolean, "bool"
 	case adminKindDatetime:
-		field.Kind, field.GoType, field.SQLCol = adminKindDatetime, "*time.Time", name+" TIMESTAMP"
+		field.Kind, field.GoType = adminKindDatetime, "*time.Time"
 	case adminKindEnum:
 		if !hasArg {
 			return adminField{}, fmt.Errorf("field %q: enum requires options (e.g. %q)", name, "status = \"enum:draft,published\"")
@@ -283,20 +309,14 @@ func parseAdminField(name, spec string) (adminField, error) {
 		if err != nil {
 			return adminField{}, fmt.Errorf("field %q: %w", name, err)
 		}
-		quoted := make([]string, 0, len(options))
-		for _, option := range options {
-			quoted = append(quoted, "'"+option+"'")
-		}
 		// *string so a cleared select round-trips as SQL NULL (the column
 		// carries a CHECK constraint that empty strings would violate).
 		field.Kind = adminKindEnum
 		field.GoType = "*string"
 		field.Options = options
-		field.SQLCol = name + " VARCHAR(255) CHECK (" + name + " IN (" + strings.Join(quoted, ", ") + "))"
 	case adminKindReferences, "ref":
 		field.Kind = adminKindReferences
 		field.GoType = "*int64"
-		field.SQLCol = name + " BIGINT"
 		field.DisplayName = toCamelName(strings.TrimSuffix(name, "_id"))
 		if hasArg {
 			if !validAdminIdentifier(arg) {
@@ -305,7 +325,7 @@ func parseAdminField(name, spec string) (adminField, error) {
 			field.RefTarget = arg
 		}
 	case adminKindAttachment:
-		field.Kind, field.GoType, field.SQLCol = adminKindAttachment, "string", name+" VARCHAR(255)"
+		field.Kind, field.GoType = adminKindAttachment, "string"
 	default:
 		return adminField{}, fmt.Errorf(
 			"field %q has unknown type %q (use string, text, integer, float, boolean, datetime, enum:<a,b,c>, references[:table] or attachment)",
@@ -498,7 +518,6 @@ func generateAdmin(args []string) error {
 	}
 
 	module := currentModulePath()
-	idColumn := idColumnForDSN()
 
 	var created []string
 	write := func(tpl string, rel string, data any) error {
@@ -623,46 +642,36 @@ func generateAdmin(args []string) error {
 		}
 	}
 
-	// One migration pair per run: auth tables (or the auth upgrade for
+	// One Go DSL migration per run: auth tables (or the auth upgrade for
 	// projects generated before roles/audit) on the first run, then every
 	// newly generated table in reference dependency order.
 	authUpgrade := authExists && !auditExists
 	if authExists && !authUpgrade && len(fresh) == 0 {
 		fmt.Println("skipped migration: no new tables")
 	} else {
-		reversed := make([]*adminTable, len(fresh))
-		for i, table := range fresh {
-			reversed[len(fresh)-1-i] = table
-		}
+		version := nextMigrationVersion("create_admin_tables")
 		mig := adminMigrationData{
-			Module:      module,
-			IDColumn:    idColumn,
+			Version:     version,
 			Auth:        !authExists,
 			AuthUpgrade: authUpgrade,
 			Tables:      fresh,
-			Reversed:    reversed,
 		}
-		// Migration filenames order db:migrate, so on a same-second re-run
-		// bump the timestamp forward instead of colliding with the existing
-		// pair.
-		stamp := timeNow()
-		name := stamp.Format("20060102150405") + "_create_admin_tables"
-		for adminPathExists("db", "migrate", name+".up.sql") {
-			stamp = stamp.Add(time.Second)
-			name = stamp.Format("20060102150405") + "_create_admin_tables"
-		}
-		if err := write(adminMigrationUpTemplate,
-			filepath.Join("db", "migrate", name+".up.sql"), mig); err != nil {
+		if err := write(adminMigrationTemplate,
+			filepath.Join("db", "migrate", version+"_create_admin_tables.go"), mig); err != nil {
 			return err
 		}
-		if err := write(adminMigrationDownTemplate,
-			filepath.Join("db", "migrate", name+".down.sql"), mig); err != nil {
-			return err
-		}
+		noteMigrationImport(module)
 	}
 	if len(rewritten) > 0 {
 		fmt.Println("\n--force rewrote generated code only: schema changes for the rewritten")
 		fmt.Println("tables still need a hand-written migration in db/migrate.")
+	}
+
+	// keep the project compilable when new or rewritten views were written:
+	// fresh .templ files have no compiled Go yet and the root package (or
+	// an export_<resource>.go) imports them
+	if len(created) > 0 || len(rewritten) > 0 {
+		compileViewsOrNote()
 	}
 
 	registerAdminRoutes(module)
@@ -697,14 +706,12 @@ type adminPageData struct {
 }
 
 type adminMigrationData struct {
-	Module   string
-	IDColumn string
-	Auth     bool
+	Version string
+	Auth    bool
 	// AuthUpgrade upgrades a pre-roles/audit install: adds admin_users.role
 	// and creates admin_audit_logs without touching existing tables.
 	AuthUpgrade bool
 	Tables      []*adminTable // topo order for the up migration
-	Reversed    []*adminTable // children-first for the down migration
 }
 
 func adminPathExists(parts ...string) bool {
