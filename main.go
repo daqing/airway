@@ -17,6 +17,10 @@ import (
 	"github.com/daqing/airway/lib/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+
+	// Blank import so app/models init() runs and every model registers
+	// itself for the REPL regardless of other import chains.
+	_ "github.com/daqing/airway/app/models"
 )
 
 // The airway binary is a CLI first: `airway <command>` (see `airway help`).
