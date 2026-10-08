@@ -30,6 +30,8 @@ func TestScaffoldWritesTemplateWithModuleReplaced(t *testing.T) {
 		"db/migrate/doc.go",
 		"db/migrate/migrations_test.go",
 		"deps/.keep",
+		"tmp/.keep",
+		"data/storage/.keep",
 	} {
 		if _, err := os.Stat(filepath.Join(destDir, rel)); err != nil {
 			t.Fatalf("expected scaffolded file %s: %v", rel, err)
