@@ -642,8 +642,9 @@ pg.Select("*").From("posts").Where(sql.Eq("id", 1))
 repo.Preview(pg.Select("*").From("posts").Where(sql.Eq("id", 1)))
 
 # table + condition
-repo.FindOne("posts", sql.Eq("id", 1))
-repo.FindAll("posts")
+repo.Find("posts", true)
+repo.Find("posts", sql.Eq("id", 1))
+repo.Find("posts", 1)
 repo.Find("posts", pg.Select("*").Where(sql.Eq("id", 1)))
 repo.Find("posts", sql.AllOf(sql.Eq("published", true), sql.Like("title", "%hello%")))
 repo.Insert("posts", pg.H{"title": "hello", "published": true})
@@ -659,8 +660,8 @@ Repo helpers:
 
 ```text
 repo.Find(tableOrStmt, [cond])
-repo.FindAll(table)
-repo.FindOne(tableOrStmt, [cond])
+repo.Find(table, id)
+repo.Find(table, true)
 repo.Count(tableOrStmt, [cond])
 repo.Exists(tableOrStmt, [cond])
 repo.Insert(tableOrStmt, [values], [returning])
@@ -683,10 +684,13 @@ Notes:
 - Neither accepts a prebuilt statement on its own, since it may carry no
   condition and rewrite or delete every row.
 - `Update(table, values, id)` and `Delete(table, id)` take an integer id and
-  match the row whose `id` column equals it.
-- `Find`/`FindOne`/`Count`/`Exists` accept `table + stmt` and bind the table
+  match the row whose `id` column equals it; `Find(table, id)` does the same
+  for a single row lookup.
+- Like `Update` and `Delete`, `Find` needs the explicit `true` for a
+  full-table read: `Find(table, true)`. A bare `Find(table)` is rejected.
+- `Find`/`Count`/`Exists` accept `table + stmt` and bind the table
   when the statement has no table yet.
-- `Find`/`FindOne`/`Count`/`Exists` also take a prebuilt statement; model type
+- `Find`/`Count`/`Exists` also take a prebuilt statement; model type
   arguments such as `repo.Find[T](...)` are not supported.
 - `app/models` types are also available as top-level type names such as `Post`.
 - `lib/sql` composite literals use positional or keyed fields, and `&` takes

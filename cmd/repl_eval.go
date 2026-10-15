@@ -975,8 +975,6 @@ func lookupMethod(receiver any, name string) (any, bool) {
 func (e *replEvaluator) newRepoNamespace() replNamespace {
 	return replNamespace{
 		"Find":    replCallable(e.callRepoFind),
-		"FindAll": replCallable(e.callRepoFindAll),
-		"FindOne": replCallable(e.callRepoFindOne),
 		"Count":   replCallable(e.callRepoCount),
 		"Exists":  replCallable(e.callRepoExists),
 		"Insert":  replCallable(e.callRepoInsert),
@@ -1350,29 +1348,6 @@ func (e *replEvaluator) callRepoFind(args []any) (any, error) {
 	return repo.FindMaps(e.db, stmt)
 }
 
-func (e *replEvaluator) callRepoFindAll(args []any) (any, error) {
-	if len(args) != 1 {
-		return nil, fmt.Errorf("repo.FindAll expects exactly 1 table argument")
-	}
-
-	table, err := coerceTable(args[0])
-	if err != nil {
-		return nil, err
-	}
-
-	stmt := reposql.SelectColumns(table.AllFields().String()).FromTable(table)
-	return repo.FindMaps(e.db, stmt)
-}
-
-func (e *replEvaluator) callRepoFindOne(args []any) (any, error) {
-	stmt, err := e.buildSelectStmt(args)
-	if err != nil {
-		return nil, err
-	}
-
-	return repo.FindOneMap(e.db, stmt)
-}
-
 func (e *replEvaluator) callRepoCount(args []any) (any, error) {
 	stmt, err := e.buildCountStmt(args)
 	if err != nil {
@@ -1457,7 +1432,7 @@ func (e *replEvaluator) callRepoDriver(args []any) (any, error) {
 
 func (e *replEvaluator) buildSelectStmt(args []any) (reposql.Stmt, error) {
 	if len(args) == 0 {
-		return nil, fmt.Errorf("repo.Find and repo.FindOne require at least 1 arg")
+		return nil, fmt.Errorf("repo.Find requires at least 1 arg")
 	}
 
 	if len(args) == 1 {
@@ -1465,12 +1440,13 @@ func (e *replEvaluator) buildSelectStmt(args []any) (reposql.Stmt, error) {
 			return stmt, nil
 		}
 
-		table, err := coerceTable(args[0])
-		if err != nil {
+		if _, err := coerceTable(args[0]); err != nil {
 			return nil, err
 		}
 
-		return reposql.SelectColumns(table.AllFields().String()).FromTable(table), nil
+		// A table on its own would read every row, so it requires the explicit
+		// true, mirroring repo.Update and repo.Delete.
+		return nil, fmt.Errorf("repo.Find full-table lookup requires true as the second arg")
 	}
 
 	table, err := coerceTable(args[0])
@@ -1479,8 +1455,26 @@ func (e *replEvaluator) buildSelectStmt(args []any) (reposql.Stmt, error) {
 	}
 
 	if len(args) == 2 {
+		// An integer argument is the row id, so repo.Find("posts", 1) selects
+		// the row whose id column equals it.
+		if id, err := coerceInt64(args[1]); err == nil {
+			return reposql.SelectColumns(table.AllFields().String()).
+				FromTable(table).
+				Where(reposql.FieldEq(table.Field("id"), id)), nil
+		}
+
 		if stmt, err := coerceStmt(args[1]); err == nil {
 			return bindStmtTable(table, stmt)
+		}
+
+		// The whole table requires the explicit true, mirroring repo.Update and
+		// repo.Delete.
+		if allowAll, ok := args[1].(bool); ok {
+			if !allowAll {
+				return nil, fmt.Errorf("repo.Find full-table lookup requires true as the second arg")
+			}
+
+			return reposql.SelectColumns(table.AllFields().String()).FromTable(table), nil
 		}
 	}
 
@@ -1507,7 +1501,7 @@ func (e *replEvaluator) buildSelectStmt(args []any) (reposql.Stmt, error) {
 			return nil, err
 		}
 	} else {
-		return nil, fmt.Errorf("too many args for repo.Find or repo.FindOne")
+		return nil, fmt.Errorf("too many args for repo.Find")
 	}
 
 	builder := reposql.SelectColumns(fields...).FromTable(table)

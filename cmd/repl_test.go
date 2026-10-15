@@ -45,10 +45,15 @@ func TestRepoREPLExecutesGoStyleRepoCalls(t *testing.T) {
 		t.Fatalf("expected numeric id, got %#v", insertedRow["id"])
 	}
 
-	found := executeAndDecode(t, session, `repo.FindOne("users", sql.Eq("id", 1))`)
-	foundRow, ok := found.(map[string]any)
+	found := executeAndDecode(t, session, `repo.Find("users", sql.Eq("id", 1))`)
+	foundRows, ok := found.([]any)
+	if !ok || len(foundRows) != 1 {
+		t.Fatalf("expected one row object, got %#v", found)
+	}
+
+	foundRow, ok := foundRows[0].(map[string]any)
 	if !ok {
-		t.Fatalf("expected row object, got %#v", found)
+		t.Fatalf("expected row object, got %#v", foundRows[0])
 	}
 
 	if foundRow["email"] != "alice@example.com" {
@@ -56,15 +61,15 @@ func TestRepoREPLExecutesGoStyleRepoCalls(t *testing.T) {
 	}
 
 	foundByStmt := executeAndDecode(t, session, `repo.Find("users", pg.Select("*").Where(sql.Eq("id", 1)))`)
-	foundRows, ok := foundByStmt.([]any)
-	if !ok || len(foundRows) != 1 {
+	foundByStmtRows, ok := foundByStmt.([]any)
+	if !ok || len(foundByStmtRows) != 1 {
 		t.Fatalf("expected one row from stmt-based find, got %#v", foundByStmt)
 	}
 
-	foundAll := executeAndDecode(t, session, `repo.FindAll("users")`)
+	foundAll := executeAndDecode(t, session, `repo.Find("users", true)`)
 	allRows, ok := foundAll.([]any)
 	if !ok || len(allRows) != 1 {
-		t.Fatalf("expected one row from FindAll, got %#v", foundAll)
+		t.Fatalf("expected one row from a full-table find, got %#v", foundAll)
 	}
 
 	countByStmt := executeAndDecode(t, session, `repo.Count("users", pg.Select("count(*)").Where(sql.Eq("id", 1)))`)
@@ -135,6 +140,18 @@ func TestRepoREPLPreviewsBuildersAndProtectsFullTableWrites(t *testing.T) {
 	if deleted.(float64) != 0 {
 		t.Fatalf("unexpected full-table delete result: %#v", deleted)
 	}
+
+	if _, err := session.execute(`repo.Find("users", false)`); err == nil {
+		t.Fatal("expected a false full-table find to be rejected")
+	}
+
+	if _, err := session.execute(`repo.Find("users")`); err == nil {
+		t.Fatal("expected a bare table find to require true")
+	}
+
+	if _, err := session.execute(`repo.FindAll("users")`); err == nil {
+		t.Fatal("expected repo.FindAll to be gone")
+	}
 }
 
 func TestRepoREPLDeletesRowByIntegerID(t *testing.T) {
@@ -148,7 +165,7 @@ func TestRepoREPLDeletesRowByIntegerID(t *testing.T) {
 		t.Fatalf("unexpected delete result: %#v", deleted)
 	}
 
-	remaining := executeAndDecode(t, session, `repo.FindAll("users")`)
+	remaining := executeAndDecode(t, session, `repo.Find("users", true)`)
 	remainingRows, ok := remaining.([]any)
 	if !ok || len(remainingRows) != 1 {
 		t.Fatalf("expected one remaining row, got %#v", remaining)
@@ -233,6 +250,62 @@ func TestRepoREPLUpdateByIntegerIDMatchesExplicitCondition(t *testing.T) {
 	}
 }
 
+func TestRepoREPLFindsRowByIntegerID(t *testing.T) {
+	session := newTestREPL(t)
+
+	executeAndDecode(t, session, `repo.Insert("users", pg.H{"email": "alice@example.com"})`)
+	executeAndDecode(t, session, `repo.Insert("users", pg.H{"email": "bob@example.com"})`)
+
+	found := executeAndDecode(t, session, `repo.Find("users", 2)`)
+	foundRows, ok := found.([]any)
+	if !ok || len(foundRows) != 1 {
+		t.Fatalf("expected one row, got %#v", found)
+	}
+
+	row, ok := foundRows[0].(map[string]any)
+	if !ok || row["email"] != "bob@example.com" {
+		t.Fatalf("expected bob, got %#v", foundRows[0])
+	}
+
+	missing := executeAndDecode(t, session, `repo.Find("users", 99)`)
+	missingRows, ok := missing.([]any)
+	if !ok || len(missingRows) != 0 {
+		t.Fatalf("expected no rows, got %#v", missing)
+	}
+
+	if _, err := session.execute(`repo.Find("users", "2")`); err == nil {
+		t.Fatal("expected a non-integer id to be rejected")
+	}
+}
+
+func TestRepoREPLFindByIntegerIDMatchesExplicitCondition(t *testing.T) {
+	session := newTestREPL(t)
+
+	byID, err := session.evaluator.buildSelectStmt([]any{"users", int64(2)})
+	if err != nil {
+		t.Fatalf("buildSelectStmt by id: %v", err)
+	}
+
+	byCond, err := session.evaluator.buildSelectStmt([]any{"users", reposql.FieldEq(reposql.TableOf("users").Field("id"), int64(2))})
+	if err != nil {
+		t.Fatalf("buildSelectStmt by cond: %v", err)
+	}
+
+	idQuery, idArgs, err := repo.Preview(session.db, byID)
+	if err != nil {
+		t.Fatalf("preview by id: %v", err)
+	}
+
+	condQuery, condArgs, err := repo.Preview(session.db, byCond)
+	if err != nil {
+		t.Fatalf("preview by cond: %v", err)
+	}
+
+	if idQuery != condQuery || !reflect.DeepEqual(idArgs, condArgs) {
+		t.Fatalf("find by id = %q %#v, want %q %#v", idQuery, idArgs, condQuery, condArgs)
+	}
+}
+
 func TestRepoREPLExposesProjectModelsNamespace(t *testing.T) {
 	session := newTestREPL(t)
 
@@ -262,7 +335,7 @@ func TestRepoREPLExposesProjectModelsAsTopLevelTypes(t *testing.T) {
 func TestRepoREPLRejectsGenericRepoCalls(t *testing.T) {
 	session := newTestREPL(t)
 
-	if _, err := session.evaluator.Eval(`repo.FindOne[User](sql.Eq("id", 1))`); err == nil {
+	if _, err := session.evaluator.Eval(`repo.Find[User](sql.Eq("id", 1))`); err == nil {
 		t.Fatal("expected generic repo calls to be rejected")
 	}
 }

@@ -145,8 +145,9 @@ func (r repoREPL) printHelp() {
   exit
 
 Expressions:
-  repo.FindOne("posts", sql.Eq("id", 1))
-  repo.FindAll("posts")
+  repo.Find("posts", sql.Eq("id", 1))
+  repo.Find("posts", 1)
+  repo.Find("posts", true)
   repo.Find("posts", pg.Select("*").Where(sql.Eq("id", 1)))
   repo.Find("posts", sql.AllOf(sql.Eq("published", true), sql.Like("title", "%hello%")))
   repo.Insert("posts", pg.H{"title": "hello", "published": true})
@@ -171,8 +172,8 @@ Composite literals:
 
 Repo helpers:
   repo.Find(tableOrStmt, [cond])
-  repo.FindAll(table)
-  repo.FindOne(tableOrStmt, [cond])
+  repo.Find(table, id)
+  repo.Find(table, true)
   repo.Count(tableOrStmt, [cond])
   repo.Exists(tableOrStmt, [cond])
   repo.Insert(tableOrStmt, [values], [returning])
@@ -191,8 +192,10 @@ Notes:
   repo.Delete always takes two args: table, then id|cond|true
   neither accepts a prebuilt statement on its own
   repo.Update(table, values, id) and repo.Delete(table, id) take an integer id and match the row whose id column equals it
-  repo.Find/FindOne/Count/Exists also accept table + stmt and will bind the table when the stmt has no table yet
-  repo.Find/FindOne/Count/Exists also take a prebuilt statement; model type arguments such as repo.Find[T](...) are not supported
+  repo.Find(table, id) does the same for a single row lookup
+  repo.Find(table, true) reads the whole table; a bare repo.Find(table) is rejected
+  repo.Find/Count/Exists also accept table + stmt and will bind the table when the stmt has no table yet
+  repo.Find/Count/Exists also take a prebuilt statement; model type arguments such as repo.Find[T](...) are not supported
   app/models types are also available as top-level type names such as Post (e.g. inside composite literals)
   composite literals may use positional fields (sql.Condition{"id", ">", 0}) or keyed fields (&sql.Condition{Key: "id", Op: ">", Val: 0}); sql.InCond[T]{...} and sql.NotInCond[T]{...} are supported too
   entering a builder expression directly prints the compiled SQL and args`)

@@ -511,8 +511,9 @@ REPL 只能看到它所在二进制编译进的模型（经 `lib/replreg` 注册
 命令：`help`、`driver`、`tables`、`exit`。输入 Go 表达式即可求值——builder 会打印编译后的 SQL，`repo.*` 调用直接作用于数据库：
 
 ```text
-repo.FindOne("posts", sql.Eq("id", 1))
-repo.FindAll("posts")
+repo.Find("posts", true)
+repo.Find("posts", sql.Eq("id", 1))
+repo.Find("posts", 1)
 repo.Find("posts", pg.Select("*").Where(sql.Eq("id", 1)))
 repo.Insert("posts", pg.H{"title": "hello", "published": true})
 repo.Update("posts", pg.H{"published": false}, sql.Eq("id", 1))
@@ -523,7 +524,7 @@ pg.Select("*").From("posts").Where(sql.Eq("id", 1))
 ```
 
 可用命名空间：`repo`、`sql`、`pg`、`mysql`、`sqlite`、`models`。
-`repo.Find`/`FindOne`/`Count`/`Exists` 接受构建好的语句或 `表 + 条件`；不再支持 `repo.Find[T](...)` 这类模型类型参数。`repo.Update` 始终要求三个参数——表名、更新值，然后是 id、条件或用于全表写入的 `true`；`repo.Delete` 始终要求两个参数——表名，然后是 id、条件或 `true`。两者都不接受只传一条构建好的语句（它可能不带条件而改写或删掉整张表）。`repo.Update(表名, 值, id)` 和 `repo.Delete(表名, id)` 传入整数 id 时，匹配 `id` 列等于该值的那一行。
+`repo.Find`/`Count`/`Exists` 接受构建好的语句或 `表 + 条件`；不再支持 `repo.Find[T](...)` 这类模型类型参数。`repo.Update` 始终要求三个参数——表名、更新值，然后是 id、条件或用于全表写入的 `true`；`repo.Delete` 始终要求两个参数——表名，然后是 id、条件或 `true`。两者都不接受只传一条构建好的语句（它可能不带条件而改写或删掉整张表）。`repo.Update(表名, 值, id)` 和 `repo.Delete(表名, id)` 传入整数 id 时，匹配 `id` 列等于该值的那一行；`repo.Find(表名, id)` 的单行查询同理。整表读取和 `Update`/`Delete` 一样需要显式的 `true`——`repo.Find(表名, true)`，只传表名的 `repo.Find(表名)` 会被拒绝。
 
 ## 文件存储
 
