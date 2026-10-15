@@ -1,5 +1,5 @@
 import { createContext } from "react";
-import { useCallback, useContext, useState } from "react";
+import { useCallback, useContext, useMemo, useState } from "react";
 import type { ComponentChildren } from "react";
 
 type ToastKind = "info" | "success" | "error";
@@ -33,11 +33,18 @@ export function ToastProvider(props: { children?: ComponentChildren }) {
     setTimeout(() => dismiss(id), 3500);
   }, [dismiss]);
 
-  const api: ToastApi = {
-    show,
-    success: (m) => show(m, "success"),
-    error: (m) => show(m, "error"),
-  };
+  // Memoized so consumers can safely list the api in hook dependencies:
+  // without this, every toast would re-render the provider with a fresh api
+  // identity and re-fire their effects (an error toast would loop the
+  // failing request forever).
+  const api: ToastApi = useMemo(
+    () => ({
+      show,
+      success: (m: string) => show(m, "success"),
+      error: (m: string) => show(m, "error"),
+    }),
+    [show],
+  );
 
   return (
     <ToastContext.Provider value={api}>
