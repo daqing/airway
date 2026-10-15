@@ -214,7 +214,7 @@ Migration and schema commands read `AIRWAY_DSN`/`DSN`.
 
 ## Code Conventions
 
-- **Models** (`app/models/`): structs with `db:"..."` field tags, a `TableName() string` method, an optional `Relations() map[string]repo.Relation` method for associations, and an `init()` calling `registerREPLModel("Name", Name{})`.
+- **Models** (`app/models/`): structs with `db:"..."` field tags, a `TableName() string` method, an optional `Relations() map[string]repo.Relation` method for associations, and an `init()` calling `replreg.Register("Name", Name{})` (from `github.com/daqing/airway/lib/replreg`) so the model shows up in the REPL. The directory holds only table definitions.
 - **API modules** (`app/api/<name>_api/`): one package per namespace. `routes.go` exposes `Routes(r *gin.RouterGroup)`; handlers live in `<action>_action.go` as `func XxxAction(c *gin.Context)`. New modules must be wired into `config/routes.go`.
 - **Data access:** prefer the generics API in `lib/repo` (`repo.FindBy[T]`, `repo.CreateFrom[T]`, `repo.UpdateByID[T]`, `repo.DeleteByID[T]`, `repo.Preload(...)`, `repo.Join(...)`) and the `lib/sql` builder for conditions (`sql.Eq`, `sql.And`, `sql.Gt`, ...). Use `repo.Preload` instead of hand-written loops to avoid N+1 queries.
 - **Responses:** use the `lib/render` helpers rather than hand-rolled JSON.

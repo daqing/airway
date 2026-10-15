@@ -512,15 +512,18 @@ REPL 只能看到它所在二进制编译进的模型（经 `lib/replreg` 注册
 
 ```text
 repo.FindOne("posts", sql.Eq("id", 1))
-repo.Find[models.Post](pg.Select("id").Where(sql.Eq("id", 1)))
-repo.Insert[models.Post](pg.H{"id": 1234, "title": "hello"})
+repo.FindAll("posts")
+repo.Find("posts", pg.Select("*").Where(sql.Eq("id", 1)))
+repo.Insert("posts", pg.H{"title": "hello", "published": true})
 repo.Update("posts", pg.H{"published": false}, sql.Eq("id", 1))
+repo.Update("posts", pg.H{"published": false}, 1)
 repo.Delete("posts", sql.Eq("id", 1))
+repo.Delete("posts", 1)
 pg.Select("*").From("posts").Where(sql.Eq("id", 1))
 ```
 
 可用命名空间：`repo`、`sql`、`pg`、`mysql`、`sqlite`、`models`。
-`repo.Find`/`FindOne`/`Count`/`Exists` 接受构建好的语句或 `表 + 条件`；类型化调用支持匿名结构体与应用模型。全表更新/删除需要显式传入 `true` 作为最后一个参数。
+`repo.Find`/`FindOne`/`Count`/`Exists` 接受构建好的语句或 `表 + 条件`；不再支持 `repo.Find[T](...)` 这类模型类型参数。`repo.Update` 始终要求三个参数——表名、更新值，然后是 id、条件或用于全表写入的 `true`；`repo.Delete` 始终要求两个参数——表名，然后是 id、条件或 `true`。两者都不接受只传一条构建好的语句（它可能不带条件而改写或删掉整张表）。`repo.Update(表名, 值, id)` 和 `repo.Delete(表名, id)` 传入整数 id 时，匹配 `id` 列等于该值的那一行。
 
 ## 文件存储
 

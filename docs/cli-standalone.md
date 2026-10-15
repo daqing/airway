@@ -189,9 +189,9 @@ go run . repl
 ```
 
 The REPL only sees the models compiled into the binary you run — project
-models register via `registerREPLModel` in `app/models`, which delegates to
-`lib/replreg`. Use `go run . repl` inside your project; the globally installed
-`airway repl` only sees the framework's built-in models.
+models register themselves via `replreg.Register` in their `init`. Use
+`go run . repl` inside your project; the globally installed `airway repl` only
+sees the framework's built-in models.
 
 ## Global `airway` vs. the project binary
 

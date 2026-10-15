@@ -12,6 +12,7 @@ import (
 
 	"github.com/daqing/airway/lib/replreg"
 	"github.com/daqing/airway/lib/repo"
+	reposql "github.com/daqing/airway/lib/sql"
 )
 
 type replUser struct {
@@ -58,6 +59,12 @@ func TestRepoREPLExecutesGoStyleRepoCalls(t *testing.T) {
 	foundRows, ok := foundByStmt.([]any)
 	if !ok || len(foundRows) != 1 {
 		t.Fatalf("expected one row from stmt-based find, got %#v", foundByStmt)
+	}
+
+	foundAll := executeAndDecode(t, session, `repo.FindAll("users")`)
+	allRows, ok := foundAll.([]any)
+	if !ok || len(allRows) != 1 {
+		t.Fatalf("expected one row from FindAll, got %#v", foundAll)
 	}
 
 	countByStmt := executeAndDecode(t, session, `repo.Count("users", pg.Select("count(*)").Where(sql.Eq("id", 1)))`)
@@ -116,100 +123,147 @@ func TestRepoREPLPreviewsBuildersAndProtectsFullTableWrites(t *testing.T) {
 		t.Fatal("expected full-table delete to require explicit true")
 	}
 
+	if _, err := session.execute(`repo.Delete(pg.DeleteFrom("users"))`); err == nil {
+		t.Fatal("expected a statement-only delete to be rejected")
+	}
+
+	if _, err := session.execute(`repo.Delete("users", sql.Eq("id", 1), true)`); err == nil {
+		t.Fatal("expected more than two args to be rejected")
+	}
+
 	deleted := executeAndDecode(t, session, `repo.Delete("users", true)`)
 	if deleted.(float64) != 0 {
 		t.Fatalf("unexpected full-table delete result: %#v", deleted)
 	}
 }
 
-func TestRepoREPLSupportsGenericRepoFindCalls(t *testing.T) {
+func TestRepoREPLDeletesRowByIntegerID(t *testing.T) {
 	session := newTestREPL(t)
-	session.evaluator.symbols["replUser"] = reflect.TypeOf(replUser{})
 
-	executeAndDecode(t, session, `repo.Insert("users", pg.H{"email": "alice@example.com", "enabled": true})`)
+	executeAndDecode(t, session, `repo.Insert("users", pg.H{"email": "alice@example.com"})`)
+	executeAndDecode(t, session, `repo.Insert("users", pg.H{"email": "bob@example.com"})`)
 
-	inferred := executeAndDecode(t, session, `repo.FindOne[replUser](sql.Eq("id", 1))`)
-	inferredRow, ok := inferred.(map[string]any)
-	if !ok {
-		t.Fatalf("expected inferred typed row object, got %#v", inferred)
+	deleted := executeAndDecode(t, session, `repo.Delete("users", 2)`)
+	if deleted.(float64) != 1 {
+		t.Fatalf("unexpected delete result: %#v", deleted)
 	}
 
-	if inferredRow["Email"] != "alice@example.com" {
-		t.Fatalf("unexpected inferred typed row: %#v", inferredRow)
+	remaining := executeAndDecode(t, session, `repo.FindAll("users")`)
+	remainingRows, ok := remaining.([]any)
+	if !ok || len(remainingRows) != 1 {
+		t.Fatalf("expected one remaining row, got %#v", remaining)
 	}
 
-	found := executeAndDecode(t, session, `repo.FindOne[struct{ ID int64 `+"`db:\"id\"`"+`; Email string `+"`db:\"email\"`"+`; Enabled bool `+"`db:\"enabled\"`"+` }]("users", pg.Select("id, email, enabled").Where(sql.Eq("id", 1)))`)
-	foundRow, ok := found.(map[string]any)
-	if !ok {
-		t.Fatalf("expected typed row object, got %#v", found)
+	row, ok := remainingRows[0].(map[string]any)
+	if !ok || row["email"] != "alice@example.com" {
+		t.Fatalf("expected alice to remain, got %#v", remainingRows[0])
 	}
 
-	if foundRow["Email"] != "alice@example.com" {
-		t.Fatalf("unexpected typed row: %#v", foundRow)
-	}
-
-	rows := executeAndDecode(t, session, `repo.Find[struct{ ID int64 `+"`db:\"id\"`"+`; Email string `+"`db:\"email\"`"+` }](pg.Select("id, email").From("users").Where(sql.Eq("enabled", true)))`)
-	rowList, ok := rows.([]any)
-	if !ok || len(rowList) != 1 {
-		t.Fatalf("expected typed rows result, got %#v", rows)
+	if _, err := session.execute(`repo.Delete("users", "2")`); err == nil {
+		t.Fatal("expected a non-integer id to be rejected")
 	}
 }
 
-func TestRepoREPLSupportsGenericRepoInsertCalls(t *testing.T) {
+func TestRepoREPLUpdatesRowByIntegerID(t *testing.T) {
 	session := newTestREPL(t)
-	session.evaluator.symbols["replUser"] = reflect.TypeOf(replUser{})
 
-	inserted := executeAndDecode(t, session, `repo.Insert[replUser](pg.H{"id": 1234, "email": "typed@example.com", "enabled": true})`)
-	insertedRow, ok := inserted.(map[string]any)
-	if !ok {
-		t.Fatalf("expected typed inserted row object, got %#v", inserted)
+	executeAndDecode(t, session, `repo.Insert("users", pg.H{"email": "alice@example.com"})`)
+	executeAndDecode(t, session, `repo.Insert("users", pg.H{"email": "bob@example.com"})`)
+
+	updated := executeAndDecode(t, session, `repo.Update("users", pg.H{"enabled": true}, 2)`)
+	if updated.(float64) != 1 {
+		t.Fatalf("unexpected update result: %#v", updated)
 	}
 
-	if insertedRow["ID"] != float64(1234) {
-		t.Fatalf("unexpected typed inserted row: %#v", insertedRow)
+	enabled := executeAndDecode(t, session, `repo.Find("users", sql.Eq("enabled", true))`)
+	enabledRows, ok := enabled.([]any)
+	if !ok || len(enabledRows) != 1 {
+		t.Fatalf("expected one enabled row, got %#v", enabled)
+	}
+
+	row, ok := enabledRows[0].(map[string]any)
+	if !ok || row["email"] != "bob@example.com" {
+		t.Fatalf("expected bob to be enabled, got %#v", enabledRows[0])
+	}
+
+	if _, err := session.execute(`repo.Update("users", pg.H{"enabled": false}, "2")`); err == nil {
+		t.Fatal("expected a non-integer id to be rejected")
+	}
+
+	if _, err := session.execute(`repo.Update(pg.Update("users").Set(pg.H{"enabled": false}))`); err == nil {
+		t.Fatal("expected a statement-only update to be rejected")
+	}
+
+	if _, err := session.execute(`repo.Update("users", pg.H{"enabled": false})`); err == nil {
+		t.Fatal("expected a two-arg update to be rejected")
+	}
+
+	if _, err := session.execute(`repo.Update("users", pg.H{"enabled": false}, sql.Eq("id", 1), true)`); err == nil {
+		t.Fatal("expected more than three args to be rejected")
+	}
+}
+
+func TestRepoREPLUpdateByIntegerIDMatchesExplicitCondition(t *testing.T) {
+	session := newTestREPL(t)
+
+	values := map[string]any{"enabled": true}
+
+	byID, err := session.evaluator.buildUpdateStmt([]any{"users", values, int64(2)})
+	if err != nil {
+		t.Fatalf("buildUpdateStmt by id: %v", err)
+	}
+
+	byCond, err := session.evaluator.buildUpdateStmt([]any{"users", values, reposql.FieldEq(reposql.TableOf("users").Field("id"), int64(2))})
+	if err != nil {
+		t.Fatalf("buildUpdateStmt by cond: %v", err)
+	}
+
+	idQuery, idArgs, err := repo.Preview(session.db, byID)
+	if err != nil {
+		t.Fatalf("preview by id: %v", err)
+	}
+
+	condQuery, condArgs, err := repo.Preview(session.db, byCond)
+	if err != nil {
+		t.Fatalf("preview by cond: %v", err)
+	}
+
+	if idQuery != condQuery || !reflect.DeepEqual(idArgs, condArgs) {
+		t.Fatalf("update by id = %q %#v, want %q %#v", idQuery, idArgs, condQuery, condArgs)
 	}
 }
 
 func TestRepoREPLExposesProjectModelsNamespace(t *testing.T) {
 	session := newTestREPL(t)
 
-	executeAndDecode(t, session, `repo.Insert("users", pg.H{"email": "alice@example.com", "enabled": true})`)
-
-	found := executeAndDecode(t, session, `repo.FindOne[models.User](pg.Select("id").Where(sql.Eq("id", 1)))`)
-	foundRow, ok := found.(map[string]any)
-	if !ok {
-		t.Fatalf("expected model row object, got %#v", found)
+	value, err := session.evaluator.Eval(`models.User`)
+	if err != nil {
+		t.Fatalf("models.User: %v", err)
 	}
 
-	if foundRow["ID"] != float64(1) {
-		t.Fatalf("unexpected model row: %#v", foundRow)
+	if _, ok := value.(reflect.Type); !ok {
+		t.Fatalf("expected models.User to resolve to a type, got %#v", value)
 	}
 }
 
 func TestRepoREPLExposesProjectModelsAsTopLevelTypes(t *testing.T) {
 	session := newTestREPL(t)
 
-	executeAndDecode(t, session, `repo.Insert("users", pg.H{"id": 7, "email": "top@example.com", "enabled": true})`)
-
-	found := executeAndDecode(t, session, `repo.FindOne[User](sql.Eq("id", 7))`)
-	foundRow, ok := found.(map[string]any)
-	if !ok {
-		t.Fatalf("expected top-level model row object, got %#v", found)
+	value, err := session.evaluator.Eval(`User`)
+	if err != nil {
+		t.Fatalf("User: %v", err)
 	}
 
-	if foundRow["ID"] != float64(7) {
-		t.Fatalf("unexpected top-level model row: %#v", foundRow)
+	if _, ok := value.(reflect.Type); !ok {
+		t.Fatalf("expected User to resolve to a type, got %#v", value)
 	}
 }
 
-func TestRepoREPLSupportsGenericRepoDeleteCalls(t *testing.T) {
+func TestRepoREPLRejectsGenericRepoCalls(t *testing.T) {
 	session := newTestREPL(t)
 
-	executeAndDecode(t, session, `repo.Insert("users", pg.H{"id": 333, "email": "delete@example.com", "enabled": true})`)
-
-	deleted := executeAndDecode(t, session, `repo.Delete[User](sql.Eq("id", 333))`)
-	if deleted.(float64) != 1 {
-		t.Fatalf("unexpected typed delete result: %#v", deleted)
+	if _, err := session.evaluator.Eval(`repo.FindOne[User](sql.Eq("id", 1))`); err == nil {
+		t.Fatal("expected generic repo calls to be rejected")
 	}
 }
 

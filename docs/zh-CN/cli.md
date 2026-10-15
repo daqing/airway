@@ -146,7 +146,7 @@ airway generate model post
 
 - `ID`、`CreatedAt`、`UpdatedAt`
 - `TableName()`
-- 供 REPL 使用的 `registerREPLModel`
+- 供 REPL 使用的 `replreg.Register`
 
 ### 生成 service
 
@@ -289,10 +289,18 @@ openapi-typescript 或 orval，SwiftUI 用 swift-openapi-generator）见
 go run . repl
 ```
 
-REPL 只能看到编译进当前二进制、通过 `github.com/daqing/airway/lib/replreg`
-注册的模型——项目模型的 init 通过 `app/models` 的 `registerREPLModel` 注册
-（该函数委托给 `lib/replreg`）。在项目内，全局安装的 `airway repl` 会自动代理为
+REPL 只能看到编译进当前二进制的模型——项目模型在各自的 init 中通过
+`replreg.Register`（来自 `github.com/daqing/airway/lib/replreg`）自注册。
+在项目内，全局安装的 `airway repl` 会自动代理为
 `go run . repl`；在项目之外则只能看到框架自带的模型。
+
+构建器按 Go 表达式求值，支持 `lib/sql` 的组合字面量，字段可以是位置参数或键值形式：
+
+```text
+repo.Find("posts", pg.Select("*").Where(sql.Condition{"id", ">", 0}))
+repo.Find("posts", pg.Select("*").Where(&sql.Condition{Key: "id", Op: "=", Val: 1}))
+repo.Find("posts", pg.Select("*").Where(sql.InCond[int]{Column: "id", Values: []int{1, 2}}))
+```
 
 ## 实战示例
 

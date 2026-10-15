@@ -162,9 +162,9 @@ airway upload images/foo.png /tmp/foo.png # 显式指定存储 key
 go run . repl
 ```
 
-REPL 只能看到编译进当前二进制的模型——项目模型通过 `app/models` 中的
-`registerREPLModel` 注册（底层委托给 `lib/replreg`）。请在你的项目内使用
-`go run . repl`；全局安装的 `airway repl` 只能看到框架内置的模型。
+REPL 只能看到编译进当前二进制的模型——项目模型在各自的 init 中通过
+`replreg.Register` 自注册。请在你的项目内使用 `go run . repl`；全局安装的
+`airway repl` 只能看到框架内置的模型。
 
 ## 全局 `airway` 与项目二进制的区别
 

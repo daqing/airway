@@ -180,7 +180,7 @@ The generated model includes:
 
 - `ID`, `CreatedAt`, `UpdatedAt`
 - `TableName()`
-- REPL registration via `registerREPLModel`
+- REPL registration via `replreg.Register`
 
 ### Generate a service
 
@@ -366,10 +366,19 @@ go run . repl
 ```
 
 The REPL only sees the models compiled into the binary you run — project models
-register through `registerREPLModel` in `app/models`, which delegates to
-`github.com/daqing/airway/lib/replreg`. Inside a project the globally installed
+register themselves through `replreg.Register` (from
+`github.com/daqing/airway/lib/replreg`) in their `init`. Inside a project the globally installed
 `airway repl` proxies to `go run . repl` for you; outside a project it only
 sees the framework's built-in models.
+
+Builders are evaluated as Go expressions, including `lib/sql` composite
+literals with positional or keyed fields:
+
+```text
+repo.Find("posts", pg.Select("*").Where(sql.Condition{"id", ">", 0}))
+repo.Find("posts", pg.Select("*").Where(&sql.Condition{Key: "id", Op: "=", Val: 1}))
+repo.Find("posts", pg.Select("*").Where(sql.InCond[int]{Column: "id", Values: []int{1, 2}}))
+```
 
 ## Practical Example
 

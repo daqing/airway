@@ -5,6 +5,7 @@ const scaffoldModelTemplate = `package models
 import (
 	"time"
 
+	"github.com/daqing/airway/lib/replreg"
 	airwaysql "github.com/daqing/airway/lib/sql"
 )
 
@@ -20,7 +21,7 @@ func ({{.Name}}) TableName() string {
 }
 
 func init() {
-	registerREPLModel("{{.Name}}", {{.Name}}{})
+	replreg.Register("{{.Name}}", {{.Name}}{})
 }
 `
 

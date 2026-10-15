@@ -31,7 +31,7 @@ func TestRunCLICommandGeneratesModel(t *testing.T) {
 		t.Fatalf("expected pluralized table name, got:\n%s", content)
 	}
 
-	if !strings.Contains(content, `registerREPLModel("Post", Post{})`) {
+	if !strings.Contains(content, `replreg.Register("Post", Post{})`) {
 		t.Fatalf("expected REPL registration, got:\n%s", content)
 	}
 }

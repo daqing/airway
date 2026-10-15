@@ -11,7 +11,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"unicode"
 
 	"github.com/daqing/airway/lib/plugin"
 	"github.com/daqing/airway/lib/replreg"
@@ -23,11 +22,6 @@ import (
 )
 
 type replCallable func(args []any) (any, error)
-
-type replOverloadedCallable struct {
-	call replCallable
-	bind func(typeArgs []reflect.Type) (any, error)
-}
 
 type replNamespace map[string]any
 
@@ -81,10 +75,8 @@ func (e *replEvaluator) evalExpr(expr ast.Expr) (any, error) {
 		return e.evalUnary(node)
 	case *ast.ParenExpr:
 		return e.evalExpr(node.X)
-	case *ast.IndexExpr:
-		return e.evalIndex(node.X, []ast.Expr{node.Index})
-	case *ast.IndexListExpr:
-		return e.evalIndex(node.X, node.Indices)
+	case *ast.IndexExpr, *ast.IndexListExpr:
+		return nil, fmt.Errorf("type arguments are not supported; pass the table name instead, e.g. repo.Find(\"posts\", ...)")
 	default:
 		return nil, fmt.Errorf("unsupported expression: %T", expr)
 	}
@@ -182,38 +174,227 @@ func (e *replEvaluator) evalSelector(selector *ast.SelectorExpr) (any, error) {
 func (e *replEvaluator) evalCompositeLit(lit *ast.CompositeLit) (any, error) {
 	switch typed := lit.Type.(type) {
 	case *ast.ArrayType:
-		items := make([]any, 0, len(lit.Elts))
-		for _, elt := range lit.Elts {
-			value, err := e.evalExpr(elt)
+		elemType, err := e.evalType(typed.Elt)
+		if err != nil {
+			// Interface element types (e.g. []sql.CondBuilder) cannot be
+			// resolved to a reflect.Type; fall back to untyped elements and
+			// let argument conversion adapt them.
+			return e.evalUntypedElements(lit.Elts)
+		}
+
+		if typed.Len != nil {
+			length, err := arrayLength(typed.Len)
 			if err != nil {
 				return nil, err
 			}
 
-			items = append(items, value)
+			return e.constructArray(reflect.ArrayOf(length, elemType), lit.Elts)
 		}
 
-		return items, nil
-	case *ast.MapType:
-		_ = typed
-		return e.evalMapLiteral(lit)
-	case *ast.SelectorExpr:
-		name := typed.Sel.Name
-		if name == "H" || name == "NamedArgs" {
-			return e.evalMapLiteral(lit)
-		}
-
-		return nil, fmt.Errorf("unsupported composite literal type: %s", name)
+		return e.constructSlice(reflect.SliceOf(elemType), lit.Elts)
+	case *ast.IndexExpr:
+		return e.evalGenericCompositeLit(lit, typed.X, []ast.Expr{typed.Index})
+	case *ast.IndexListExpr:
+		return e.evalGenericCompositeLit(lit, typed.X, typed.Indices)
 	default:
-		return nil, fmt.Errorf("unsupported composite literal: %T", lit.Type)
+		targetType, err := e.evalType(lit.Type)
+		if err != nil {
+			return nil, err
+		}
+
+		return e.constructLiteral(targetType, lit.Elts)
 	}
 }
 
-func (e *replEvaluator) evalMapLiteral(lit *ast.CompositeLit) (map[string]any, error) {
-	values := map[string]any{}
-	for _, elt := range lit.Elts {
+// evalUntypedElements evaluates a slice/array literal to a []any when the
+// element type cannot be resolved (for example a non-empty interface).
+func (e *replEvaluator) evalUntypedElements(elts []ast.Expr) (any, error) {
+	items := make([]any, 0, len(elts))
+	for _, elt := range elts {
+		value, err := e.evalExpr(elt)
+		if err != nil {
+			return nil, err
+		}
+
+		items = append(items, value)
+	}
+
+	return items, nil
+}
+
+// evalGenericCompositeLit handles literal forms of generic types such as
+// sql.InCond[int]{...}. Go reflection cannot instantiate generic types, so the
+// supported cases are translated back to their constructors.
+func (e *replEvaluator) evalGenericCompositeLit(lit *ast.CompositeLit, base ast.Expr, _ []ast.Expr) (any, error) {
+	name, err := typeNameFromExpr(base)
+	if err != nil {
+		return nil, err
+	}
+
+	switch name {
+	case "InCond", "NotInCond":
+		return e.constructInCondLiteral(name, lit.Elts)
+	default:
+		return nil, fmt.Errorf("generic composite literal %s is not supported", name)
+	}
+}
+
+func typeNameFromExpr(expr ast.Expr) (string, error) {
+	switch typed := expr.(type) {
+	case *ast.Ident:
+		return typed.Name, nil
+	case *ast.SelectorExpr:
+		return typed.Sel.Name, nil
+	default:
+		return "", fmt.Errorf("unsupported type expression: %T", expr)
+	}
+}
+
+func (e *replEvaluator) constructInCondLiteral(name string, elts []ast.Expr) (any, error) {
+	var columnExpr ast.Expr
+	var valuesExpr ast.Expr
+
+	if len(elts) == 2 {
+		if _, keyed := elts[0].(*ast.KeyValueExpr); !keyed {
+			columnExpr = elts[0]
+			valuesExpr = elts[1]
+		}
+	}
+
+	if columnExpr == nil {
+		for _, elt := range elts {
+			pair, ok := elt.(*ast.KeyValueExpr)
+			if !ok {
+				return nil, fmt.Errorf("%s literal requires Column and Values", name)
+			}
+
+			field, ok := pair.Key.(*ast.Ident)
+			if !ok {
+				return nil, fmt.Errorf("%s literal field name must be an identifier", name)
+			}
+
+			switch field.Name {
+			case "Column":
+				columnExpr = pair.Value
+			case "Values":
+				valuesExpr = pair.Value
+			}
+		}
+	}
+
+	if columnExpr == nil || valuesExpr == nil {
+		return nil, fmt.Errorf("%s literal requires Column and Values", name)
+	}
+
+	columnValue, err := e.evalExpr(columnExpr)
+	if err != nil {
+		return nil, err
+	}
+
+	column, err := coerceString(columnValue)
+	if err != nil {
+		return nil, err
+	}
+
+	valuesValue, err := e.evalExpr(valuesExpr)
+	if err != nil {
+		return nil, err
+	}
+
+	items, err := toAnySlice(valuesValue)
+	if err != nil {
+		return nil, err
+	}
+
+	if name == "NotInCond" {
+		return reposql.NotIn(column, items), nil
+	}
+
+	return reposql.In(column, items), nil
+}
+
+// constructLiteral builds a value of targetType from the elements of a
+// composite literal.
+func (e *replEvaluator) constructLiteral(targetType reflect.Type, elts []ast.Expr) (any, error) {
+	switch targetType.Kind() {
+	case reflect.Struct:
+		return e.constructStruct(targetType, elts)
+	case reflect.Map:
+		return e.constructMap(targetType, elts)
+	case reflect.Slice:
+		return e.constructSlice(targetType, elts)
+	case reflect.Array:
+		return e.constructArray(targetType, elts)
+	default:
+		return nil, fmt.Errorf("unsupported composite literal type: %s", targetType)
+	}
+}
+
+func (e *replEvaluator) constructStruct(targetType reflect.Type, elts []ast.Expr) (any, error) {
+	value := reflect.New(targetType).Elem()
+	if len(elts) == 0 {
+		return value.Interface(), nil
+	}
+
+	if _, keyed := elts[0].(*ast.KeyValueExpr); keyed {
+		for _, elt := range elts {
+			pair, ok := elt.(*ast.KeyValueExpr)
+			if !ok {
+				return nil, fmt.Errorf("%s literals cannot mix keyed and positional elements", targetType)
+			}
+
+			name, ok := pair.Key.(*ast.Ident)
+			if !ok {
+				return nil, fmt.Errorf("%s literal field name must be an identifier", targetType)
+			}
+
+			field := value.FieldByName(name.Name)
+			if !field.IsValid() {
+				return nil, fmt.Errorf("%s has no field %s", targetType, name.Name)
+			}
+
+			if !field.CanSet() {
+				return nil, fmt.Errorf("%s.%s cannot be set", targetType, name.Name)
+			}
+
+			fieldValue, err := e.evalValueForType(pair.Value, field.Type())
+			if err != nil {
+				return nil, err
+			}
+
+			field.Set(fieldValue)
+		}
+
+		return value.Interface(), nil
+	}
+
+	if len(elts) > targetType.NumField() {
+		return nil, fmt.Errorf("too many values for %s", targetType)
+	}
+
+	for idx, elt := range elts {
+		field := value.Field(idx)
+		if !field.CanSet() {
+			return nil, fmt.Errorf("%s.%s cannot be set", targetType, targetType.Field(idx).Name)
+		}
+
+		fieldValue, err := e.evalValueForType(elt, field.Type())
+		if err != nil {
+			return nil, err
+		}
+
+		field.Set(fieldValue)
+	}
+
+	return value.Interface(), nil
+}
+
+func (e *replEvaluator) constructMap(targetType reflect.Type, elts []ast.Expr) (any, error) {
+	value := reflect.MakeMapWithSize(targetType, len(elts))
+	for _, elt := range elts {
 		pair, ok := elt.(*ast.KeyValueExpr)
 		if !ok {
-			return nil, fmt.Errorf("map literals require key/value elements")
+			return nil, fmt.Errorf("%s literals require key/value elements", targetType)
 		}
 
 		keyValue, err := e.evalExpr(pair.Key)
@@ -221,20 +402,98 @@ func (e *replEvaluator) evalMapLiteral(lit *ast.CompositeLit) (map[string]any, e
 			return nil, err
 		}
 
-		key, err := coerceString(keyValue)
+		key, err := convertArg(keyValue, targetType.Key())
 		if err != nil {
 			return nil, err
 		}
 
-		value, err := e.evalExpr(pair.Value)
+		entryValue, err := e.evalValueForType(pair.Value, targetType.Elem())
 		if err != nil {
 			return nil, err
 		}
 
-		values[key] = value
+		value.SetMapIndex(key, entryValue)
 	}
 
-	return values, nil
+	return value.Interface(), nil
+}
+
+func (e *replEvaluator) constructSlice(targetType reflect.Type, elts []ast.Expr) (any, error) {
+	value := reflect.MakeSlice(targetType, len(elts), len(elts))
+	for idx, elt := range elts {
+		item, err := e.evalValueForType(elt, targetType.Elem())
+		if err != nil {
+			return nil, err
+		}
+
+		value.Index(idx).Set(item)
+	}
+
+	return value.Interface(), nil
+}
+
+func (e *replEvaluator) constructArray(targetType reflect.Type, elts []ast.Expr) (any, error) {
+	value := reflect.New(targetType).Elem()
+	if len(elts) > value.Len() {
+		return nil, fmt.Errorf("too many values for %s", targetType)
+	}
+
+	for idx, elt := range elts {
+		item, err := e.evalValueForType(elt, targetType.Elem())
+		if err != nil {
+			return nil, err
+		}
+
+		value.Index(idx).Set(item)
+	}
+
+	return value.Interface(), nil
+}
+
+// evalValueForType evaluates an element expression and converts it to the
+// requested target type. Composite literals with an elided type (valid inside
+// a typed slice or struct literal) are constructed against targetType.
+func (e *replEvaluator) evalValueForType(expr ast.Expr, targetType reflect.Type) (reflect.Value, error) {
+	if lit, ok := expr.(*ast.CompositeLit); ok && lit.Type == nil {
+		if targetType.Kind() == reflect.Pointer {
+			elemValue, err := e.constructLiteral(targetType.Elem(), lit.Elts)
+			if err != nil {
+				return reflect.Value{}, err
+			}
+
+			pointer := reflect.New(targetType.Elem())
+			pointer.Elem().Set(reflect.ValueOf(elemValue))
+			return pointer, nil
+		}
+
+		value, err := e.constructLiteral(targetType, lit.Elts)
+		if err != nil {
+			return reflect.Value{}, err
+		}
+
+		return reflect.ValueOf(value), nil
+	}
+
+	value, err := e.evalExpr(expr)
+	if err != nil {
+		return reflect.Value{}, err
+	}
+
+	return convertArg(value, targetType)
+}
+
+func arrayLength(expr ast.Expr) (int, error) {
+	lit, ok := expr.(*ast.BasicLit)
+	if !ok || lit.Kind != token.INT {
+		return 0, fmt.Errorf("array length must be an integer literal")
+	}
+
+	length, err := strconv.Atoi(lit.Value)
+	if err != nil {
+		return 0, err
+	}
+
+	return length, nil
 }
 
 func (e *replEvaluator) evalUnary(expr *ast.UnaryExpr) (any, error) {
@@ -255,36 +514,17 @@ func (e *replEvaluator) evalUnary(expr *ast.UnaryExpr) (any, error) {
 		}
 	case token.ADD:
 		return value, nil
+	case token.AND:
+		reflected := reflect.ValueOf(value)
+		if !reflected.IsValid() {
+			return nil, fmt.Errorf("cannot take the address of nil")
+		}
+
+		pointer := reflect.New(reflected.Type())
+		pointer.Elem().Set(reflected)
+		return pointer.Interface(), nil
 	default:
 		return nil, fmt.Errorf("unsupported unary operator: %s", expr.Op.String())
-	}
-}
-
-func (e *replEvaluator) evalIndex(target ast.Expr, indices []ast.Expr) (any, error) {
-	value, err := e.evalExpr(target)
-	if err != nil {
-		return nil, err
-	}
-
-	typeArgs := make([]reflect.Type, 0, len(indices))
-	for _, index := range indices {
-		typ, err := e.evalType(index)
-		if err != nil {
-			return nil, err
-		}
-
-		typeArgs = append(typeArgs, typ)
-	}
-
-	switch typed := value.(type) {
-	case replOverloadedCallable:
-		if typed.bind == nil {
-			return nil, fmt.Errorf("value does not accept type arguments")
-		}
-
-		return typed.bind(typeArgs)
-	default:
-		return nil, fmt.Errorf("value does not accept type arguments")
 	}
 }
 
@@ -446,13 +686,34 @@ func invokeCallable(callee any, args []any) (any, error) {
 	switch typed := callee.(type) {
 	case replCallable:
 		return typed(args)
-	case replOverloadedCallable:
-		return typed.call(args)
+	case reflect.Type:
+		return convertToType(typed, args)
 	case reflect.Value:
 		return callReflect(typed, args)
 	default:
 		return callReflect(reflect.ValueOf(callee), args)
 	}
+}
+
+// convertToType applies a Go type conversion such as
+// sql.ConditionGroupOp("AND") or sql.IdType(1).
+func convertToType(target reflect.Type, args []any) (any, error) {
+	if len(args) != 1 {
+		return nil, fmt.Errorf("conversion to %s expects exactly 1 arg", target)
+	}
+
+	if target.Kind() == reflect.Slice && target.Elem().Kind() == reflect.Uint8 {
+		if text, ok := args[0].(string); ok {
+			return reflect.ValueOf([]byte(text)).Convert(target).Interface(), nil
+		}
+	}
+
+	value, err := convertArg(args[0], target)
+	if err != nil {
+		return nil, err
+	}
+
+	return value.Interface(), nil
 }
 
 func callReflect(fn reflect.Value, args []any) (any, error) {
@@ -559,6 +820,17 @@ func convertArg(arg any, target reflect.Type) (reflect.Value, error) {
 
 	if target.Kind() == reflect.Interface && value.Type().Implements(target) {
 		return value, nil
+	}
+
+	// Go methods such as (*sql.Condition).ToSQL are declared on the pointer
+	// receiver, so a literal like sql.Condition{...} only satisfies the
+	// interface through its address. Auto-address such values.
+	if target.Kind() == reflect.Interface {
+		pointer := reflect.New(value.Type())
+		pointer.Elem().Set(value)
+		if pointer.Type().Implements(target) {
+			return pointer, nil
+		}
 	}
 
 	if target.Kind() == reflect.Interface && target.NumMethod() == 0 {
@@ -702,34 +974,14 @@ func lookupMethod(receiver any, name string) (any, bool) {
 
 func (e *replEvaluator) newRepoNamespace() replNamespace {
 	return replNamespace{
-		"Find": replOverloadedCallable{
-			call: replCallable(e.callRepoFind),
-			bind: e.bindRepoFind,
-		},
-		"FindOne": replOverloadedCallable{
-			call: replCallable(e.callRepoFindOne),
-			bind: e.bindRepoFindOne,
-		},
-		"Count": replOverloadedCallable{
-			call: replCallable(e.callRepoCount),
-			bind: e.bindRepoCount,
-		},
-		"Exists": replOverloadedCallable{
-			call: replCallable(e.callRepoExists),
-			bind: e.bindRepoExists,
-		},
-		"Insert": replOverloadedCallable{
-			call: replCallable(e.callRepoInsert),
-			bind: e.bindRepoInsert,
-		},
-		"Update": replOverloadedCallable{
-			call: replCallable(e.callRepoUpdate),
-			bind: e.bindRepoUpdate,
-		},
-		"Delete": replOverloadedCallable{
-			call: replCallable(e.callRepoDelete),
-			bind: e.bindRepoDelete,
-		},
+		"Find":    replCallable(e.callRepoFind),
+		"FindAll": replCallable(e.callRepoFindAll),
+		"FindOne": replCallable(e.callRepoFindOne),
+		"Count":   replCallable(e.callRepoCount),
+		"Exists":  replCallable(e.callRepoExists),
+		"Insert":  replCallable(e.callRepoInsert),
+		"Update":  replCallable(e.callRepoUpdate),
+		"Delete":  replCallable(e.callRepoDelete),
 		"Preview": replCallable(e.callRepoPreview),
 		"SQL":     replCallable(e.callRepoPreview),
 		"Tables":  replCallable(e.callRepoTables),
@@ -787,6 +1039,16 @@ func newPGNamespace() replNamespace {
 			return pgsql.UpdateTable(table), nil
 		}),
 	)
+	namespace["SelectFields"] = any(pgsql.SelectFields)
+	namespace["SelectRefs"] = any(pgsql.SelectRefs)
+	namespace["InsertRows"] = any(pgsql.InsertRows)
+	namespace["All"] = any(pgsql.All)
+	namespace["FindBy"] = any(pgsql.FindBy)
+	namespace["FindByCond"] = any(pgsql.FindByCond)
+	namespace["Create"] = any(pgsql.Create)
+	namespace["UpdateAll"] = any(pgsql.UpdateAll)
+	namespace["DeleteById"] = any(pgsql.DeleteById)
+	namespace["ExistsWhere"] = any(pgsql.ExistsWhere)
 	namespace["SubQuery"] = any(pgsql.SubQuery)
 	namespace["ExistsQuery"] = any(pgsql.ExistsQuery)
 	namespace["NotExistsQuery"] = any(pgsql.NotExistsQuery)
@@ -817,6 +1079,16 @@ func newMySQLNamespace() replNamespace {
 			return mysqlsql.UpdateTable(table), nil
 		}),
 	)
+	namespace["SelectFields"] = any(mysqlsql.SelectFields)
+	namespace["SelectRefs"] = any(mysqlsql.SelectRefs)
+	namespace["InsertRows"] = any(mysqlsql.InsertRows)
+	namespace["All"] = any(mysqlsql.All)
+	namespace["FindBy"] = any(mysqlsql.FindBy)
+	namespace["FindByCond"] = any(mysqlsql.FindByCond)
+	namespace["Create"] = any(mysqlsql.Create)
+	namespace["UpdateAll"] = any(mysqlsql.UpdateAll)
+	namespace["DeleteById"] = any(mysqlsql.DeleteById)
+	namespace["ExistsWhere"] = any(mysqlsql.ExistsWhere)
 	namespace["SubQuery"] = any(mysqlsql.SubQuery)
 	namespace["ExistsQuery"] = any(mysqlsql.ExistsQuery)
 	namespace["NotExistsQuery"] = any(mysqlsql.NotExistsQuery)
@@ -847,6 +1119,16 @@ func newSQLiteNamespace() replNamespace {
 			return sqlitesql.UpdateTable(table), nil
 		}),
 	)
+	namespace["SelectFields"] = any(sqlitesql.SelectFields)
+	namespace["SelectRefs"] = any(sqlitesql.SelectRefs)
+	namespace["InsertRows"] = any(sqlitesql.InsertRows)
+	namespace["All"] = any(sqlitesql.All)
+	namespace["FindBy"] = any(sqlitesql.FindBy)
+	namespace["FindByCond"] = any(sqlitesql.FindByCond)
+	namespace["Create"] = any(sqlitesql.Create)
+	namespace["UpdateAll"] = any(sqlitesql.UpdateAll)
+	namespace["DeleteById"] = any(sqlitesql.DeleteById)
+	namespace["ExistsWhere"] = any(sqlitesql.ExistsWhere)
 	namespace["SubQuery"] = any(sqlitesql.SubQuery)
 	namespace["ExistsQuery"] = any(sqlitesql.ExistsQuery)
 	namespace["NotExistsQuery"] = any(sqlitesql.NotExistsQuery)
@@ -874,68 +1156,153 @@ func newModelsNamespace() replNamespace {
 }
 
 func newBuilderNamespace(selectFn any, selectColumnsFn any, insertFn any, updateFn any, deleteFn any, deleteFromFn replCallable, updateTableFn replCallable) replNamespace {
-	return replNamespace{
+	namespace := replNamespace{
 		"Select":        selectFn,
 		"SelectColumns": selectColumnsFn,
+		"SelectFields":  any(reposql.SelectFields),
+		"SelectRefs":    any(reposql.SelectRefs),
 		"Insert":        insertFn,
+		"InsertRows":    any(reposql.InsertRows),
 		"Update":        updateFn,
 		"Delete":        deleteFn,
 		"DeleteFrom":    deleteFromFn,
 		"UpdateTable":   updateTableFn,
-		"TableOf":       any(reposql.TableOf),
-		"TableAlias":    any(reposql.TableAlias),
-		"Ref":           any(reposql.Ref),
-		"RefAs":         any(reposql.RefAs),
-		"Field":         any(reposql.Field),
-		"Col":           any(reposql.Col),
-		"Ident":         any(reposql.Ident),
-		"Eq":            any(reposql.Eq),
-		"NotEq":         any(reposql.NotEq),
-		"Gt":            any(reposql.Gt),
-		"Gte":           any(reposql.Gte),
-		"Lt":            any(reposql.Lt),
-		"Lte":           any(reposql.Lte),
-		"Like":          any(reposql.Like),
-		"NotLike":       any(reposql.NotLike),
-		"ILike":         any(reposql.ILike),
-		"NotILike":      any(reposql.NotILike),
-		"AllOf":         any(reposql.AllOf),
-		"AnyOf":         any(reposql.AnyOf),
-		"Not":           any(reposql.Not),
-		"IsNull":        any(reposql.IsNull),
-		"IsNotNull":     any(reposql.IsNotNull),
-		"Between":       any(reposql.Between),
-		"NotBetween":    any(reposql.NotBetween),
-		"HCond":         any(reposql.HCond),
-		"Compare":       any(reposql.Compare),
-		"FieldEq":       any(reposql.FieldEq),
-		"FieldNotEq":    any(reposql.FieldNotEq),
-		"FieldGt":       any(reposql.FieldGt),
-		"FieldGte":      any(reposql.FieldGte),
-		"FieldLt":       any(reposql.FieldLt),
-		"FieldLte":      any(reposql.FieldLte),
-		"FieldLike":     any(reposql.FieldLike),
-		"FieldILike":    any(reposql.FieldILike),
-		"MatchFields":   any(reposql.MatchFields),
-		"HCondRef":      any(reposql.HCondRef),
-		"HCondTable":    any(reposql.HCondTable),
-		"MatchTable":    any(reposql.MatchTable),
-		"RawCondition":  any(reposql.RawCondition),
-		"In":            replCallable(callInCondition),
-		"NotIn":         replCallable(callNotInCondition),
-		"Expr":          any(reposql.Expr),
-		"ExprNamed":     any(reposql.ExprNamed),
-		"Raw":           any(reposql.Raw),
-		"Column":        any(reposql.Column),
-		"Excluded":      any(reposql.Excluded),
-		"Default":       any(reposql.Default),
-		"Func":          any(reposql.Func),
-		"Op":            any(reposql.Op),
-		"Cast":          any(reposql.Cast),
-		"Array":         any(reposql.Array),
-		"Any":           any(reposql.Any),
-		"AllExpr":       any(reposql.AllExpr),
+
+		"TableOf":     any(reposql.TableOf),
+		"TableAlias":  any(reposql.TableAlias),
+		"Ref":         any(reposql.Ref),
+		"RefAs":       any(reposql.RefAs),
+		"Field":       any(reposql.Field),
+		"Col":         any(reposql.Col),
+		"Ident":       any(reposql.Ident),
+		"TableFor":    any(reposql.TableFor),
+		"TableRefOf":  any(reposql.TableRefOf),
+		"FieldFor":    any(reposql.FieldFor),
+		"TableColumn": any(reposql.TableColumn),
+
+		"All":        any(reposql.All),
+		"FindBy":     any(reposql.FindBy),
+		"FindByCond": any(reposql.FindByCond),
+		"Create":     any(reposql.Create),
+		"UpdateAll":  any(reposql.UpdateAll),
+		"DeleteById": any(reposql.DeleteById),
+		"Exists":     any(reposql.Exists),
+
+		"ToH":    any(reposql.ToH),
+		"ToCent": any(reposql.ToCent),
+
+		"Eq":               any(reposql.Eq),
+		"NotEq":            any(reposql.NotEq),
+		"Gt":               any(reposql.Gt),
+		"Gte":              any(reposql.Gte),
+		"Lt":               any(reposql.Lt),
+		"Lte":              any(reposql.Lte),
+		"Like":             any(reposql.Like),
+		"NotLike":          any(reposql.NotLike),
+		"ILike":            any(reposql.ILike),
+		"NotILike":         any(reposql.NotILike),
+		"AllOf":            any(reposql.AllOf),
+		"AnyOf":            any(reposql.AnyOf),
+		"Not":              any(reposql.Not),
+		"IsNull":           any(reposql.IsNull),
+		"IsNotNull":        any(reposql.IsNotNull),
+		"Between":          any(reposql.Between),
+		"NotBetween":       any(reposql.NotBetween),
+		"ExistsQuery":      any(reposql.ExistsQuery),
+		"NotExistsQuery":   any(reposql.NotExistsQuery),
+		"HCond":            any(reposql.HCond),
+		"Compare":          any(reposql.Compare),
+		"FieldEq":          any(reposql.FieldEq),
+		"EqRef":            any(reposql.EqRef),
+		"FieldNotEq":       any(reposql.FieldNotEq),
+		"NotEqRef":         any(reposql.NotEqRef),
+		"FieldGt":          any(reposql.FieldGt),
+		"GtRef":            any(reposql.GtRef),
+		"FieldGte":         any(reposql.FieldGte),
+		"GteRef":           any(reposql.GteRef),
+		"FieldLt":          any(reposql.FieldLt),
+		"LtRef":            any(reposql.LtRef),
+		"FieldLte":         any(reposql.FieldLte),
+		"LteRef":           any(reposql.LteRef),
+		"FieldLike":        any(reposql.FieldLike),
+		"LikeRef":          any(reposql.LikeRef),
+		"FieldILike":       any(reposql.FieldILike),
+		"ILikeRef":         any(reposql.ILikeRef),
+		"MatchFields":      any(reposql.MatchFields),
+		"HCondRef":         any(reposql.HCondRef),
+		"HCondTable":       any(reposql.HCondTable),
+		"MatchTable":       any(reposql.MatchTable),
+		"RawCondition":     any(reposql.RawCondition),
+		"ArrayContains":    any(reposql.ArrayContains),
+		"ArrayContainedBy": any(reposql.ArrayContainedBy),
+		"ArrayOverlap":     any(reposql.ArrayOverlap),
+		"JSONGet":          any(reposql.JSONGet),
+		"JSONGetText":      any(reposql.JSONGetText),
+		"JSONPath":         any(reposql.JSONPath),
+		"JSONPathText":     any(reposql.JSONPathText),
+		"JSONContains":     any(reposql.JSONContains),
+		"JSONContainedBy":  any(reposql.JSONContainedBy),
+		"JSONHasKey":       any(reposql.JSONHasKey),
+		"JSONHasAnyKeys":   any(reposql.JSONHasAnyKeys),
+		"JSONHasAllKeys":   any(reposql.JSONHasAllKeys),
+		"In":               replCallable(callInCondition),
+		"NotIn":            replCallable(callNotInCondition),
+
+		"Expr":      any(reposql.Expr),
+		"ExprNamed": any(reposql.ExprNamed),
+		"Raw":       any(reposql.Raw),
+		"Column":    any(reposql.Column),
+		"Excluded":  any(reposql.Excluded),
+		"Default":   any(reposql.Default),
+		"Func":      any(reposql.Func),
+		"Op":        any(reposql.Op),
+		"Cast":      any(reposql.Cast),
+		"Array":     any(reposql.Array),
+		"Any":       any(reposql.Any),
+		"AllExpr":   any(reposql.AllExpr),
+		"ExprFrom":  any(reposql.ExprFrom),
+		"SubQuery":  any(reposql.SubQuery),
 	}
+
+	registerSQLTypes(namespace)
+	return namespace
+}
+
+// registerSQLTypes exposes the constructible types of lib/sql so the REPL can
+// evaluate composite literals such as sql.Condition{...} or sql.NullCond{...}.
+func registerSQLTypes(namespace replNamespace) {
+	types := []reflect.Type{
+		reflect.TypeOf(reposql.H(nil)),
+		reflect.TypeOf(reposql.NamedArgs(nil)),
+		reflect.TypeOf(reposql.IdType(0)),
+		reflect.TypeOf(reposql.PriceCent(0)),
+		reflect.TypeOf(reposql.SQLExpr{}),
+		reflect.TypeOf(reposql.Condition{}),
+		reflect.TypeOf(reposql.CompareCond{}),
+		reflect.TypeOf(reposql.ConditionGroupOp("")),
+		reflect.TypeOf(reposql.ConditionGroup{}),
+		reflect.TypeOf(reposql.EmptyCond{}),
+		reflect.TypeOf(reposql.AndCond{}),
+		reflect.TypeOf(reposql.OrCond{}),
+		reflect.TypeOf(reposql.MapCond{}),
+		reflect.TypeOf(reposql.BoolCond{}),
+		reflect.TypeOf(reposql.NotCond{}),
+		reflect.TypeOf(reposql.BetweenCond{}),
+		reflect.TypeOf(reposql.NullCond{}),
+		reflect.TypeOf(reposql.ExistsCond{}),
+		reflect.TypeOf(reposql.Identifier{}),
+		reflect.TypeOf(reposql.TableRef{}),
+		reflect.TypeOf(reposql.ColumnRef{}),
+	}
+
+	for _, typ := range types {
+		namespace[typ.Name()] = typ
+	}
+
+	namespace["TableName"] = reflect.TypeOf(reposql.TableRef{})
+	namespace["FieldName"] = reflect.TypeOf(reposql.ColumnRef{})
+	namespace["And"] = reposql.And
+	namespace["Or"] = reposql.Or
 }
 
 func callInCondition(args []any) (any, error) {
@@ -983,6 +1350,20 @@ func (e *replEvaluator) callRepoFind(args []any) (any, error) {
 	return repo.FindMaps(e.db, stmt)
 }
 
+func (e *replEvaluator) callRepoFindAll(args []any) (any, error) {
+	if len(args) != 1 {
+		return nil, fmt.Errorf("repo.FindAll expects exactly 1 table argument")
+	}
+
+	table, err := coerceTable(args[0])
+	if err != nil {
+		return nil, err
+	}
+
+	stmt := reposql.SelectColumns(table.AllFields().String()).FromTable(table)
+	return repo.FindMaps(e.db, stmt)
+}
+
 func (e *replEvaluator) callRepoFindOne(args []any) (any, error) {
 	stmt, err := e.buildSelectStmt(args)
 	if err != nil {
@@ -990,38 +1371,6 @@ func (e *replEvaluator) callRepoFindOne(args []any) (any, error) {
 	}
 
 	return repo.FindOneMap(e.db, stmt)
-}
-
-func (e *replEvaluator) bindRepoFind(typeArgs []reflect.Type) (any, error) {
-	if len(typeArgs) != 1 {
-		return nil, fmt.Errorf("repo.Find expects exactly 1 type argument")
-	}
-
-	modelType := typeArgs[0]
-	return replCallable(func(args []any) (any, error) {
-		stmt, err := e.buildSelectStmtForModel(modelType, args)
-		if err != nil {
-			return nil, err
-		}
-
-		return repo.FindByType(e.db, stmt, modelType)
-	}), nil
-}
-
-func (e *replEvaluator) bindRepoFindOne(typeArgs []reflect.Type) (any, error) {
-	if len(typeArgs) != 1 {
-		return nil, fmt.Errorf("repo.FindOne expects exactly 1 type argument")
-	}
-
-	modelType := typeArgs[0]
-	return replCallable(func(args []any) (any, error) {
-		stmt, err := e.buildSelectStmtForModel(modelType, args)
-		if err != nil {
-			return nil, err
-		}
-
-		return repo.FindOneByType(e.db, stmt, modelType)
-	}), nil
 }
 
 func (e *replEvaluator) callRepoCount(args []any) (any, error) {
@@ -1033,22 +1382,6 @@ func (e *replEvaluator) callRepoCount(args []any) (any, error) {
 	return repo.Count(e.db, stmt)
 }
 
-func (e *replEvaluator) bindRepoCount(typeArgs []reflect.Type) (any, error) {
-	if len(typeArgs) != 1 {
-		return nil, fmt.Errorf("repo.Count expects exactly 1 type argument")
-	}
-
-	modelType := typeArgs[0]
-	return replCallable(func(args []any) (any, error) {
-		stmt, err := e.buildCountStmtForModel(modelType, args)
-		if err != nil {
-			return nil, err
-		}
-
-		return repo.Count(e.db, stmt)
-	}), nil
-}
-
 func (e *replEvaluator) callRepoExists(args []any) (any, error) {
 	stmt, err := e.buildCountStmt(args)
 	if err != nil {
@@ -1056,22 +1389,6 @@ func (e *replEvaluator) callRepoExists(args []any) (any, error) {
 	}
 
 	return repo.Exists(e.db, stmt)
-}
-
-func (e *replEvaluator) bindRepoExists(typeArgs []reflect.Type) (any, error) {
-	if len(typeArgs) != 1 {
-		return nil, fmt.Errorf("repo.Exists expects exactly 1 type argument")
-	}
-
-	modelType := typeArgs[0]
-	return replCallable(func(args []any) (any, error) {
-		stmt, err := e.buildCountStmtForModel(modelType, args)
-		if err != nil {
-			return nil, err
-		}
-
-		return repo.Exists(e.db, stmt)
-	}), nil
 }
 
 func (e *replEvaluator) callRepoInsert(args []any) (any, error) {
@@ -1083,22 +1400,6 @@ func (e *replEvaluator) callRepoInsert(args []any) (any, error) {
 	return repo.InsertMap(e.db, stmt)
 }
 
-func (e *replEvaluator) bindRepoInsert(typeArgs []reflect.Type) (any, error) {
-	if len(typeArgs) != 1 {
-		return nil, fmt.Errorf("repo.Insert expects exactly 1 type argument")
-	}
-
-	modelType := typeArgs[0]
-	return replCallable(func(args []any) (any, error) {
-		stmt, err := e.buildInsertStmtForModel(modelType, args)
-		if err != nil {
-			return nil, err
-		}
-
-		return repo.InsertByType(e.db, stmt, modelType)
-	}), nil
-}
-
 func (e *replEvaluator) callRepoUpdate(args []any) (any, error) {
 	stmt, err := e.buildUpdateStmt(args)
 	if err != nil {
@@ -1108,22 +1409,6 @@ func (e *replEvaluator) callRepoUpdate(args []any) (any, error) {
 	return repo.UpdateAffected(e.db, stmt)
 }
 
-func (e *replEvaluator) bindRepoUpdate(typeArgs []reflect.Type) (any, error) {
-	if len(typeArgs) != 1 {
-		return nil, fmt.Errorf("repo.Update expects exactly 1 type argument")
-	}
-
-	modelType := typeArgs[0]
-	return replCallable(func(args []any) (any, error) {
-		stmt, err := e.buildUpdateStmtForModel(modelType, args)
-		if err != nil {
-			return nil, err
-		}
-
-		return repo.UpdateAffected(e.db, stmt)
-	}), nil
-}
-
 func (e *replEvaluator) callRepoDelete(args []any) (any, error) {
 	stmt, err := e.buildDeleteStmt(args)
 	if err != nil {
@@ -1131,22 +1416,6 @@ func (e *replEvaluator) callRepoDelete(args []any) (any, error) {
 	}
 
 	return repo.DeleteAffected(e.db, stmt)
-}
-
-func (e *replEvaluator) bindRepoDelete(typeArgs []reflect.Type) (any, error) {
-	if len(typeArgs) != 1 {
-		return nil, fmt.Errorf("repo.Delete expects exactly 1 type argument")
-	}
-
-	modelType := typeArgs[0]
-	return replCallable(func(args []any) (any, error) {
-		stmt, err := e.buildDeleteStmtForModel(modelType, args)
-		if err != nil {
-			return nil, err
-		}
-
-		return repo.DeleteAffected(e.db, stmt)
-	}), nil
 }
 
 func (e *replEvaluator) callRepoPreview(args []any) (any, error) {
@@ -1249,60 +1518,6 @@ func (e *replEvaluator) buildSelectStmt(args []any) (reposql.Stmt, error) {
 	return builder, nil
 }
 
-func (e *replEvaluator) buildSelectStmtForModel(modelType reflect.Type, args []any) (reposql.Stmt, error) {
-	if len(args) > 0 {
-		if _, err := coerceTable(args[0]); err == nil {
-			return e.buildSelectStmt(args)
-		}
-	}
-
-	table, ok := tableForModelType(modelType)
-	if !ok {
-		return e.buildSelectStmt(args)
-	}
-
-	return buildSelectStmtWithModel(table, modelType, args)
-}
-
-func buildSelectStmtWithTable(table reposql.TableName, args []any) (reposql.Stmt, error) {
-	if len(args) == 0 {
-		return reposql.SelectColumns(table.AllFields().String()).FromTable(table), nil
-	}
-
-	if len(args) == 1 {
-		if stmt, err := coerceStmt(args[0]); err == nil {
-			return bindStmtTable(table, stmt)
-		}
-
-		if cond, err := coerceCond(args[0]); err == nil {
-			return reposql.SelectColumns(table.AllFields().String()).FromTable(table).Where(cond), nil
-		}
-
-		fields, err := coerceFields(table, args[0])
-		if err != nil {
-			return nil, err
-		}
-
-		return reposql.SelectColumns(fields...).FromTable(table), nil
-	}
-
-	if len(args) == 2 {
-		fields, err := coerceFields(table, args[0])
-		if err != nil {
-			return nil, err
-		}
-
-		cond, err := coerceCond(args[1])
-		if err != nil {
-			return nil, err
-		}
-
-		return reposql.SelectColumns(fields...).FromTable(table).Where(cond), nil
-	}
-
-	return nil, fmt.Errorf("too many args for repo.Find or repo.FindOne")
-}
-
 func (e *replEvaluator) buildCountStmt(args []any) (reposql.Stmt, error) {
 	if len(args) == 0 {
 		return nil, fmt.Errorf("repo.Count and repo.Exists require at least 1 arg")
@@ -1335,42 +1550,6 @@ func (e *replEvaluator) buildCountStmt(args []any) (reposql.Stmt, error) {
 	}
 
 	cond, err := coerceCond(args[1])
-	if err != nil {
-		return nil, err
-	}
-
-	return reposql.SelectColumns("count(*)").FromTable(table).Where(cond), nil
-}
-
-func (e *replEvaluator) buildCountStmtForModel(modelType reflect.Type, args []any) (reposql.Stmt, error) {
-	if len(args) > 0 {
-		if _, err := coerceTable(args[0]); err == nil {
-			return e.buildCountStmt(args)
-		}
-	}
-
-	table, ok := tableForModelType(modelType)
-	if !ok {
-		return e.buildCountStmt(args)
-	}
-
-	return buildCountStmtWithTable(table, args)
-}
-
-func buildCountStmtWithTable(table reposql.TableName, args []any) (reposql.Stmt, error) {
-	if len(args) == 0 {
-		return reposql.SelectColumns("count(*)").FromTable(table), nil
-	}
-
-	if len(args) != 1 {
-		return nil, fmt.Errorf("repo.Count and repo.Exists accept table+cond or stmt")
-	}
-
-	if stmt, err := coerceStmt(args[0]); err == nil {
-		return bindStmtTable(table, stmt)
-	}
-
-	cond, err := coerceCond(args[0])
 	if err != nil {
 		return nil, err
 	}
@@ -1414,110 +1593,17 @@ func (e *replEvaluator) buildInsertStmt(args []any) (reposql.Stmt, error) {
 	return builder, nil
 }
 
-func buildSelectStmtWithModel(table reposql.TableName, modelType reflect.Type, args []any) (reposql.Stmt, error) {
-	fields := defaultSelectFieldsForModel(table, modelType)
-
-	if len(args) == 0 {
-		return reposql.SelectColumns(fields...).FromTable(table), nil
-	}
-
-	if len(args) == 1 {
-		if stmt, err := coerceStmt(args[0]); err == nil {
-			return bindStmtTable(table, stmt)
-		}
-
-		if cond, err := coerceCond(args[0]); err == nil {
-			return reposql.SelectColumns(fields...).FromTable(table).Where(cond), nil
-		}
-
-		explicitFields, err := coerceFields(table, args[0])
-		if err != nil {
-			return nil, err
-		}
-
-		return reposql.SelectColumns(explicitFields...).FromTable(table), nil
-	}
-
-	if len(args) == 2 {
-		explicitFields, err := coerceFields(table, args[0])
-		if err != nil {
-			return nil, err
-		}
-
-		cond, err := coerceCond(args[1])
-		if err != nil {
-			return nil, err
-		}
-
-		return reposql.SelectColumns(explicitFields...).FromTable(table).Where(cond), nil
-	}
-
-	return nil, fmt.Errorf("too many args for repo.Find or repo.FindOne")
-}
-
-func (e *replEvaluator) buildInsertStmtForModel(modelType reflect.Type, args []any) (reposql.Stmt, error) {
-	if len(args) > 0 {
-		if _, err := coerceTable(args[0]); err == nil {
-			return e.buildInsertStmt(args)
-		}
-	}
-
-	table, ok := tableForModelType(modelType)
-	if !ok {
-		return e.buildInsertStmt(args)
-	}
-
-	return buildInsertStmtWithTable(table, args)
-}
-
-func buildInsertStmtWithTable(table reposql.TableName, args []any) (reposql.Stmt, error) {
-	if len(args) == 0 {
-		return nil, fmt.Errorf("repo.Insert requires at least 1 arg")
-	}
-
-	if len(args) == 1 {
-		if stmt, err := coerceStmt(args[0]); err == nil {
-			return bindInsertStmtTable(table, stmt)
-		}
-
-		values, err := coerceH(args[0])
-		if err != nil {
-			return nil, fmt.Errorf("repo.Insert accepts stmt or table, values, [returning]")
-		}
-
-		return reposql.Insert(values).IntoTable(table), nil
-	}
-
-	if len(args) == 2 {
-		values, err := coerceH(args[0])
-		if err != nil {
-			return nil, fmt.Errorf("repo.Insert accepts stmt or table, values, [returning]")
-		}
-
-		builder := reposql.Insert(values).IntoTable(table)
-		fields, err := coerceFields(table, args[1])
-		if err != nil {
-			return nil, err
-		}
-
-		builder.Returning(fields...)
-		return builder, nil
-	}
-
-	return nil, fmt.Errorf("repo.Insert accepts stmt or table, values, [returning]")
-}
-
 func (e *replEvaluator) buildUpdateStmt(args []any) (reposql.Stmt, error) {
-	if len(args) == 0 {
-		return nil, fmt.Errorf("repo.Update requires at least 1 arg")
-	}
-
-	if len(args) == 1 {
-		return coerceStmt(args[0])
-	}
-
+	// repo.Update always takes three args: a prebuilt statement could carry no
+	// condition and rewrite the whole table without the explicit true.
 	if len(args) != 3 {
-		return nil, fmt.Errorf("repo.Update accepts stmt or table, values, cond|true")
+		if len(args) == 2 {
+			if _, err := coerceTable(args[0]); err == nil {
+				return nil, fmt.Errorf("repo.Update full-table update requires true as the last arg")
+			}
+		}
+
+		return nil, fmt.Errorf("repo.Update expects table, values, id|cond|true")
 	}
 
 	table, err := coerceTable(args[0])
@@ -1531,6 +1617,13 @@ func (e *replEvaluator) buildUpdateStmt(args []any) (reposql.Stmt, error) {
 	}
 
 	builder := reposql.UpdateTable(table).Set(values)
+
+	// An integer argument is the row id, so repo.Update("posts", vals, 1)
+	// updates the row whose id column equals it.
+	if id, err := coerceInt64(args[2]); err == nil {
+		return builder.Where(reposql.FieldEq(table.Field("id"), id)), nil
+	}
+
 	if allowAll, ok := args[2].(bool); ok {
 		if !allowAll {
 			return nil, fmt.Errorf("repo.Update full-table update requires true as the last arg")
@@ -1548,81 +1641,17 @@ func (e *replEvaluator) buildUpdateStmt(args []any) (reposql.Stmt, error) {
 	return builder, nil
 }
 
-func (e *replEvaluator) buildUpdateStmtForModel(modelType reflect.Type, args []any) (reposql.Stmt, error) {
-	if len(args) > 0 {
-		if _, err := coerceTable(args[0]); err == nil {
-			return e.buildUpdateStmt(args)
-		}
-	}
-
-	table, ok := tableForModelType(modelType)
-	if !ok {
-		return e.buildUpdateStmt(args)
-	}
-
-	return buildUpdateStmtWithTable(table, args)
-}
-
-func buildUpdateStmtWithTable(table reposql.TableName, args []any) (reposql.Stmt, error) {
-	if len(args) == 0 {
-		return nil, fmt.Errorf("repo.Update requires at least 1 arg")
-	}
-
-	if len(args) == 1 {
-		stmt, err := coerceStmt(args[0])
-		if err != nil {
-			return nil, fmt.Errorf("repo.Update accepts stmt or table, values, cond|true")
-		}
-
-		if stmt.TableName() == "" {
-			return nil, fmt.Errorf("repo.Update stmt must already be bound to a table")
-		}
-
-		return stmt, nil
-	}
-
-	if len(args) != 2 {
-		return nil, fmt.Errorf("repo.Update accepts stmt or table, values, cond|true")
-	}
-
-	values, err := coerceH(args[0])
-	if err != nil {
-		return nil, err
-	}
-
-	builder := reposql.UpdateTable(table).Set(values)
-	if allowAll, ok := args[1].(bool); ok {
-		if !allowAll {
-			return nil, fmt.Errorf("repo.Update full-table update requires true as the last arg")
-		}
-
-		return builder, nil
-	}
-
-	cond, err := coerceCond(args[1])
-	if err != nil {
-		return nil, err
-	}
-
-	builder.Where(cond)
-	return builder, nil
-}
-
 func (e *replEvaluator) buildDeleteStmt(args []any) (reposql.Stmt, error) {
-	if len(args) == 0 {
-		return nil, fmt.Errorf("repo.Delete requires at least 1 arg")
-	}
-
-	if len(args) == 1 {
-		if stmt, err := coerceStmt(args[0]); err == nil {
-			return stmt, nil
+	// repo.Delete always takes two args: a prebuilt statement could carry no
+	// condition and delete the whole table without the explicit true.
+	if len(args) != 2 {
+		if len(args) == 1 {
+			if _, err := coerceTable(args[0]); err == nil {
+				return nil, fmt.Errorf("repo.Delete full-table delete requires true as the second arg")
+			}
 		}
 
-		return nil, fmt.Errorf("repo.Delete full-table delete requires true as the second arg")
-	}
-
-	if len(args) != 2 {
-		return nil, fmt.Errorf("repo.Delete accepts stmt or table, cond|true")
+		return nil, fmt.Errorf("repo.Delete expects table, id|cond|true")
 	}
 
 	table, err := coerceTable(args[0])
@@ -1631,6 +1660,13 @@ func (e *replEvaluator) buildDeleteStmt(args []any) (reposql.Stmt, error) {
 	}
 
 	builder := reposql.DeleteFrom(table)
+
+	// An integer argument is the row id, so repo.Delete("posts", 1) deletes the
+	// row whose id column equals it.
+	if id, err := coerceInt64(args[1]); err == nil {
+		return builder.Where(reposql.FieldEq(table.Field("id"), id)), nil
+	}
+
 	if allowAll, ok := args[1].(bool); ok {
 		if !allowAll {
 			return nil, fmt.Errorf("repo.Delete full-table delete requires true as the second arg")
@@ -1646,52 +1682,6 @@ func (e *replEvaluator) buildDeleteStmt(args []any) (reposql.Stmt, error) {
 
 	builder.Where(cond)
 	return builder, nil
-}
-
-func (e *replEvaluator) buildDeleteStmtForModel(modelType reflect.Type, args []any) (reposql.Stmt, error) {
-	if len(args) > 0 {
-		if _, err := coerceTable(args[0]); err == nil {
-			return e.buildDeleteStmt(args)
-		}
-	}
-
-	table, ok := tableForModelType(modelType)
-	if !ok {
-		return e.buildDeleteStmt(args)
-	}
-
-	return buildDeleteStmtWithTable(table, args)
-}
-
-func buildDeleteStmtWithTable(table reposql.TableName, args []any) (reposql.Stmt, error) {
-	if len(args) == 0 {
-		return nil, fmt.Errorf("repo.Delete requires at least 1 arg")
-	}
-
-	if len(args) == 1 {
-		if stmt, err := coerceStmt(args[0]); err == nil {
-			return bindStmtTable(table, stmt)
-		}
-
-		builder := reposql.DeleteFrom(table)
-		if allowAll, ok := args[0].(bool); ok {
-			if !allowAll {
-				return nil, fmt.Errorf("repo.Delete full-table delete requires true as the second arg")
-			}
-
-			return builder, nil
-		}
-
-		cond, err := coerceCond(args[0])
-		if err != nil {
-			return nil, fmt.Errorf("repo.Delete accepts stmt or table, cond|true")
-		}
-
-		builder.Where(cond)
-		return builder, nil
-	}
-
-	return nil, fmt.Errorf("repo.Delete accepts stmt or table, cond|true")
 }
 
 func coerceStmt(value any) (reposql.Stmt, error) {
@@ -1770,122 +1760,6 @@ func bindInsertStmtTable(table reposql.TableName, stmt reposql.Stmt) (reposql.St
 	return coerceStmt(bound)
 }
 
-func tableForModelType(modelType reflect.Type) (reposql.TableName, bool) {
-	if modelType == nil {
-		return reposql.TableName{}, false
-	}
-
-	for modelType.Kind() == reflect.Pointer {
-		modelType = modelType.Elem()
-	}
-
-	tableType := reflect.TypeOf((*reposql.Table)(nil)).Elem()
-	if modelType.Implements(tableType) {
-		value := reflect.Zero(modelType).Interface().(reposql.Table)
-		return reposql.TableFor(value), true
-	}
-
-	pointerType := reflect.PointerTo(modelType)
-	if pointerType.Implements(tableType) {
-		value := reflect.New(modelType).Interface().(reposql.Table)
-		return reposql.TableFor(value), true
-	}
-
-	return reposql.TableName{}, false
-}
-
-func defaultSelectFieldsForModel(table reposql.TableName, modelType reflect.Type) []string {
-	modelType, err := normalizeStructModelType(modelType)
-	if err != nil {
-		return []string{table.AllFields().String()}
-	}
-
-	fields := collectModelSelectFields(table, modelType)
-	if len(fields) == 0 {
-		return []string{table.AllFields().String()}
-	}
-
-	return fields
-}
-
-func normalizeStructModelType(modelType reflect.Type) (reflect.Type, error) {
-	if modelType == nil {
-		return nil, fmt.Errorf("model type cannot be nil")
-	}
-
-	for modelType.Kind() == reflect.Pointer {
-		modelType = modelType.Elem()
-	}
-
-	if modelType.Kind() != reflect.Struct {
-		return nil, fmt.Errorf("model type must be a struct or pointer to struct, got %s", modelType)
-	}
-
-	return modelType, nil
-}
-
-func collectModelSelectFields(table reposql.TableName, modelType reflect.Type) []string {
-	fields := make([]string, 0, modelType.NumField())
-	for idx := 0; idx < modelType.NumField(); idx++ {
-		field := modelType.Field(idx)
-		if field.PkgPath != "" {
-			continue
-		}
-
-		if field.Anonymous && field.Type.Kind() == reflect.Struct {
-			fields = append(fields, collectModelSelectFields(table, field.Type)...)
-			continue
-		}
-
-		column := parseDBTag(field.Tag.Get("db"))
-		if column == "-" {
-			continue
-		}
-		if column == "" {
-			column = toSnakeCase(field.Name)
-		}
-
-		fields = append(fields, table.Field(column).String())
-	}
-
-	return fields
-}
-
-func parseDBTag(tag string) string {
-	tag = strings.TrimSpace(tag)
-	if tag == "" {
-		return ""
-	}
-
-	parts := strings.Split(tag, ",")
-	return strings.TrimSpace(parts[0])
-}
-
-func toSnakeCase(value string) string {
-	if value == "" {
-		return value
-	}
-
-	var builder strings.Builder
-	runes := []rune(value)
-	for idx, rn := range runes {
-		if unicode.IsUpper(rn) {
-			if idx > 0 {
-				prev := runes[idx-1]
-				if unicode.IsLower(prev) || (idx+1 < len(runes) && unicode.IsLower(runes[idx+1])) {
-					builder.WriteByte('_')
-				}
-			}
-			builder.WriteRune(unicode.ToLower(rn))
-			continue
-		}
-
-		builder.WriteRune(rn)
-	}
-
-	return builder.String()
-}
-
 func coerceTableArg(args []any) (reposql.TableName, error) {
 	if len(args) != 1 {
 		return reposql.TableName{}, fmt.Errorf("expected exactly 1 table arg")
@@ -1910,12 +1784,23 @@ func coerceCond(value any) (reposql.CondBuilder, error) {
 		return nil, fmt.Errorf("condition cannot be nil")
 	}
 
-	cond, ok := value.(reposql.CondBuilder)
-	if !ok {
-		return nil, fmt.Errorf("expected condition, got %T", value)
+	if cond, ok := value.(reposql.CondBuilder); ok {
+		return cond, nil
 	}
 
-	return cond, nil
+	// Conditions such as sql.Condition declare ToSQL on the pointer receiver,
+	// so a composite literal value only satisfies CondBuilder through its
+	// address. Auto-address it, mirroring convertArg.
+	reflected := reflect.ValueOf(value)
+	if reflected.IsValid() {
+		pointer := reflect.New(reflected.Type())
+		pointer.Elem().Set(reflected)
+		if cond, ok := pointer.Interface().(reposql.CondBuilder); ok {
+			return cond, nil
+		}
+	}
+
+	return nil, fmt.Errorf("expected condition, got %T", value)
 }
 
 func coerceH(value any) (reposql.H, error) {

@@ -146,39 +146,55 @@ func (r repoREPL) printHelp() {
 
 Expressions:
   repo.FindOne("posts", sql.Eq("id", 1))
-  repo.FindOne[models.Post](pg.Select("id").Where(sql.Eq("id", 1)))
-  repo.Insert[models.Post](pg.H{"id": 1234})
-  repo.FindOne[Post](sql.Eq("id", 1))
-  repo.FindOne[struct{ ID int64; Title string }](pg.Select("id AS id, title AS title").From("posts").Where(sql.Eq("id", 1)))
-	repo.Find("posts", pg.Select("*").Where(sql.Eq("id", 1)))
+  repo.FindAll("posts")
+  repo.Find("posts", pg.Select("*").Where(sql.Eq("id", 1)))
   repo.Find("posts", sql.AllOf(sql.Eq("published", true), sql.Like("title", "%hello%")))
   repo.Insert("posts", pg.H{"title": "hello", "published": true})
   repo.Update("posts", pg.H{"published": false}, sql.Eq("id", 1))
+  repo.Update("posts", pg.H{"published": false}, 1)
   repo.Delete("posts", sql.Eq("id", 1))
+  repo.Delete("posts", 1)
   repo.Preview(pg.Select("*").From("posts").Where(sql.Eq("id", 1)))
   pg.Select("*").From("posts").Where(sql.Eq("id", 1))
 
 Available namespaces:
   repo, sql, pg, mysql, sqlite, models
 
+Composite literals:
+  struct types from lib/sql (sql.Condition{...}, sql.NullCond{...}, ...) accept
+  both positional and keyed fields, and & takes their address:
+    sql.Condition{"id", ">", 0}
+    &sql.Condition{Key: "id", Op: ">", Val: 0}
+    sql.BoolCond{Op: sql.Or, Conds: []sql.CondBuilder{sql.Eq("id", 1), sql.Eq("id", 2)}}
+    sql.InCond[int]{Column: "id", Values: []int{1, 2}}
+  typed slices and maps ([]int{...}, pg.H{...}, sql.NamedArgs{...}) are supported too
+
 Repo helpers:
   repo.Find(tableOrStmt, [cond])
+  repo.FindAll(table)
   repo.FindOne(tableOrStmt, [cond])
   repo.Count(tableOrStmt, [cond])
   repo.Exists(tableOrStmt, [cond])
   repo.Insert(tableOrStmt, [values], [returning])
-  repo.Update(tableOrStmt, [values], cond|true)
-  repo.Delete(tableOrStmt, cond|true)
+  repo.Update(table, values, id)
+  repo.Update(table, values, cond)
+  repo.Update(table, values, true)
+  repo.Delete(table, id)
+  repo.Delete(table, cond)
+  repo.Delete(table, true)
   repo.Preview(stmt)
   repo.Tables()
   repo.Driver()
 
 Notes:
-  update/delete without a condition require explicit true as the last argument
-	repo.Find/FindOne/Count/Exists also accept table + stmt and will bind the table when the stmt has no table yet
-  repo.Find[T]/FindOne[T] support anonymous struct type arguments and use struct scan instead of map results
-  when T implements TableName(), repo.Find[T]/FindOne[T] can infer the table and omit the first table argument
-  app/models types are also available as top-level type names such as Post
+  repo.Update always takes three args: table, values, then id|cond|true
+  repo.Delete always takes two args: table, then id|cond|true
+  neither accepts a prebuilt statement on its own
+  repo.Update(table, values, id) and repo.Delete(table, id) take an integer id and match the row whose id column equals it
+  repo.Find/FindOne/Count/Exists also accept table + stmt and will bind the table when the stmt has no table yet
+  repo.Find/FindOne/Count/Exists also take a prebuilt statement; model type arguments such as repo.Find[T](...) are not supported
+  app/models types are also available as top-level type names such as Post (e.g. inside composite literals)
+  composite literals may use positional fields (sql.Condition{"id", ">", 0}) or keyed fields (&sql.Condition{Key: "id", Op: ">", Val: 0}); sql.InCond[T]{...} and sql.NotInCond[T]{...} are supported too
   entering a builder expression directly prints the compiled SQL and args`)
 }
 

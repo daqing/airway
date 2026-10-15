@@ -9,6 +9,8 @@ const adminModelTemplate = `package models
 
 import (
 	"time"
+
+	"github.com/daqing/airway/lib/replreg"
 {{if .HasRefs}}	"github.com/daqing/airway/lib/repo"
 {{end}}	airwaysql "github.com/daqing/airway/lib/sql"
 )
@@ -32,7 +34,7 @@ func ({{.Name}}) Relations() map[string]repo.Relation {
 }
 {{end}}
 func init() {
-	registerREPLModel("{{.Name}}", {{.Name}}{})
+	replreg.Register("{{.Name}}", {{.Name}}{})
 }
 `
 
@@ -41,6 +43,7 @@ const adminAuthUserModelTemplate = `package models
 import (
 	"time"
 
+	"github.com/daqing/airway/lib/replreg"
 	airwaysql "github.com/daqing/airway/lib/sql"
 )
 
@@ -60,7 +63,7 @@ func (AdminUser) TableName() string {
 }
 
 func init() {
-	registerREPLModel("AdminUser", AdminUser{})
+	replreg.Register("AdminUser", AdminUser{})
 }
 `
 
@@ -69,6 +72,7 @@ const adminAuthSessionModelTemplate = `package models
 import (
 	"time"
 
+	"github.com/daqing/airway/lib/replreg"
 	airwaysql "github.com/daqing/airway/lib/sql"
 )
 
@@ -87,7 +91,7 @@ func (AdminSession) TableName() string {
 }
 
 func init() {
-	registerREPLModel("AdminSession", AdminSession{})
+	replreg.Register("AdminSession", AdminSession{})
 }
 `
 
