@@ -195,6 +195,15 @@ func TestMissingVendorHint(t *testing.T) {
 	})
 }
 
+func TestStartDevWithoutSources(t *testing.T) {
+	// Binary-only deployment: no frontend sources at all. StartDev must
+	// refuse (ErrSourcesMissing) so the server falls back to the embedded
+	// production bundle instead of serving permanent 500s.
+	if _, err := StartDev(t.TempDir(), nil); !errors.Is(err, ErrSourcesMissing) {
+		t.Fatalf("StartDev error = %v, want ErrSourcesMissing", err)
+	}
+}
+
 func TestScanMtimesIgnoresVendor(t *testing.T) {
 	dir := t.TempDir()
 	write := func(rel, content string) {

@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync/atomic"
@@ -57,6 +58,11 @@ func StartDev(root string, broadcast func(string)) (*DevServer, error) {
 	}
 	if err := checkVendor(root); err != nil {
 		return nil, err
+	}
+	// A binary-only deployment has no frontend sources to build or watch;
+	// refuse to start so the caller falls back to the embedded bundle.
+	if _, err := os.Stat(filepath.Join(root, EntryPoint)); err != nil {
+		return nil, ErrSourcesMissing
 	}
 	ctx, cerr := api.Context(options(root, false))
 	if cerr != nil {

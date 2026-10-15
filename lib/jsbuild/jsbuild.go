@@ -104,6 +104,14 @@ func options(root string, write bool) api.BuildOptions {
 // check for it to fail fast instead of continuing without a frontend.
 var ErrVendorMissing = fmt.Errorf("%s is missing; run `airway js:install` to fetch the %s dependencies", VendorDir, jspkg.ManifestFile)
 
+// ErrSourcesMissing is returned by StartDev when the frontend entry source
+// is absent — the binary-only deployment case (a minimal container image
+// ships the compiled app without frontend sources). There is nothing to
+// build or watch, so server boots should log it non-fatally and let the
+// asset routes fall back to the embedded production bundle instead of
+// serving permanent build-failure responses.
+var ErrSourcesMissing = fmt.Errorf("frontend source %s is unavailable", EntryPoint)
+
 // checkVendor fails fast when js.pkg.json declares dependencies but the
 // vendor directory they install into is absent — the freshly scaffolded
 // project case, where a build would otherwise drown in esbuild "Could not
