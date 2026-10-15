@@ -631,22 +631,60 @@ via `lib/replreg`). Inside a project, `airway repl` proxies to `go run . repl`
 automatically, so your project's models show up; outside a project only the
 framework's built-in models are visible.
 
-Commands: `help`, `driver`, `tables`, `exit`. Type a Go expression to evaluate
-it — builders print the compiled SQL, `repo.*` calls run against the database:
+Type `help` at the prompt for the full command reference (`driver` prints the
+connected driver, `tables` lists the database tables, `exit`/`quit` leaves).
+Everything else is a Go expression: builders print the compiled SQL, `repo.*`
+calls run against the database.
 
 ```text
+# builder expressions print the compiled SQL and args
+pg.Select("*").From("posts").Where(sql.Eq("id", 1))
+repo.Preview(pg.Select("*").From("posts").Where(sql.Eq("id", 1)))
+
+# table + condition
 repo.FindOne("posts", sql.Eq("id", 1))
-repo.Find[models.Post](pg.Select("id").Where(sql.Eq("id", 1)))
-repo.Insert[models.Post](pg.H{"id": 1234, "title": "hello"})
+repo.Find("posts", pg.Select("*").Where(sql.Eq("id", 1)))
+repo.Find("posts", sql.AllOf(sql.Eq("published", true), sql.Like("title", "%hello%")))
+repo.Insert("posts", pg.H{"title": "hello", "published": true})
 repo.Update("posts", pg.H{"published": false}, sql.Eq("id", 1))
 repo.Delete("posts", sql.Eq("id", 1))
-pg.Select("*").From("posts").Where(sql.Eq("id", 1))
+
+# typed calls (models from the binary, or anonymous structs)
+repo.FindOne[models.Post](pg.Select("id").Where(sql.Eq("id", 1)))
+repo.FindOne[Post](sql.Eq("id", 1))
+repo.FindOne[struct{ ID int64; Title string }](
+    pg.Select("id AS id, title AS title").From("posts").Where(sql.Eq("id", 1)))
+repo.Insert[models.Post](pg.H{"id": 1234})
 ```
 
 Available namespaces: `repo`, `sql`, `pg`, `mysql`, `sqlite`, `models`.
-`repo.Find`/`FindOne`/`Count`/`Exists` accept a built statement or a
-`table + condition`; typed calls support anonymous structs and app models.
-Full-table updates/deletes require an explicit `true` as the last argument.
+
+Repo helpers:
+
+```text
+repo.Find(tableOrStmt, [cond])
+repo.FindOne(tableOrStmt, [cond])
+repo.Count(tableOrStmt, [cond])
+repo.Exists(tableOrStmt, [cond])
+repo.Insert(tableOrStmt, [values], [returning])
+repo.Update(tableOrStmt, [values], cond|true)
+repo.Delete(tableOrStmt, cond|true)
+repo.Preview(stmt)
+repo.Tables()
+repo.Driver()
+```
+
+Notes:
+
+- `Update`/`Delete` without a condition require an explicit `true` as the last
+  argument.
+- `Find`/`FindOne`/`Count`/`Exists` accept `table + stmt` and bind the table
+  when the statement has no table yet.
+- `Find[T]`/`FindOne[T]` support anonymous struct type arguments and use struct
+  scan instead of map results.
+- When `T` implements `TableName()`, `Find[T]`/`FindOne[T]` infer the table and
+  the first table argument can be omitted.
+- `app/models` types are also available as top-level type names such as `Post`.
 
 ## File storage
 

@@ -89,6 +89,12 @@ func openREPLDB(driver string, dsn string) (*repo.DB, error) {
 		return repo.NewDBWithDriver(driver, dsn)
 	}
 
+	// The CLI never boots the server's database, so fall back to the DSN from
+	// the environment (.env is loaded before dispatch).
+	if envDSN, err := cliDSN(); err == nil {
+		return repo.NewDBWithDriver(driver, envDSN)
+	}
+
 	if db, ok := repo.CurrentDBOK(); ok {
 		return db, nil
 	}

@@ -213,6 +213,24 @@ func TestRepoREPLSupportsGenericRepoDeleteCalls(t *testing.T) {
 	}
 }
 
+func TestOpenREPLDBUsesEnvDSN(t *testing.T) {
+	t.Setenv("AIRWAY_DSN", "")
+	t.Setenv("DSN", "sqlite://:memory:")
+
+	db, err := openREPLDB("", "")
+	if err != nil {
+		t.Fatalf("openREPLDB: %v", err)
+	}
+
+	t.Cleanup(func() {
+		_ = db.Close()
+	})
+
+	if db.Driver() != "sqlite" {
+		t.Fatalf("driver = %q, want sqlite", db.Driver())
+	}
+}
+
 func newTestREPL(t *testing.T) *repoREPL {
 	t.Helper()
 
