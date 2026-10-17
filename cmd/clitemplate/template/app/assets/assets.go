@@ -1,7 +1,8 @@
 // Package assets embeds the production frontend bundle (app/assets/dist,
-// produced by `airway js:build`) and serves it over HTTP. The dist output
+// produced by `airway js:build`) and serves it under /assets/. The dist output
 // is committed, so a fresh clone builds and serves without re-running the
-// bundler.
+// bundler. StaticHandler serves extra files from a directory on disk under
+// /static/ instead, keeping /assets/ limited to the embedded bundle.
 package assets
 
 import (
@@ -10,8 +11,11 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"io/fs"
+	"log"
 	"net/http"
+	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -57,8 +61,8 @@ func EntryPath() string {
 // ETag revalidation.
 func Handler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		name := strings.TrimPrefix(path.Clean(r.URL.Path), "/assets/")
-		if name == "" || name == "." || strings.Contains(name, "..") {
+		name := path.Clean(strings.TrimPrefix(r.URL.Path, "/assets/"))
+		if !fs.ValidPath(name) || strings.Contains(name, `\`) {
 			http.NotFound(w, r)
 			return
 		}
@@ -83,6 +87,35 @@ func Handler() http.Handler {
 
 		w.Header().Set("Content-Type", contentType(name))
 		http.ServeContent(w, r, name, time.Time{}, strings.NewReader(string(data)))
+	})
+}
+
+// StaticHandler serves files from root under /static/. Directories are never
+// listed; an unset or unusable root answers 404 for every request.
+func StaticHandler(root string) http.Handler {
+	if root != "" {
+		if info, err := os.Stat(root); err != nil || !info.IsDir() {
+			log.Printf("assets: STATIC_PATH %q is not a directory; /static is disabled", root)
+			root = ""
+		}
+	}
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if root == "" {
+			http.NotFound(w, r)
+			return
+		}
+		name := path.Clean(strings.TrimPrefix(r.URL.Path, "/static/"))
+		if !fs.ValidPath(name) || strings.Contains(name, `\`) {
+			http.NotFound(w, r)
+			return
+		}
+		file := filepath.Join(root, name)
+		if info, err := os.Stat(file); err != nil || info.IsDir() {
+			http.NotFound(w, r)
+			return
+		}
+		http.ServeFile(w, r, file)
 	})
 }
 

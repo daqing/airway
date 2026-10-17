@@ -129,6 +129,7 @@ accepts a short name or its `AIRWAY_` alias, with the alias taking precedence.
 | `LISTEN` / `AIRWAY_LISTEN` | Address the server binds, `host:port` (e.g. `0.0.0.0:1905`, `:1905`). Default `:1900`. |
 | `REDIS` / `AIRWAY_REDIS` | Optional Redis URL for cache/queue. |
 | `URL_PREFIX` / `AIRWAY_URL_PREFIX` | Optional public sub-path prefix, e.g. `/airway`. Empty serves at the root. |
+| `STATIC_PATH` / `AIRWAY_STATIC_PATH` | Optional directory served under `/static/*`; `/assets/*` always serves the embedded frontend bundle. |
 | `AIRWAY_JS_REGISTRY` | npm registry for `js:add` / `js:install` (default `https://registry.npmjs.org`; set a mirror like `https://registry.npmmirror.com` if needed). |
 | `AIRWAY_ENV` | `local` loads `.env` and uses Gin debug mode; anything else runs release mode. |
 | `STORAGE_DRIVER` | `local` (default), `s3`, `r2` or `cos`. |

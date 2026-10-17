@@ -74,8 +74,16 @@ func assetRoutes(r *gin.Engine) {
 	if utils.AppConfig().IsLocal {
 		if dev := jsbuild.Default(); dev != nil {
 			r.GET("/assets/*path", gin.WrapH(dev.Handler()))
+			staticRoutes(r)
 			return
 		}
 	}
 	r.GET("/assets/*path", gin.WrapH(assets.Handler()))
+	staticRoutes(r)
+}
+
+// staticRoutes serves extra files from STATIC_PATH under /static/; /assets/
+// stays reserved for the embedded frontend bundle.
+func staticRoutes(r *gin.Engine) {
+	r.GET("/static/*path", gin.WrapH(assets.StaticHandler(utils.GetEnvMulti("AIRWAY_STATIC_PATH", "STATIC_PATH"))))
 }

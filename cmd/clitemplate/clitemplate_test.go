@@ -32,6 +32,7 @@ func TestScaffoldWritesTemplateWithModuleReplaced(t *testing.T) {
 		"deps/.keep",
 		"tmp/.keep",
 		"data/storage/.keep",
+		"static/.keep",
 	} {
 		if _, err := os.Stat(filepath.Join(destDir, rel)); err != nil {
 			t.Fatalf("expected scaffolded file %s: %v", rel, err)
