@@ -73,12 +73,12 @@ import sqlite "github.com/daqing/airway/lib/sql/sqlite"
 
 核心结构如下：
 
-- [lib/sql/base.go](/Users/daqing/mzevo/open-source/airway/lib/sql/base.go)：定义 `Stmt`、`H`、基础类型
-- [lib/sql/builder.go](/Users/daqing/mzevo/open-source/airway/lib/sql/builder.go)：底层 Builder 实现
-- [lib/sql/pg/builder.go](/Users/daqing/mzevo/open-source/airway/lib/sql/pg/builder.go)：PostgreSQL 方言包装
-- [lib/sql/mysql/builder.go](/Users/daqing/mzevo/open-source/airway/lib/sql/mysql/builder.go)：MySQL 方言包装
-- [lib/sql/sqlite/builder.go](/Users/daqing/mzevo/open-source/airway/lib/sql/sqlite/builder.go)：SQLite 方言包装
-- [lib/repo/query.go](/Users/daqing/mzevo/open-source/airway/lib/repo/query.go)：执行前的数据库方言转换和命名参数编译
+- [lib/sql/base.go](../../lib/sql/base.go)：定义 `Stmt`、`H`、基础类型
+- [lib/sql/builder.go](../../lib/sql/builder.go)：底层 Builder 实现
+- [lib/sql/pg/builder.go](../../lib/sql/pg/builder.go)：PostgreSQL 方言包装
+- [lib/sql/mysql/builder.go](../../lib/sql/mysql/builder.go)：MySQL 方言包装
+- [lib/sql/sqlite/builder.go](../../lib/sql/sqlite/builder.go)：SQLite 方言包装
+- [lib/repo/query.go](../../lib/repo/query.go)：执行前的数据库方言转换和命名参数编译
 
 ### 0.3 能力矩阵
 
@@ -205,17 +205,17 @@ b := pg.SelectFields(users.AllFields()).
 
 业务代码最常见的入口应该是这三个文件：
 
-- [lib/sql/pg/builder.go](/Users/daqing/mzevo/open-source/airway/lib/sql/pg/builder.go)
-- [lib/sql/mysql/builder.go](/Users/daqing/mzevo/open-source/airway/lib/sql/mysql/builder.go)
-- [lib/sql/sqlite/builder.go](/Users/daqing/mzevo/open-source/airway/lib/sql/sqlite/builder.go)
+- [lib/sql/pg/builder.go](../../lib/sql/pg/builder.go)
+- [lib/sql/mysql/builder.go](../../lib/sql/mysql/builder.go)
+- [lib/sql/sqlite/builder.go](../../lib/sql/sqlite/builder.go)
 
 底层实现和共用类型仍然在这些文件中：
 
-- [lib/sql/builder.go](/Users/daqing/mzevo/open-source/airway/lib/sql/builder.go)
-- [lib/sql/op.go](/Users/daqing/mzevo/open-source/airway/lib/sql/op.go)
-- [lib/sql/expr.go](/Users/daqing/mzevo/open-source/airway/lib/sql/expr.go)
-- [lib/sql/identifiers.go](/Users/daqing/mzevo/open-source/airway/lib/sql/identifiers.go)
-- [lib/sql/table.go](/Users/daqing/mzevo/open-source/airway/lib/sql/table.go)
+- [lib/sql/builder.go](../../lib/sql/builder.go)
+- [lib/sql/op.go](../../lib/sql/op.go)
+- [lib/sql/expr.go](../../lib/sql/expr.go)
+- [lib/sql/identifiers.go](../../lib/sql/identifiers.go)
+- [lib/sql/table.go](../../lib/sql/table.go)
 
 
 ## 2. 基本用法
@@ -246,15 +246,20 @@ query, args := b.ToSQL()
 
 仓储层中已经封装好了这一步，参考：
 
-- [lib/repo/find.go](/Users/daqing/mzevo/open-source/airway/lib/repo/find.go)
-- [lib/repo/insert.go](/Users/daqing/mzevo/open-source/airway/lib/repo/insert.go)
-- [lib/repo/update.go](/Users/daqing/mzevo/open-source/airway/lib/repo/update.go)
-- [lib/repo/delete.go](/Users/daqing/mzevo/open-source/airway/lib/repo/delete.go)
+- [lib/repo/find.go](../../lib/repo/find.go)
+- [lib/repo/insert.go](../../lib/repo/insert.go)
+- [lib/repo/update.go](../../lib/repo/update.go)
+- [lib/repo/delete.go](../../lib/repo/delete.go)
 
 例如：
 
 ```go
-user, err := repo.FindOne[User](repo.CurrentDB(), pg.Select("*").From("users").Where(pg.Eq("id", 1)))
+b := pg.Select("*").From("users").Where(pg.Eq("id", 1))
+user, err := repo.FindOne[User](repo.CurrentDB(), b)
+
+// 单表按主键或字段查询时，直接用泛型 CRUD helper 更简洁
+byID, err := repo.FindByID[User](1)
+byEmail, err := repo.FindOneBy[User](pg.H{"email": "dev@example.com"})
 ```
 
 
@@ -793,7 +798,7 @@ MySQL 特别说明：
 
 - `mysql.OnConflictDoNothing(...)` 在执行前会被转换成 `INSERT IGNORE`
 - `mysql.OnConflictDoUpdate(...)` 在执行前会被转换成 `ON DUPLICATE KEY UPDATE`
-- 这部分转换逻辑位于 [lib/repo/query.go](/Users/daqing/mzevo/open-source/airway/lib/repo/query.go)
+- 这部分转换逻辑位于 [lib/repo/query.go](../../lib/repo/query.go)
 
 示例：
 
@@ -988,6 +993,8 @@ user, err := repo.FindOne[User](repo.CurrentDB(), b)
 ```
 
 原因是 `repo` 现在接收的是 `sql.Stmt` 接口，而不是固定的 `*sql.Builder`。
+`repo.FindOne` 用于执行预构建的语句；日常单表 CRUD 推荐直接使用
+`repo.FindByID`、`repo.FindOneBy`、`repo.FindBy` 等泛型 helper。
 
 ### 11.3 什么时候还可以继续用 `lib/sql`
 
@@ -1014,18 +1021,26 @@ user, err := repo.FindOne[User](repo.CurrentDB(), b)
 
 项目已经把部分 helper 和 CRUD 封装迁到了表/字段 DSL：
 
-- [lib/sql/table.go](/Users/daqing/mzevo/open-source/airway/lib/sql/table.go)
-- [lib/db/find.go](/Users/daqing/mzevo/open-source/airway/lib/db/find.go)
-- [lib/db/update.go](/Users/daqing/mzevo/open-source/airway/lib/db/update.go)
-- [lib/db/delete.go](/Users/daqing/mzevo/open-source/airway/lib/db/delete.go)
+- [lib/sql/table.go](../../lib/sql/table.go)
+- [lib/repo/find.go](../../lib/repo/find.go)
+- [lib/repo/update.go](../../lib/repo/update.go)
+- [lib/repo/delete.go](../../lib/repo/delete.go)
 
-例如：
+例如，一个项目的 service 层可以这样组合 builder 与泛型仓储：
 
 ```go
-func FindById[T sql.Table](id sql.IdType) (*T, error) {
-    var t T
-    b := sql.FindByCond(t, sql.FieldEq(sql.FieldFor(t, "id"), id))
-    return repo.FindOne[T](repo.CurrentDB(), b)
+func FindPublishedPosts(limit int) ([]*models.Post, error) {
+    posts := pg.TableOf("posts")
+    b := pg.Select("*").
+        FromTable(posts).
+        Where(pg.FieldEq(posts.Field("published"), true)).
+        OrderBy(posts.Field("created_at").Desc()).
+        Limit(limit)
+    return repo.Find[models.Post](repo.CurrentDB(), b)
+}
+
+func FindPostByID(id sql.IdType) (*models.Post, error) {
+    return repo.FindByID[models.Post](id)
 }
 ```
 
@@ -1091,7 +1106,7 @@ sql.MatchTable(t, vals)
 
 可以参考：
 
-- [lib/sql/builder_test.go](/Users/daqing/mzevo/open-source/airway/lib/sql/builder_test.go)
+- [lib/sql/builder_test.go](../../lib/sql/builder_test.go)
 
 
 ## 14. 当前限制
@@ -1111,5 +1126,5 @@ sql.MatchTable(t, vals)
 
 完整的调用示例可以直接看：
 
-- [lib/sql/builder_test.go](/Users/daqing/mzevo/open-source/airway/lib/sql/builder_test.go)
-- [lib/repo/crud_integration_test.go](/Users/daqing/mzevo/open-source/airway/lib/repo/crud_integration_test.go)
+- [lib/sql/builder_test.go](../../lib/sql/builder_test.go)
+- [lib/repo/crud_integration_test.go](../../lib/repo/crud_integration_test.go)

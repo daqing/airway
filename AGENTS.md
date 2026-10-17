@@ -15,7 +15,7 @@ The project supports PostgreSQL, SQLite 3, and MySQL 8 from the same codebase; t
 
 ## Tech Stack
 
-- **Language:** Go 1.27 (module `github.com/daqing/airway`); pure-Go SQLite driver (`modernc.org/sqlite`).
+- **Language:** Go 1.27.1 (module `github.com/daqing/airway`); pure-Go SQLite driver (`modernc.org/sqlite`).
 - **HTTP framework:** Gin (`gin-gonic/gin`), with `gin-contrib/cors`.
 - **HTML views:** [templ](https://templ.guide/) templates under `app/views`, compiled to Go and rendered via `lib/render.HTML`. Generated `*_templ.go` files are committed.
 - **Database access:** `database/sql` on top of `jackc/pgx/v5/stdlib` (PostgreSQL), `go-sql-driver/mysql`, `modernc.org/sqlite`.
@@ -38,8 +38,10 @@ app/
   api/           HTTP API modules, one package per namespace (e.g. health_api,
                  home_api, storage_api). Each has routes.go + <name>_action.go.
   models/        Model structs with `db` tags, TableName(), and REPL registration.
-  services/      Business-logic layer (currently empty; use `generate service`).
-  middlewares/   HTTP middlewares (currently empty).
+  services/      Business-logic layer. Ships empty; `airway generate service`
+                 writes files here.
+  middlewares/   HTTP middlewares. Ships empty; `airway admin:generate` writes
+                 the admin auth middleware here.
   websocket/     WebSocket hub, connections, publish endpoint.
   views/         Server-rendered HTML pages as templ templates, one folder per
                  API module (e.g. app/views/home/index.templ for home_api).
