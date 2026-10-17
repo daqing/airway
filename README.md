@@ -359,6 +359,7 @@ own binary. Commands auto-load `.env` from the project root.
 
 ```bash
 airway new <module-path | /path>            # scaffold a new project skeleton
+airway upgrade [--dry-run] [--check]        # sync an existing project's skeleton and dependency with this CLI
 airway server                               # start the HTTP server
 airway generate api admin                   # new API namespace under app/api/
 airway generate action admin show           # new action in an existing API module

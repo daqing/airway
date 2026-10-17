@@ -14,13 +14,16 @@ go install github.com/daqing/airway@latest
 `proxying to project binary: go run . ...` 提示。只有当全局安装的 CLI 版本与项目
 go.mod 中 pin 的 airway 版本一致时代理才会执行（若通过 `replace` 指向本地 airway
 检出，则改与该目录的 `VERSION` 文件比对）；版本不一致时命令直接报错退出，避免
-静默运行项目二进制里过期的 CLI 逻辑。`new`、`version`、`help`
-始终本地执行；项目之外的命令行为不变；直接使用 `go run . <命令>` 与代理等价。
+静默运行项目二进制里过期的 CLI 逻辑。`new`、`upgrade`、`version`、`help`
+始终本地执行（`upgrade` 尤其需要在项目尚不能编译时也能运行）；项目之外的命令
+行为不变；直接使用 `go run . <命令>` 与代理等价。
 
 ## 命令总览
 
 ```bash
 airway new <module-path | directory>                    # 生成新项目骨架
+airway upgrade [--dry-run] [--check] [--force] [--no-deps] [--from vX.Y.Z]
+                                                        # 把已有项目的骨架与依赖同步到当前 CLI 版本
 airway server                                           # 启动 HTTP 服务
 airway db:create
 airway db:drop
@@ -69,6 +72,52 @@ go run .                # 启动服务器（等同于 go run . server）
 
 新项目的二进制不带参数（或带 `server`）时启动 HTTP 服务；带其他参数时派发给
 内置 CLI。
+
+## 升级已有项目
+
+骨架文件（`main.go`、`config/`、`app/assets/assets.go`、`.env.example` 等）
+是在生成项目时复制进去的。`go get` 只会更新 `lib/` 下的框架库，不会改动这些
+项目内副本，所以用旧版本生成的项目会一直保留旧骨架。`airway upgrade` 会把
+骨架和 `github.com/daqing/airway` 依赖一起对齐到当前安装的 CLI：
+
+```bash
+airway upgrade                    # 把骨架和 go.mod 同步到当前 CLI
+airway upgrade --dry-run          # 只打印计划，不写任何文件
+airway upgrade --check            # 项目落后时返回非零状态码（可用于 CI）
+airway upgrade --force            # 跳过 git 工作区检查；恢复被删除的框架文件
+airway upgrade --no-deps          # 只更新项目文件，不改 go.mod
+airway upgrade --from v0.19.2     # 没有 .airway/manifest.json 的旧项目
+airway upgrade --from-dir ~/src/airway   # 以本地检出或模板目录作为基线
+```
+
+`airway new` 会在每个项目里写入 `.airway/manifest.json`，请把它和骨架一起提交。
+manifest 记录上次同步的骨架版本，以及每个框架文件的内容哈希，下次升级才能区分
+“用户没动过”和“用户改过”。对于 manifest 出现之前创建的项目，基线取 go.mod
+里 pin 的 airway 版本；该版本不可用时用 `--from` / `--from-dir` 指定。
+
+升级按文件类型做三方合并：
+
+- **merge**——框架拥有的文件（`main.go`、`config/routes.go`、
+  `app/assets/assets.go`、`.env.example`、`.gitignore`、`justfile` 等）。
+  在保留本地修改的前提下应用框架改动。若两边修改了同一区域且内容不同，新版本
+  写到文件旁的 `<file>.airway-new`，原文件保持不变。
+- **create**——`.keep` 占位文件等“应该存在、但用户可能删掉”的文件；仅在缺失时创建。
+- **regenerate**——构建产物（`app/assets/dist/*`、
+  `app/views/layouts/base_templ.go`）。请用 `airway js:build` /
+  `airway templates:compile` 重新生成；升级只在可能过期时提示。
+- **never**——用户拥有的文件（`go.mod`、`README*`、`app/views/home/*`、
+  `app/assets/js/islands/*`、`app/api/home_api/*`）。既不读取也不写入。
+
+升级永远不会删除文件：模板中已移除的文件会作为 obsolete 列出，原样保留。
+`.env` 永远不会被修改：只在新的 `.env.example` 中出现、但 `.env`（及进程环境）
+里没有的键会打印出来，由你手动补充。merge 更新了 `.templ` 视图时，升级会自动
+执行 `go tool templ generate`（除非传了 `--no-deps`）；前端文件变化时会提示运行
+`airway js:install` / `airway js:build`。
+
+只要有文件冲突，升级会在更新 `go.mod` 之前中止；解决 `.airway-new` 后重新执行
+`airway upgrade` 即可。除 `--force` 外，升级要求 git 工作区（已跟踪文件）干净。
+如果项目通过本地 `replace` 指向 airway 检出，则目标骨架来自该检出，`go.mod`
+保持不动。
 
 ## 启动服务器
 

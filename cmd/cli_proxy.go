@@ -60,10 +60,12 @@ func ProxyHostProject(args []string) (bool, error) {
 // project's go.mod, not the CLI), and it must work exactly when the project
 // does not compile — right after scaffolding wrote .templ files whose
 // generated counterparts are missing, so `go run .` would fail before it
-// could help.
+// could help. `upgrade` stays local for the same reason: its whole job is to
+// bring the project's skeleton and go.mod up to date, which must work on a
+// project that does not compile yet.
 func proxyableCommand(command string) bool {
 	switch strings.ToLower(strings.TrimSpace(command)) {
-	case "", "new", "ssg:new", "theme:new", "version", "-v", "--version", "help", "-h", "--help", "templates:compile":
+	case "", "new", "upgrade", "ssg:new", "theme:new", "version", "-v", "--version", "help", "-h", "--help", "templates:compile":
 		return false
 	default:
 		return true
@@ -241,7 +243,8 @@ func checkHostAirwayVersion(dir string) error {
 
 Align them before running project commands:
 
-- go get github.com/daqing/airway@v%s (in the project)
+- airway upgrade (in the project; upgrades the skeleton and the dependency)
+- go get github.com/daqing/airway@v%s (dependency only; the skeleton stays old)
 - go install github.com/daqing/airway@v%s (for the global command)
 - go mod edit -replace github.com/daqing/airway=/path/to/local/airway`,
 		global, pinned, global, pinned,

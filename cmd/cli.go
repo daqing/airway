@@ -21,6 +21,8 @@ func runCLI(args []string) error {
 	switch command {
 	case "new":
 		return runCLINew(xargs)
+	case "upgrade":
+		return runCLIUpgrade(xargs)
 	case "generate", "g":
 		return runCLIGenerate(xargs)
 	case "db:migrate":
@@ -104,6 +106,7 @@ func cliDSN() (string, error) {
 func printUsage(w io.Writer) {
 	_, _ = fmt.Fprintln(w, "usage:")
 	_, _ = fmt.Fprintln(w, "  airway new <module-path>                 create a new Airway project")
+	_, _ = fmt.Fprintln(w, "  airway upgrade [--dry-run] [--check]     sync the project skeleton and framework version with this CLI")
 	_, _ = fmt.Fprintln(w, "  airway server                            start the HTTP server")
 	_, _ = fmt.Fprintln(w, "  airway generate [action|api|model|migration|service|island|scaffold|cmd] [params]")
 	_, _ = fmt.Fprintln(w, "  airway db:create")

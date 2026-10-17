@@ -162,6 +162,8 @@ compared against that checkout's `VERSION` file):
 
 ```bash
 airway new [--local[=path]] myapp                      # scaffold a new project; --local replaces the framework with an airway checkout (default $PWD) for framework development
+airway upgrade [--dry-run] [--check] [--force] [--no-deps] [--from vX.Y.Z] [--from-dir path]
+                                                       # sync an existing project's skeleton + go.mod with this CLI (3-way merge; records .airway/manifest.json)
 airway server                                         # start the HTTP server
 airway generate api admin                             # new API namespace under app/api/
 airway generate action admin show                     # new action in an existing API module
@@ -253,6 +255,13 @@ Migration and schema commands read `AIRWAY_DSN`/`DSN`.
   static:build/static:serve collects pages; those commands connect to the
   database from the DSN when a provider needs one (see
   docs/static-export.md).
+- **Skeleton upgrades:** `airway new` writes `.airway/manifest.json` (skeleton
+  version + pristine template hashes) and `airway upgrade` does a three-way
+  merge of the embedded template into an existing project. Every template file
+  must be classified in `skeletonRules` in `cmd/upgrade_template.go`; add a
+  rule when adding a scaffolded file (`TestEveryTemplateFileIsClassified`
+  enforces this). `clitemplate.Render`/`RenderFS` plus
+  `rewriteSkeletonPorts` are the shared rendering path for both commands.
 - **Naming:** environment variables are prefixed `AIRWAY_`; CLI subcommands follow the Rails-like `db:migrate` / `schema:dump` style.
 - Format code with `gofmt`/`go fmt`; keep changes minimal and match the surrounding style.
 - **Git commit messages:** a concise one-line summary plus a short paragraph describing what the change accomplishes; leave implementation details (files, functions, internal mechanics) out of the message. Do not add AI attribution/signatures (such as `Co-Authored-By` or any other AI-related lines) to commit messages.

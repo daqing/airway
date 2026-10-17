@@ -248,6 +248,7 @@ Airway CLI 是单个 `airway` 二进制（`go install github.com/daqing/airway@l
 
 ```bash
 airway new <module-path | /path>            # 生成新项目骨架
+airway upgrade [--dry-run] [--check]        # 把已有项目的骨架与依赖同步到当前 CLI 版本
 airway server                               # 启动 HTTP 服务
 airway generate api admin                   # 在 app/api/ 下新建 API 命名空间
 airway generate action admin show           # 在已有 API 模块中新建 action

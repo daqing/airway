@@ -140,6 +140,16 @@ func newProject(arg string, tidy, installJS bool, localDir string) error {
 		return fmt.Errorf("rewrite scaffold port: %w", err)
 	}
 
+	skeletonVersion := Version
+	if localDir != "" {
+		if data, err := os.ReadFile(filepath.Join(localDir, "VERSION")); err == nil {
+			skeletonVersion = strings.TrimSpace(string(data))
+		}
+	}
+	if err := writeScaffoldManifest(destDir, module, skeletonVersion); err != nil {
+		return fmt.Errorf("write %s: %w", upgradeManifestPath, err)
+	}
+
 	if err := copyScaffoldEnv(destDir); err != nil {
 		return fmt.Errorf("copy .env.example: %w", err)
 	}

@@ -17,14 +17,17 @@ The proxy only runs when the globally installed CLI's version matches the
 airway version the project pins in go.mod (a `replace` onto a local airway
 checkout compares against that checkout's `VERSION` file instead); on a
 mismatch the command aborts with an error instead of silently running the
-project binary's older CLI logic. `new`, `version` and `help` always run
-locally, as does everything outside a project; running `go run . <command>`
+project binary's older CLI logic. `new`, `upgrade`, `version` and `help` always
+run locally (as does everything outside a project); `upgrade` in particular
+must work on a project that does not compile yet. Running `go run . <command>`
 yourself remains equivalent.
 
 ## Command Overview
 
 ```bash
 airway new [--local[=path]] <module-path | directory>   # scaffold a new project skeleton
+airway upgrade [--dry-run] [--check] [--force] [--no-deps] [--from vX.Y.Z]
+                                                         # sync an existing project's skeleton and dependency
 airway server                                           # start the HTTP server
 airway db:create
 airway db:drop
@@ -87,6 +90,60 @@ airway server             # starts the HTTP server
 
 A generated project's binary starts the HTTP server when run with no arguments
 (or with `server`), and dispatches any other arguments to the built-in CLI.
+
+## Upgrade an existing project
+
+Skeleton files (`main.go`, `config/`, `app/assets/assets.go`, `.env.example`,
+...) are copied into the project when it is generated. `go get` updates the
+framework library under `lib/`, but it never touches those copies, so a project
+created by an older release keeps the old skeleton. `airway upgrade` brings
+both the skeleton and the `github.com/daqing/airway` requirement in line with
+the installed CLI:
+
+```bash
+airway upgrade                    # sync the skeleton and go.mod with this CLI
+airway upgrade --dry-run          # print the plan; write nothing
+airway upgrade --check            # exit non-zero when the project is behind (for CI)
+airway upgrade --force            # skip the clean-git-tree check; restore deleted files
+airway upgrade --no-deps          # update project files only; leave go.mod alone
+airway upgrade --from v0.19.2     # legacy project with no .airway/manifest.json
+airway upgrade --from-dir ~/src/airway   # compare against a local checkout or template
+```
+
+`airway new` writes `.airway/manifest.json` into each project; commit it along
+with the rest of the skeleton. The manifest records the last synced skeleton
+version and a hash of every framework-owned file, so the next upgrade can tell
+an untouched file from a user-modified one. For a project created before the
+manifest existed, the baseline is the airway version pinned in `go.mod` (or
+`--from` / `--from-dir` when that version is unavailable).
+
+Upgrade is a three-way merge per file, classified as:
+
+- **merge** — framework-owned files (`main.go`, `config/routes.go`,
+  `app/assets/assets.go`, `.env.example`, `.gitignore`, `justfile`, ...). The
+  framework's changes are applied while local edits are preserved. If both
+  sides changed the same region differently, the new version is written beside
+  the file as `<file>.airway-new` and the original is left untouched.
+- **create** — `.keep` placeholders and other files that should exist but that
+  users may have removed; created only when missing.
+- **regenerate** — build output (`app/assets/dist/*`, `app/views/layouts/base_templ.go`).
+  Run `airway js:build` / `airway templates:compile` instead; upgrade only
+  reports when they may be stale.
+- **never** — user-owned files (`go.mod`, `README*`, `app/views/home/*`,
+  `app/assets/js/islands/*`, `app/api/home_api/*`). Never read or written.
+
+Nothing is ever deleted; files dropped from the template are reported as
+obsolete and left in place. `.env` is never edited: keys that appear in the new
+`.env.example` but not in `.env` (or the process environment) are printed for
+you to add. When a merge updates a `.templ` view, upgrade runs
+`go tool templ generate` automatically (unless `--no-deps`); it also reminds
+you to run `airway js:install` / `airway js:build` when frontend files changed.
+
+The upgrade aborts before updating `go.mod` if any file conflicts, so resolve
+the `.airway-new` files and re-run `airway upgrade`. Upgrades require a clean
+git working tree (tracked files) unless `--force` is passed. A project that
+replaces airway with a local checkout upgrades to that checkout's template and
+leaves `go.mod` alone.
 
 ## Start the server
 
