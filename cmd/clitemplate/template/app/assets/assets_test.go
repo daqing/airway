@@ -67,7 +67,7 @@ func TestStaticHandlerServesFilesFromRoot(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	handler := StaticHandler(dir)
+	handler := StaticHandler(dir, "static")
 
 	get := func(path string) *httptest.ResponseRecorder {
 		rec := httptest.NewRecorder()
@@ -91,9 +91,30 @@ func TestStaticHandlerServesFilesFromRoot(t *testing.T) {
 
 func TestStaticHandlerDisabledWithoutRoot(t *testing.T) {
 	rec := httptest.NewRecorder()
-	StaticHandler("").ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/static/app.js", nil))
+	StaticHandler("", "static").ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/static/app.js", nil))
 	if rec.Code != http.StatusNotFound {
 		t.Errorf("status %d, want 404", rec.Code)
+	}
+}
+
+func TestStaticHandlerCustomPrefix(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "a.zip"), []byte("payload"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	handler := StaticHandler(dir, "/downloads/")
+
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/downloads/a.zip", nil))
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "payload") {
+		t.Errorf("prefixed file: status %d body %q", rec.Code, rec.Body.String())
+	}
+
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/static/a.zip", nil))
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("old prefix status %d, want 404", rec.Code)
 	}
 }
 

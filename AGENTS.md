@@ -282,7 +282,8 @@ overrides a `LISTEN` in `.env`:
 - `AIRWAY_JS_REGISTRY` — npm registry for `js:add` / `js:install` (default `https://registry.npmjs.org`); set a mirror such as `https://registry.npmmirror.com` when the default is slow.
 - `LISTEN` — address the server binds, `host:port` (e.g. `0.0.0.0:1905`, `:1905`); default `:1900`. `AIRWAY_LISTEN` is accepted as an alias.
 - `URL_PREFIX` — optional public sub-path prefix (e.g. `/airway`) under which the app is served behind a reverse proxy; empty means the root. `AIRWAY_URL_PREFIX` is accepted as an alias.
-- `STATIC_PATH` — optional directory served under `/static/*` for extra downloads; `/assets/*` always serves the embedded frontend bundle. `AIRWAY_STATIC_PATH` is accepted as an alias.
+- `STATIC_PATH` — optional directory for extra downloads; `/assets/*` always serves the embedded frontend bundle. `AIRWAY_STATIC_PATH` is accepted as an alias.
+- `STATIC_URL_PREFIX` — public URL prefix for `STATIC_PATH` files (default `static`, e.g. `downloads` serves `/downloads/a.zip`). `AIRWAY_STATIC_URL_PREFIX` is accepted as an alias.
 - `STORAGE_DRIVER` — `local` (default), `s3`, `r2`, or `cos`; with `STORAGE_ROOT` for local, or `STORAGE_BUCKET` / `STORAGE_ACCESS_KEY` / `STORAGE_SECRET_KEY` / `STORAGE_REGION` / `STORAGE_ENDPOINT` / optional `STORAGE_PUBLIC_URL` (CDN base; disables presigned URLs) for cloud drivers.
 - `TZ` — server timezone (e.g. `Asia/Shanghai`).
 

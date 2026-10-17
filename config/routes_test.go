@@ -34,3 +34,18 @@ func TestRoutesRegistersCoreEndpoints(t *testing.T) {
 		}
 	}
 }
+
+func TestStaticRoutesUseConfiguredPrefix(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	t.Setenv("STATIC_URL_PREFIX", "/downloads/")
+
+	r := gin.New()
+	Routes(r)
+
+	for _, route := range r.Routes() {
+		if route.Method == "GET" && route.Path == "/downloads/*path" {
+			return
+		}
+	}
+	t.Fatalf("expected GET /downloads/*path to be registered, got %#v", r.Routes())
+}

@@ -92,7 +92,8 @@ just dev
 | `LISTEN` / `AIRWAY_LISTEN` | 服务器绑定的地址，`host:port`（如 `0.0.0.0:1905`、`:1905`），默认 `:1900`。 |
 | `REDIS` / `AIRWAY_REDIS` | 可选的 Redis URL，用于缓存/队列。 |
 | `URL_PREFIX` / `AIRWAY_URL_PREFIX` | 可选的公开子路径前缀，如 `/airway`；留空则在根路径服务。 |
-| `STATIC_PATH` / `AIRWAY_STATIC_PATH` | 可选目录，从 `/static/*` 提供额外下载文件；`/assets/*` 始终提供内嵌的前端产物。 |
+| `STATIC_PATH` / `AIRWAY_STATIC_PATH` | 可选目录，通过 `STATIC_URL_PREFIX` 提供额外下载文件；`/assets/*` 始终提供内嵌的前端产物。 |
+| `STATIC_URL_PREFIX` / `AIRWAY_STATIC_URL_PREFIX` | `STATIC_PATH` 文件的公开 URL 前缀（默认 `static`）：设为 `downloads` 时通过 `/downloads/a.zip` 访问。 |
 | `AIRWAY_JS_REGISTRY` | `js:add` / `js:install` 使用的 npm registry（默认 `https://registry.npmjs.org`；需要时可设为 `https://registry.npmmirror.com` 等镜像）。 |
 | `AIRWAY_ENV` | `local` 会加载 `.env` 并使用 Gin debug 模式；其他值为 release 模式。 |
 | `STORAGE_DRIVER` | `local`（默认）、`s3`、`r2` 或 `cos`。 |

@@ -1,8 +1,9 @@
 // Package assets embeds the production frontend bundle (app/assets/dist,
 // produced by `airway js:build`) and serves it under /assets/. The dist output
 // is committed, so a fresh clone builds and serves without re-running the
-// bundler. StaticHandler serves extra files from a directory on disk under
-// /static/ instead, keeping /assets/ limited to the embedded bundle.
+// bundler. StaticHandler serves extra files from a directory on disk under a
+// configurable URL prefix (default /static), keeping /assets/ limited to the
+// embedded bundle.
 package assets
 
 import (
@@ -90,22 +91,25 @@ func Handler() http.Handler {
 	})
 }
 
-// StaticHandler serves files from root under /static/. Directories are never
-// listed; an unset or unusable root answers 404 for every request.
-func StaticHandler(root string) http.Handler {
-	if root != "" {
+// StaticHandler serves files from root under urlPrefix (e.g. "static" or
+// "downloads"). Directories are never listed; an unset or unusable root
+// answers 404 for every request.
+func StaticHandler(root, urlPrefix string) http.Handler {
+	prefix := strings.Trim(urlPrefix, "/")
+	if root != "" && prefix != "" {
 		if info, err := os.Stat(root); err != nil || !info.IsDir() {
-			log.Printf("assets: STATIC_PATH %q is not a directory; /static is disabled", root)
+			log.Printf("assets: STATIC_PATH %q is not a directory; /%s is disabled", root, prefix)
 			root = ""
 		}
 	}
+	base := "/" + prefix + "/"
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if root == "" {
+		if root == "" || prefix == "" {
 			http.NotFound(w, r)
 			return
 		}
-		name := path.Clean(strings.TrimPrefix(r.URL.Path, "/static/"))
+		name := path.Clean(strings.TrimPrefix(r.URL.Path, base))
 		if !fs.ValidPath(name) || strings.Contains(name, `\`) {
 			http.NotFound(w, r)
 			return

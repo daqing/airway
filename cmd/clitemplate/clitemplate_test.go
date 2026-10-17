@@ -69,6 +69,12 @@ func TestScaffoldWritesTemplateWithModuleReplaced(t *testing.T) {
 	if strings.Contains(envExample, "PORT=") {
 		t.Fatalf("expected no legacy PORT in .env.example, got:\n%s", envExample)
 	}
+	if !strings.Contains(envExample, `STATIC_PATH="./static"`) {
+		t.Fatalf("expected STATIC_PATH in .env.example, got:\n%s", envExample)
+	}
+	if !strings.Contains(envExample, `STATIC_URL_PREFIX="static"`) {
+		t.Fatalf("expected STATIC_URL_PREFIX default in .env.example, got:\n%s", envExample)
+	}
 
 	exportGo := readFile(t, filepath.Join(destDir, "export.go"))
 	if !strings.Contains(exportGo, `"github.com/example/demo/app/views/home"`) {
