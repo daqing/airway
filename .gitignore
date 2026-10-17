@@ -13,6 +13,9 @@
 /data/storage/*
 !/data/storage/.keep
 
+/static/*
+!/static/.keep
+
 *.sock
 *.sh
 

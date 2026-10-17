@@ -15,7 +15,7 @@ The project supports PostgreSQL, SQLite 3, and MySQL 8 from the same codebase; t
 
 ## Tech Stack
 
-- **Language:** Go 1.27 (module `github.com/daqing/airway`); pure-Go SQLite driver (`modernc.org/sqlite`).
+- **Language:** Go 1.27.1 (module `github.com/daqing/airway`); pure-Go SQLite driver (`modernc.org/sqlite`).
 - **HTTP framework:** Gin (`gin-gonic/gin`), with `gin-contrib/cors`.
 - **HTML views:** [templ](https://templ.guide/) templates under `app/views`, compiled to Go and rendered via `lib/render.HTML`. Generated `*_templ.go` files are committed.
 - **Database access:** `database/sql` on top of `jackc/pgx/v5/stdlib` (PostgreSQL), `go-sql-driver/mysql`, `modernc.org/sqlite`.
@@ -38,8 +38,10 @@ app/
   api/           HTTP API modules, one package per namespace (e.g. health_api,
                  home_api, storage_api). Each has routes.go + <name>_action.go.
   models/        Model structs with `db` tags, TableName(), and REPL registration.
-  services/      Business-logic layer (currently empty; use `generate service`).
-  middlewares/   HTTP middlewares (currently empty).
+  services/      Business-logic layer. Ships empty; `airway generate service`
+                 writes files here.
+  middlewares/   HTTP middlewares. Ships empty; `airway admin:generate` writes
+                 the admin auth middleware here.
   websocket/     WebSocket hub, connections, publish endpoint.
   views/         Server-rendered HTML pages as templ templates, one folder per
                  API module (e.g. app/views/home/index.templ for home_api).
@@ -280,6 +282,8 @@ overrides a `LISTEN` in `.env`:
 - `AIRWAY_JS_REGISTRY` — npm registry for `js:add` / `js:install` (default `https://registry.npmjs.org`); set a mirror such as `https://registry.npmmirror.com` when the default is slow.
 - `LISTEN` — address the server binds, `host:port` (e.g. `0.0.0.0:1905`, `:1905`); default `:1900`. `AIRWAY_LISTEN` is accepted as an alias.
 - `URL_PREFIX` — optional public sub-path prefix (e.g. `/airway`) under which the app is served behind a reverse proxy; empty means the root. `AIRWAY_URL_PREFIX` is accepted as an alias.
+- `STATIC_PATH` — optional directory for extra downloads; `/assets/*` always serves the embedded frontend bundle. `AIRWAY_STATIC_PATH` is accepted as an alias.
+- `STATIC_URL_PREFIX` — public URL prefix for `STATIC_PATH` files (default `static`, e.g. `downloads` serves `/downloads/a.zip`). `AIRWAY_STATIC_URL_PREFIX` is accepted as an alias.
 - `STORAGE_DRIVER` — `local` (default), `s3`, `r2`, or `cos`; with `STORAGE_ROOT` for local, or `STORAGE_BUCKET` / `STORAGE_ACCESS_KEY` / `STORAGE_SECRET_KEY` / `STORAGE_REGION` / `STORAGE_ENDPOINT` / optional `STORAGE_PUBLIC_URL` (CDN base; disables presigned URLs) for cloud drivers.
 - `TZ` — server timezone (e.g. `Asia/Shanghai`).
 

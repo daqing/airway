@@ -3,6 +3,8 @@ package assets
 import (
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -53,5 +55,79 @@ func TestManifestAndEntryPath(t *testing.T) {
 	// be empty; EntryPath must fall back to the un-busted path in that case.
 	if p := EntryPath(); !strings.HasPrefix(p, "/assets/"+jsbuild.EntryJS) {
 		t.Errorf("EntryPath %q", p)
+	}
+}
+
+func TestStaticHandlerServesFilesFromRoot(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "download.zip"), []byte("extra payload"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(filepath.Join(dir, "nested"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	handler := StaticHandler(dir, "static")
+
+	get := func(path string) *httptest.ResponseRecorder {
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
+		return rec
+	}
+
+	if rec := get("/static/download.zip"); rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "extra payload") {
+		t.Errorf("static file: status %d body %q", rec.Code, rec.Body.String())
+	}
+	if rec := get("/static/missing.zip"); rec.Code != http.StatusNotFound {
+		t.Errorf("missing file status %d, want 404", rec.Code)
+	}
+	if rec := get("/static/nested"); rec.Code != http.StatusNotFound {
+		t.Errorf("directory status %d, want 404", rec.Code)
+	}
+	if rec := get("/static/../go.mod"); rec.Code != http.StatusNotFound {
+		t.Errorf("traversal attempt status %d, want 404", rec.Code)
+	}
+}
+
+func TestStaticHandlerDisabledWithoutRoot(t *testing.T) {
+	rec := httptest.NewRecorder()
+	StaticHandler("", "static").ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/static/app.js", nil))
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("status %d, want 404", rec.Code)
+	}
+}
+
+func TestStaticHandlerCustomPrefix(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "a.zip"), []byte("payload"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	handler := StaticHandler(dir, "/downloads/")
+
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/downloads/a.zip", nil))
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "payload") {
+		t.Errorf("prefixed file: status %d body %q", rec.Code, rec.Body.String())
+	}
+
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/static/a.zip", nil))
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("old prefix status %d, want 404", rec.Code)
+	}
+}
+
+func TestAssetsHandlerIgnoresStaticPath(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "download.zip"), []byte("extra payload"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("STATIC_PATH", dir)
+
+	rec := httptest.NewRecorder()
+	Handler().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/assets/download.zip", nil))
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("/assets must serve only the embedded bundle: status %d, want 404", rec.Code)
 	}
 }

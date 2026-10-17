@@ -35,11 +35,23 @@ directory.
 
 The `airway` binary is a CLI first:
 
-- `airway server` starts the HTTP server (it requires `AIRWAY_ENV`; when
-  `AIRWAY_ENV=local`, `.env` is loaded automatically).
+- `airway server` starts the HTTP server. `AIRWAY_ENV` must be set, either in
+  the process environment or in `.env`; `.env` is loaded as a fallback (the
+  process environment wins), and `AIRWAY_ENV=local` also enables Gin debug
+  mode.
 - Every other argument is dispatched to the CLI. All CLI commands auto-load
   `.env` from the current directory, so run them from your project root.
 - Running `airway` with no arguments prints usage.
+
+Inside a project, the globally installed `airway` detects the host application
+(a `go.mod` requiring `github.com/daqing/airway` plus a `main.go`) and
+transparently re-runs every project-scoped command through `go run .` — so
+plugins, REPL models and Go-code migrations always come from the project's own
+binary. It prints a `proxying to project binary` notice on stderr. The proxy
+only runs when the global CLI's version matches the version the project pins in
+`go.mod`; on a mismatch the command aborts instead of silently using the older
+CLI logic. `new`, `ssg:new`, `theme:new`, `version`, `help` and
+`templates:compile` always run locally, as does everything outside a project.
 
 The framework repository itself behaves the same way: `go run . server`
 starts the server, `go run . <command>` runs a CLI command. (A project
@@ -49,9 +61,9 @@ run with no arguments.)
 ## Command reference
 
 ```bash
-airway new <module-path | directory>                    # scaffold a new project
-airway server                                           # start the HTTP server
-airway generate [action|api|model|migration|service|cmd] [params]
+airway new [--local[=path]] <module-path | directory>     # scaffold a new project
+airway server                                            # start the HTTP server
+airway generate [action|api|model|migration|service|island|scaffold|cmd] [params]
 airway db:create
 airway db:drop
 airway db:migrate [version]
@@ -59,13 +71,30 @@ airway db:rollback [step]
 airway db:status
 airway schema:dump
 airway schema:show
-airway plugin:new <module-path>                         # scaffold a new plugin module
+airway openapi:generate [--out path]                     # write the OpenAPI 3.2 document
+airway admin:generate [--force[=tables]] [config/admin.toml]
+airway admin:root <username> <password>
+airway admin:member <username> <password> [--role=editor|viewer]
+airway desktop:init [--force]                            # generate the Wails v3 desktop target
+airway ssg:new [--local[=path]] <module-path | directory> # scaffold a static showcase site
+airway ssg:build [--out dist]
+airway ssg:serve [--addr 127.0.0.1:3000]
+airway static:build [--out dist]                         # export app pages from export.go
+airway static:serve [--addr 127.0.0.1:3000]
+airway theme:new [--local[=path]] <module-path | path>   # scaffold a site theme module
+airway theme:install <module | /path>
+airway templates:compile                                 # regenerate the templ views
+airway js:add <pkg>[@version]                            # add a frontend dependency (no Node)
+airway js:install                                        # install js.pkg.json deps into vendor/
+airway js:build                                          # bundle app/assets/js into dist/
+airway plugin:new <module-path | /path>                  # scaffold a new plugin module
 airway plugin:list
 airway plugin:install <module>
+airway plugin:lint
 airway upload [key] /path/to/file
-airway repl                                             # project binary only
+airway repl                                              # project binary only
 airway version                                           # or -v / --version; prints the VERSION file contents
-airway help                                             # or -h / --help
+airway help                                              # or -h / --help
 ```
 
 `generate` can be shortened to `g` (`airway g api admin`).
@@ -82,15 +111,18 @@ airway generate action admin show               # new action in an existing API 
 airway generate model post                      # app/models/post.go (with REPL registration)
 airway generate service post title:string       # CRUD service in app/services/
 airway generate cmd post title published        # custom CLI helper in cmd/
-airway generate migration create_posts          # SQL up/down pair in db/migrate/
+airway generate island chart                    # interactive island in app/assets/js/islands/
+airway generate scaffold post title:string      # full CRUD: model, migration, API, pages, island
+airway generate migration create_posts          # Go DSL migration in db/migrate/
 ```
 
 After `generate api`, remember to wire the generated `Routes(...)` into
-`config/routes.go`.
+`config/routes.go`. `generate scaffold` does that for you and compiles the new
+`.templ` views immediately.
 
 After editing a `.templ` view under `app/views/`, recompile the generated
-Go code (a shorthand for `go generate ./...`, which runs the templ
-directive declared in `generate.go`):
+Go code (a shorthand for `go generate ./...`, which runs the templ directive
+declared in `generate.go`):
 
 ```bash
 airway templates:compile       # = `go generate ./...`
@@ -98,17 +130,26 @@ airway templates:compile       # = `go generate ./...`
 
 ### Database and migrations
 
-Migration files are plain SQL pairs under `db/migrate/`:
+`airway generate migration create_posts` writes a timestamped Go DSL migration
+to `db/migrate/` (e.g. `<timestamp>_create_posts.go`, package `migrations`).
+The file registers itself with `lib/migrate/schema` in `init()`, and the down
+migration is derived automatically by reversing the change — one file runs on
+PostgreSQL, MySQL and SQLite. For anything the DSL cannot express, drop to raw
+SQL with `schema.Register(version, name, up, down)` or `m.Reversible(up, down)`
+inside the change.
 
-- `<timestamp>_<name>.up.sql` — the forward migration
-- `<timestamp>_<name>.down.sql` — the rollback migration
+A Go DSL migration only runs when it is compiled into the binary that executes
+it: the `db/migrate` package must be blank-imported from `main.go` (projects
+scaffolded by `airway new` already carry this import). Inside a project the
+globally installed `airway` proxies migration commands to `go run .`, so they
+see the same migrations as the server. Legacy timestamped SQL pairs
+(`<version>_<name>.up.sql` / `.down.sql`) are still executed, so existing
+projects keep working.
 
-Because migrations are plain SQL files, the standalone CLI can migrate *any*
-Airway project without compiling the project itself. Each migration runs in a
-transaction, applied versions are tracked in the `schema_migrations` table,
-and `db:migrate` / `db:rollback` refresh the `db/schema.json` snapshot
-automatically. Migrations work with PostgreSQL, MySQL, and SQLite; the driver
-is inferred from the DSN scheme.
+Each migration runs in a transaction, applied versions are tracked in the
+`schema_migrations` table, and `db:migrate` / `db:rollback` refresh the
+`db/schema.json` snapshot automatically. Migrations work with PostgreSQL,
+MySQL, and SQLite; the driver is inferred from the DSN scheme.
 
 ```bash
 airway db:migrate                # apply all pending migrations
@@ -119,14 +160,8 @@ airway db:status                 # show applied/pending per migration
 ```
 
 Database commands resolve the DSN from the first of these environment
-variables that is set: `DSN` or `AIRWAY_DSN`. Since the CLI auto-loads `.env`, setting `DSN` there is
-enough.
-
-The older Go DSL migration mechanism (`schema.RegisterChange`) is still
-supported, but DSL migrations only run when compiled into the binary that
-executes them. If the CLI finds timestamped `.go` migration files under
-`db/migrate`, it prints a warning — prefer SQL migrations so the standalone
-CLI can run them.
+variables that is set: `AIRWAY_DSN`, then `DSN`. Since the CLI auto-loads
+`.env`, setting `DSN` there is enough.
 
 ### Schema snapshot
 
@@ -134,6 +169,76 @@ CLI can run them.
 airway schema:dump   # inspect the database and write db/schema.json
 airway schema:show   # print the current db/schema.json
 ```
+
+### Frontend dependencies and bundling
+
+```bash
+airway js:add preact                        # add a dependency (latest, pinned exactly)
+airway js:add @tanstack/react-table@9.2.4   # add at an explicit version
+airway js:install                           # install js.pkg.json deps into app/assets/js/vendor/
+airway js:build                             # bundle app/assets/js into app/assets/dist
+```
+
+The registry defaults to `https://registry.npmjs.org`; set
+`AIRWAY_JS_REGISTRY` (or `JS_REGISTRY`) to use a mirror. No Node toolchain is
+required — the CLI talks to an npm-compatible registry directly and bundles
+with an embedded esbuild.
+
+### OpenAPI documentation
+
+```bash
+airway openapi:generate                    # write ./openapi.json (OpenAPI 3.2)
+airway openapi:generate --out docs/api.json
+```
+
+The document covers every route registered on the Gin engine and is also served
+live at `GET /openapi.json` by a running server. See
+[docs/openapi.md](openapi.md).
+
+### Admin panel
+
+```bash
+airway admin:generate                      # generate the backend from config/admin.toml
+airway admin:root admin 's3cret'           # create the administrator account (role admin)
+airway admin:member editor 's3cret'        # create a non-admin account (--role=editor|viewer)
+```
+
+`admin:generate` writes models, a JSON API under `/api/v1/admin`, templ pages
+under `/admin`, CRUD islands, and one migration pair per run. Accounts are
+stored in `admin_users` with bcrypt-hashed passwords, so run `db:migrate`
+first. See the [admin panel guide](../ADMIN.md).
+
+### Desktop apps
+
+```bash
+airway desktop:init [--force]              # generate the Wails v3 target in ./desktop
+```
+
+The generated `desktop/` package runs the same web stack in a native WebView
+window. See the [desktop guide](desktop.md).
+
+### Static showcase sites and themes
+
+```bash
+airway ssg:new [--local[=path]] mysite     # scaffold a static site project
+airway ssg:build [--out dist]              # export the site defined in ssg.go
+airway ssg:serve [--addr 127.0.0.1:3000]   # preview it locally
+airway theme:new [--local[=path]] mytheme  # scaffold a theme module
+airway theme:install <module | /path>      # wire a theme into the project's go.mod
+```
+
+See the [SSG guide](ssg.md).
+
+### Static export of app pages
+
+```bash
+airway static:build [--out dist]            # export pages registered in export.go
+airway static:serve [--addr 127.0.0.1:3000] # preview the static pages locally
+```
+
+The export renders the same templ components the server uses and copies the
+frontend bundle next to them. See the
+[static export guide](static-export.md).
 
 ### Plugins
 
@@ -149,15 +254,17 @@ Plugins are optional feature modules enabled via blank imports in
 `plugins.go` (see [docs/plugin.md](plugin.md)):
 
 ```bash
-go run . plugin:list           # list registered plugins and mount paths
-go run . plugin:install <module> # install a plugin's SQL migrations, host/ tree, and deps/ directory
+go run . plugin:list              # list registered plugins and mount paths
+go run . plugin:install <module>  # install a plugin's SQL migrations, host/ tree, and deps/
+go run . plugin:lint              # check a plugin checkout for legacy layout issues
 ```
 
 Plugins register at compile time, so run these through the **project binary**
-(`go run . ...`): the globally installed `airway` can only see the plugins
-compiled into itself. `plugin:install` assigns fresh timestamps to the copied
-migrations and skips files that are already installed; afterwards they are
-ordinary migrations managed by `db:migrate` / `db:rollback` / `db:status`.
+(`go run . ...`): the globally installed `airway` proxies them automatically
+inside a project, so both forms see the project's own plugins.
+`plugin:install` assigns fresh timestamps to the copied migrations and skips
+files that are already installed; afterwards they are ordinary migrations
+managed by `db:migrate` / `db:rollback` / `db:status`.
 
 ### File upload
 
@@ -169,19 +276,6 @@ airway upload images/foo.png /tmp/foo.png # explicit storage key
 Uploads go through the storage configured in `.env` (`STORAGE_DRIVER`,
 `STORAGE_ROOT`, cloud credentials, ...).
 
-### Admin panel
-
-Create an admin account for a project that generated its admin panel with
-`airway admin:generate` (see [docs/cli.md](cli.md)):
-
-```bash
-go run . admin:user admin@example.com 's3cret'
-```
-
-The account is inserted into the `admin_users` table (bcrypt-hashed
-password), so run `db:migrate` first. The command always runs through the
-project binary; the globally installed `airway` proxies it automatically.
-
 ### REPL
 
 ```bash
@@ -190,23 +284,31 @@ go run . repl
 
 The REPL only sees the models compiled into the binary you run — project
 models register themselves via `replreg.Register` in their `init`. Use
-`go run . repl` inside your project; the globally installed `airway repl` only
-sees the framework's built-in models.
+`go run . repl` inside your project (or `airway repl`, which proxies there);
+the globally installed `airway` outside a project only sees the framework's
+built-in models.
 
 ## Global `airway` vs. the project binary
 
 Some commands depend on code compiled into the running binary (models,
-plugins, Go DSL migrations). Use the right binary for each:
+plugins, Go DSL migrations, the route table). The proxy keeps this transparent
+inside a project, but the distinction still matters outside one:
 
 | Command | Global `airway` | Project binary (`go run . ...`) |
 | --- | --- | --- |
-| `new`, `generate`, `server` | yes | yes |
-| `plugin:new` | yes | yes |
-| `db:create` / `db:drop` / `db:migrate` / `db:rollback` / `db:status` | yes (SQL migrations) | yes |
-| `schema:dump` / `schema:show`, `upload`, `version` | yes | yes |
-| `templates:compile` | **runs locally** — must work while the project does not compile (right after scaffolding wrote `.templ` files) | yes |
-| `repl` | framework's built-in models only | **use this** — sees your project models |
-| `plugin:list` / `plugin:install` | plugins compiled into `airway` itself | **use this** — sees your project's plugins |
+| `new`, `ssg:new`, `theme:new`, `version`, `help` | runs locally — they scaffold fresh projects or describe the tool | — |
+| `templates:compile` | **runs locally** — must work while the project does not compile (right after scaffolding wrote `.templ` files) | runs directly |
+| `generate`, `server`, `db:*`, `schema:*` | proxies to the project binary | runs directly |
+| `openapi:generate`, `admin:*`, `desktop:init`, `js:*` | proxies to the project binary | runs directly |
+| `ssg:build` / `ssg:serve`, `static:*`, `theme:install` | proxies to the project binary | runs directly |
+| `plugin:new` / `plugin:lint` | proxies to the project binary | runs directly |
+| `plugin:list` / `plugin:install` | proxies to the project binary | **sees the project's plugins** |
+| `upload` | proxies to the project binary | runs directly |
+| `repl` | proxies to the project binary | **sees your project models** |
+
+Outside a project the global CLI runs the command itself: legacy SQL migrations
+still apply, but Go DSL migrations, plugin routes, project models and the route
+table only exist inside the project binary.
 
 See also: [docs/cli.md](cli.md) for the full scaffolding guide with a
 step-by-step feature example.

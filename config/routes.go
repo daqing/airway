@@ -1,6 +1,8 @@
 package config
 
 import (
+	"strings"
+
 	"github.com/gin-gonic/gin"
 
 	"github.com/daqing/airway/app/api/health_api"
@@ -51,10 +53,29 @@ func assetRoutes(r *gin.Engine) {
 	if utils.AppConfig().IsLocal {
 		if dev := jsbuild.Default(); dev != nil {
 			r.GET("/assets/*path", gin.WrapH(dev.Handler()))
+			staticRoutes(r)
 			return
 		}
 	}
 	r.GET("/assets/*path", gin.WrapH(assets.Handler()))
+	staticRoutes(r)
+}
+
+// staticRoutes serves extra files from STATIC_PATH under STATIC_URL_PREFIX
+// (default "static"); /assets/ stays reserved for the embedded frontend bundle.
+func staticRoutes(r *gin.Engine) {
+	prefix := staticURLPrefix()
+	r.GET("/"+prefix+"/*path", gin.WrapH(assets.StaticHandler(
+		utils.GetEnvMulti("AIRWAY_STATIC_PATH", "STATIC_PATH"), prefix)))
+}
+
+// staticURLPrefix returns the public path segment for STATIC_PATH files,
+// without surrounding slashes. It defaults to "static".
+func staticURLPrefix() string {
+	if prefix := strings.Trim(utils.GetEnvMulti("AIRWAY_STATIC_URL_PREFIX", "STATIC_URL_PREFIX"), "/"); prefix != "" {
+		return prefix
+	}
+	return "static"
 }
 
 // HealthRoutes registers the internal health-check route. It stays reachable at

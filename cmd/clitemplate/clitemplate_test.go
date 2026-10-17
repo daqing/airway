@@ -32,6 +32,7 @@ func TestScaffoldWritesTemplateWithModuleReplaced(t *testing.T) {
 		"deps/.keep",
 		"tmp/.keep",
 		"data/storage/.keep",
+		"static/.keep",
 	} {
 		if _, err := os.Stat(filepath.Join(destDir, rel)); err != nil {
 			t.Fatalf("expected scaffolded file %s: %v", rel, err)
@@ -67,6 +68,12 @@ func TestScaffoldWritesTemplateWithModuleReplaced(t *testing.T) {
 	}
 	if strings.Contains(envExample, "PORT=") {
 		t.Fatalf("expected no legacy PORT in .env.example, got:\n%s", envExample)
+	}
+	if !strings.Contains(envExample, `STATIC_PATH="./static"`) {
+		t.Fatalf("expected STATIC_PATH in .env.example, got:\n%s", envExample)
+	}
+	if !strings.Contains(envExample, `STATIC_URL_PREFIX="static"`) {
+		t.Fatalf("expected STATIC_URL_PREFIX default in .env.example, got:\n%s", envExample)
 	}
 
 	exportGo := readFile(t, filepath.Join(destDir, "export.go"))

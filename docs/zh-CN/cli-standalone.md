@@ -33,11 +33,21 @@ module 路径，并自动执行 `go mod tidy` 和 `airway js:install`（安装�
 
 `airway` 二进制首先是一个 CLI：
 
-- `airway server` 启动 HTTP 服务器（要求设置 `AIRWAY_ENV`；当
-  `AIRWAY_ENV=local` 时会自动加载 `.env`）。
+- `airway server` 启动 HTTP 服务器。必须设置 `AIRWAY_ENV`（进程环境或
+  `.env` 均可）；`.env` 作为回退加载（进程环境优先），`AIRWAY_ENV=local`
+  还会开启 Gin 调试模式。
 - 其他所有参数都会分发给 CLI。所有 CLI 命令会自动加载当前目录下的
   `.env`，因此请在项目根目录运行它们。
 - 不带参数运行 `airway` 会打印用法说明。
+
+在项目内，全局安装的 `airway` 会识别宿主应用（`go.mod` 依赖
+`github.com/daqing/airway`，且旁边有 `main.go`），并把所有项目级命令透明地
+通过 `go run .` 重新执行——因此 Plugin、REPL 模型和 Go 代码迁移始终来自项目
+自己的二进制。它会在 stderr 打印 `proxying to project binary` 提示。只有当全局
+CLI 的版本与项目 `go.mod` 中 pin 的版本一致时才会代理；版本不一致会直接报错
+终止，而不是静默使用项目二进制里较旧的 CLI 逻辑。`new`、`ssg:new`、
+`theme:new`、`version`、`help` 和 `templates:compile` 始终在本地执行，在项目
+之外运行的一切命令同样如此。
 
 框架仓库本身行为一致：`go run . server` 启动服务器，`go run . <command>`
 运行 CLI 命令。（由 `airway new` 生成的项目，其二进制不带参数运行时也会
@@ -46,9 +56,9 @@ module 路径，并自动执行 `go mod tidy` 和 `airway js:install`（安装�
 ## 命令一览
 
 ```bash
-airway new <module-path | directory>                    # 生成新项目骨架
-airway server                                           # 启动 HTTP 服务器
-airway generate [action|api|model|migration|service|cmd] [params]
+airway new [--local[=path]] <module-path | directory>     # 生成新项目骨架
+airway server                                            # 启动 HTTP 服务器
+airway generate [action|api|model|migration|service|island|scaffold|cmd] [params]
 airway db:create
 airway db:drop
 airway db:migrate [version]
@@ -56,13 +66,30 @@ airway db:rollback [step]
 airway db:status
 airway schema:dump
 airway schema:show
-airway plugin:new <module-path>                         # 生成新的 Plugin 模块骨架
+airway openapi:generate [--out path]                     # 写出 OpenAPI 3.2 文档
+airway admin:generate [--force[=tables]] [config/admin.toml]
+airway admin:root <username> <password>
+airway admin:member <username> <password> [--role=editor|viewer]
+airway desktop:init [--force]                            # 生成 Wails v3 桌面目标
+airway ssg:new [--local[=path]] <module-path | directory> # 脚手架静态展示站点项目
+airway ssg:build [--out dist]
+airway ssg:serve [--addr 127.0.0.1:3000]
+airway static:build [--out dist]                         # 导出 export.go 注册的应用页面
+airway static:serve [--addr 127.0.0.1:3000]
+airway theme:new [--local[=path]] <module-path | path>   # 脚手架站点主题模块
+airway theme:install <module | /path>
+airway templates:compile                                 # 重新生成 templ 视图
+airway js:add <pkg>[@version]                            # 添加前端依赖（无需 Node）
+airway js:install                                        # 按 js.pkg.json 安装到 vendor/
+airway js:build                                          # 打包 app/assets/js 到 dist/
+airway plugin:new <module-path | /path>                  # 生成新的 Plugin 模块骨架
 airway plugin:list
 airway plugin:install <module>
+airway plugin:lint
 airway upload [key] /path/to/file
-airway repl                                             # 仅项目二进制可用
+airway repl                                              # 仅项目二进制可用
 airway version                                           # 或 -v / --version；打印 VERSION 文件内容
-airway help                                             # 或 -h / --help
+airway help                                              # 或 -h / --help
 ```
 
 `generate` 可以缩写为 `g`（`airway g api admin`）。
@@ -78,11 +105,14 @@ airway generate action admin show               # 在已有 API 模块中新增 
 airway generate model post                      # app/models/post.go（含 REPL 注册）
 airway generate service post title:string       # app/services/ 下的 CRUD service
 airway generate cmd post title published        # cmd/ 下的自定义 CLI 辅助命令
-airway generate migration create_posts          # db/migrate/ 下的 SQL up/down 文件对
+airway generate island chart                    # app/assets/js/islands/ 下的交互式 island
+airway generate scaffold post title:string      # 完整 CRUD：模型、迁移、API、页面、island
+airway generate migration create_posts          # db/migrate/ 下的 Go DSL 迁移
 ```
 
 执行 `generate api` 之后，记得把生成的 `Routes(...)` 注册到
-`config/routes.go` 中。
+`config/routes.go` 中。`generate scaffold` 会自动完成这一步，并立即编译新的
+`.templ` 视图。
 
 编辑 `app/views/` 下的 `.templ` 视图后，重新编译生成的 Go 代码（等价于
 `go generate ./...`，它会执行 `generate.go` 里声明的 templ 指令）：
@@ -93,13 +123,20 @@ airway templates:compile       # 等价于 `go generate ./...`
 
 ### 数据库与迁移
 
-迁移文件是 `db/migrate/` 下的纯 SQL 文件对：
+`airway generate migration create_posts` 会在 `db/migrate/` 下写入一个带时间戳
+的 Go DSL 迁移（例如 `<时间戳>_create_posts.go`，package `migrations`）。文件在
+`init()` 中通过 `lib/migrate/schema` 注册自己，down 迁移由变更自动反向推导——
+同一份文件可以在 PostgreSQL、MySQL 和 SQLite 上运行。DSL 无法表达的内容可以
+退回原始 SQL：使用 `schema.Register(version, name, up, down)`，或在 change 内用
+`m.Reversible(up, down)`。
 
-- `<时间戳>_<名称>.up.sql` —— 前向迁移
-- `<时间戳>_<名称>.down.sql` —— 回滚迁移
+Go DSL 迁移只有在被编译进执行它的二进制时才会运行：`db/migrate` 包必须被
+`main.go` 空白导入（`airway new` 生成的项目已经包含该导入）。在项目内，全局
+安装的 `airway` 会把迁移命令代理到 `go run .`，因此它们看到的迁移与服务器完全
+一致。遗留的时间戳 SQL 文件对（`<version>_<name>.up.sql` / `.down.sql`）仍然会
+被执行，旧项目可以继续工作。
 
-因为迁移是纯 SQL 文件，独立 CLI 无需编译项目本身即可迁移*任何* Airway
-项目。每个迁移在事务中执行，已应用的版本记录在 `schema_migrations` 表中，
+每个迁移在事务中执行，已应用的版本记录在 `schema_migrations` 表中，
 `db:migrate` / `db:rollback` 会自动刷新 `db/schema.json` 快照。迁移支持
 PostgreSQL、MySQL 和 SQLite，数据库驱动由 DSN 的 scheme 自动推断。
 
@@ -111,12 +148,8 @@ airway db:rollback 3             # 回滚三步
 airway db:status                 # 查看每个迁移的 applied/pending 状态
 ```
 
-数据库命令按以下顺序读取第一个已设置的环境变量作为 DSN：`DSN`、
-`AIRWAY_DSN`。由于 CLI 会自动加载 `.env`，在其中配置 `DSN` 即可。
-
-旧的 Go DSL 迁移机制（`schema.RegisterChange`）仍然受支持，但 DSL 迁移只有
-编译进执行它的二进制时才会生效。如果 CLI 在 `db/migrate` 下发现时间戳命名
-的 `.go` 迁移文件，会打印警告——建议改用 SQL 迁移，以便独立 CLI 执行。
+数据库命令按以下顺序读取第一个已设置的环境变量作为 DSN：`AIRWAY_DSN`、
+`DSN`。由于 CLI 会自动加载 `.env`，在其中配置 `DSN` 即可。
 
 ### Schema 快照
 
@@ -124,6 +157,73 @@ airway db:status                 # 查看每个迁移的 applied/pending 状态
 airway schema:dump   # 检查数据库并写入 db/schema.json
 airway schema:show   # 打印当前的 db/schema.json
 ```
+
+### 前端依赖与打包
+
+```bash
+airway js:add preact                        # 添加依赖（最新版，精确锁定）
+airway js:add @tanstack/react-table@9.2.4   # 指定版本添加
+airway js:install                           # 按 js.pkg.json 安装到 app/assets/js/vendor/
+airway js:build                             # 打包 app/assets/js 到 app/assets/dist
+```
+
+registry 默认为 `https://registry.npmjs.org`；可设置 `AIRWAY_JS_REGISTRY`
+（或 `JS_REGISTRY`）使用镜像。整个过程不需要 Node 工具链——CLI 直接与
+npm 兼容的 registry 通信，并使用内嵌的 esbuild 打包。
+
+### OpenAPI 文档
+
+```bash
+airway openapi:generate                    # 写出 ./openapi.json（OpenAPI 3.2）
+airway openapi:generate --out docs/api.json
+```
+
+文档覆盖 Gin 引擎上注册的所有路由，运行中的服务器还会在
+`GET /openapi.json` 实时提供同一份文档。参见 [OpenAPI 指南](openapi.md)。
+
+### Admin 后台
+
+```bash
+airway admin:generate                      # 按 config/admin.toml 生成后台
+airway admin:root admin 's3cret'           # 创建管理员账号（role admin）
+airway admin:member editor 's3cret'        # 创建非管理员账号（--role=editor|viewer）
+```
+
+`admin:generate` 会生成模型、`/api/v1/admin` 下的 JSON API、`/admin` 下的
+templ 页面、CRUD island，以及每次运行一份迁移文件。账号存放在 `admin_users`
+表（密码经 bcrypt 哈希），请先执行 `db:migrate`。参见
+[Admin 后台指南](../../ADMIN.zh-CN.md)。
+
+### 桌面应用
+
+```bash
+airway desktop:init [--force]              # 在 ./desktop 生成 Wails v3 目标
+```
+
+生成的 `desktop/` 包把同一套 Web 技术栈跑在原生 WebView 窗口里。参见
+[桌面应用指南](desktop.md)。
+
+### 静态展示站点与主题
+
+```bash
+airway ssg:new [--local[=path]] mysite     # 脚手架静态站点项目
+airway ssg:build [--out dist]              # 导出 ssg.go 中定义的站点
+airway ssg:serve [--addr 127.0.0.1:3000]   # 本地预览
+airway theme:new [--local[=path]] mytheme  # 脚手架主题模块
+airway theme:install <module | /path>      # 把主题接入项目的 go.mod
+```
+
+参见 [SSG 指南](ssg.md)。
+
+### 应用页面的静态导出
+
+```bash
+airway static:build [--out dist]            # 导出 export.go 中注册的页面
+airway static:serve [--addr 127.0.0.1:3000] # 本地预览静态页面
+```
+
+导出使用与服务器相同的 templ 组件渲染页面，并把前端产物复制到页面旁边。
+参见[静态导出指南](static-export.md)。
 
 ### Plugin（插件）
 
@@ -138,14 +238,16 @@ Plugin 是通过 `plugins.go` 中的空白导入启用的可选功能模块
 （参见 [plugin.md](plugin.md)）：
 
 ```bash
-go run . plugin:list           # 列出已注册的 Plugin 及挂载路径
-go run . plugin:install <module> # 安装 Plugin 的 SQL 迁移、host/ 目录树和 deps/ 目录
+go run . plugin:list              # 列出已注册的 Plugin 及挂载路径
+go run . plugin:install <module>  # 安装 Plugin 的 SQL 迁移、host/ 目录树和 deps/ 目录
+go run . plugin:lint              # 检查 Plugin 检出目录的遗留布局问题
 ```
 
 Plugin 在编译期注册，因此请通过**项目二进制**运行这些命令
-（`go run . ...`）：全局安装的 `airway` 只能看到编译进它自身的 Plugin。
-`plugin:install` 会为复制的迁移分配新的时间戳，并跳过已安装的文件；之后
-它们就是普通迁移，由 `db:migrate` / `db:rollback` / `db:status` 管理。
+（`go run . ...`）：在项目内全局安装的 `airway` 会自动代理，两种形式看到的
+都是你项目自己的 Plugin。`plugin:install` 会为复制的迁移分配新的时间戳，
+并跳过已安装的文件；之后它们就是普通迁移，由 `db:migrate` / `db:rollback` /
+`db:status` 管理。
 
 ### 文件上传
 
@@ -163,35 +265,27 @@ go run . repl
 ```
 
 REPL 只能看到编译进当前二进制的模型——项目模型在各自的 init 中通过
-`replreg.Register` 自注册。请在你的项目内使用 `go run . repl`；全局安装的
-`airway repl` 只能看到框架内置的模型。
+`replreg.Register` 自注册。请在你的项目内使用 `go run . repl`（或使用会自动
+代理的 `airway repl`）；项目之外全局安装的 `airway` 只能看到框架内置的模型。
 
 ## 全局 `airway` 与项目二进制的区别
 
-有些命令依赖编译进当前二进制的代码（模型、Plugin、Go DSL 迁移），请为每条
-命令选择正确的二进制：
+有些命令依赖编译进当前二进制的代码（模型、Plugin、Go DSL 迁移、路由表）。
+在项目内代理让这一点保持透明，但在项目之外仍需区分：
 
 | 命令 | 全局 `airway` | 项目二进制（`go run . ...`） |
 | --- | --- | --- |
-| `new`、`generate`、`server` | 可用 | 可用 |
-| `plugin:new` | 可用 | 可用 |
-| `db:create` / `db:drop` / `db:migrate` / `db:rollback` / `db:status` | 可用（SQL 迁移） | 可用 |
-| `schema:dump` / `schema:show`、`upload`、`version` | 可用 | 可用 |
-| `templates:compile` | **本地直接执行**——必须在项目尚不能编译时可用（刚生成 `.templ` 文件之后） | 可用 |
-| `repl` | 仅框架内置模型 | **推荐**——能看到你的项目模型 |
-| `plugin:list` / `plugin:install` | 仅编译进 `airway` 自身的 Plugin | **推荐**——能看到你项目的 Plugin |
+| `new`、`ssg:new`、`theme:new`、`version`、`help` | 本地执行——生成新项目或描述工具本身 | — |
+| `templates:compile` | **本地执行**——必须在项目尚不能编译时可用（刚生成 `.templ` 文件之后） | 可直接运行 |
+| `generate`、`server`、`db:*`、`schema:*` | 代理到项目二进制 | 可直接运行 |
+| `openapi:generate`、`admin:*`、`desktop:init`、`js:*` | 代理到项目二进制 | 可直接运行 |
+| `ssg:build` / `ssg:serve`、`static:*`、`theme:install` | 代理到项目二进制 | 可直接运行 |
+| `plugin:new` / `plugin:lint` | 代理到项目二进制 | 可直接运行 |
+| `plugin:list` / `plugin:install` | 代理到项目二进制 | **能看到你项目的 Plugin** |
+| `upload` | 代理到项目二进制 | 可直接运行 |
+| `repl` | 代理到项目二进制 | **能看到你的项目模型** |
 
-另请参阅：[../cli.md](../cli.md) 获取完整的脚手架指南和逐步特性示例。
+在项目之外，全局 CLI 会自己执行命令：遗留 SQL 迁移仍然可用，但 Go DSL 迁移、
+Plugin 路由、项目模型和路由表只存在于项目二进制中。
 
-### Admin 后台
-
-为已经用 `airway admin:generate` 生成 Admin 后台的项目创建管理员账号
-（参见 [cli.md](cli.md)）：
-
-```bash
-go run . admin:user admin@example.com 's3cret'
-```
-
-账号会插入 `admin_users` 表（密码经 bcrypt 哈希），请先执行
-`db:migrate`。该命令请通过项目二进制运行；全局安装的 `airway` 会自动
-代理。
+另请参阅：[docs/cli.md](cli.md) 获取完整的脚手架指南和逐步特性示例。
