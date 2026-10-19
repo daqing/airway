@@ -762,7 +762,7 @@ just docker        # or: docker build -t airway .
 docker run -p 1900:1900 -e AIRWAY_ENV=production -e DSN="sqlite:///app/tmp/airway.db" airway
 ```
 
-The Dockerfile pulls base images from a daocloud.io mirror and points the Go
+The Dockerfile pulls base images from `reg.mindwork.cool` and points the Go
 module proxy at goproxy.cn, so builds work on networks where the default
 endpoints are slow or blocked; strip the mirrors if you don't need them.
 

@@ -20,7 +20,7 @@
 | v0.10.0–0.10.2 | plugin:lint;plugin install/ 布局;**OpenAPI 3.2 文档生成**(`openapi:generate` + GET /openapi.json);进程环境优先于 .env | **完全缺失**:Features、CLI、HTTP endpoints、Configuration 四处都要补 |
 | v0.11.0 | 事务绑定仓储助手(`repo.WithTx`/`*With` 变体) | 已有 Transactions 章节 ✓ |
 | v0.12.0–0.12.1 | Go 1.27.1;plugin 支持文件系统路径 | README **未声明 Go 版本要求** → 补 |
-| v0.13.0–0.13.2 | Docker 镜像国内 mirror(daocloud/goproxy.cn);脚手架后自动装前端依赖;**SKIP LOCKED 原生支持**(`ForUpdateSkipLocked`);全仓测试覆盖 | SKIP LOCKED 与 mirror **未提** → 补 Features/Deployment |
+| v0.13.0–0.13.2 | Docker 镜像国内 `reg.mindwork.cool`;脚手架后自动装前端依赖;**SKIP LOCKED 原生支持**(`ForUpdateSkipLocked`);全仓测试覆盖 | SKIP LOCKED 与 mirror **未提** → 补 Features/Deployment |
 | v0.14.0 | **Admin 后台生成器**:admin:generate(TOML 驱动)+ admin:root/admin:member、角色、审计日志、服务端分页 | 仅文档列表有链接;**Features、CLI 清单缺失** → 补章节 |
 | v0.15.0 | **Wails v3 桌面导出**:`desktop:init`,lib/boot 程序化启动,三平台打包 | CLI 清单已有;**Features 缺失**,docs/desktop.md 未入文档列表 → 补 |
 | feat/ssg(≥v0.15.0) | **SSG + 主题**:`ssg:new/build/serve`、`theme:new/install`、`lib/ssg`、themes/corporate | CLI 清单已补;**Features 缺失** → 补章节 |
@@ -33,7 +33,7 @@
 4. **Configuration 缺**两类信息:进程环境优先于 .env 的显式说明;`AIRWAY_DB_DSN`/`AIRWAY_PG` 兼容别名(CLI 段落有提,配置表没有)。
 5. **文档列表(顶部 + 底部"Guides")重复且不一致**:底部缺 admin/ssg/desktop/openapi;两处应合并为一处。
 6. **未声明 Go 版本要求**(go 1.27.1)。
-7. **Deployment 未提** Dockerfile 的国内镜像(goproxy.cn / daocloud)。
+7. **Deployment 未提** Dockerfile 的国内镜像(goproxy.cn / reg.mindwork.cool)。
 8. **docs/zh-CN/README.md(428 行)与英文版(578 行)结构已分叉**,不是镜像;需按新版英文全量重写对齐。
 
 ## 3. 新 README.md 结构(英文,约 650 行)

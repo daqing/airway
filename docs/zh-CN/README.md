@@ -586,7 +586,7 @@ just docker        # 或：docker build -t airway .
 docker run -p 1900:1900 -e AIRWAY_ENV=production -e DSN="sqlite:///app/tmp/airway.db" airway
 ```
 
-Dockerfile 从 daocloud.io 镜像拉取基础镜像，并把 Go module 代理指向
+Dockerfile 从 `reg.mindwork.cool` 拉取基础镜像，并把 Go module 代理指向
 goproxy.cn，因此在默认源缓慢或不可达的网络环境下也能开箱构建；不需要镜像
 的话移除即可。
 
